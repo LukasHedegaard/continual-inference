@@ -1,10 +1,20 @@
 # Continual Inference
 Building blocks for Continual Inference Networks in PyTorch
 
-[![codecov](https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG)](https://codecov.io/gh/LukasHedegaard/continual-inference)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+<div align="left">
+  <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
+    <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG"/>
+  </a>
+  <a href="https://opensource.org/licenses/Apache-2.0">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" height="20">
+  </a>
+  <a href="https://github.com/psf/black">
+    <img src="https://img.shields.io/badge/code%20style-black-000000.svg" height="20">
+  </a>
+  <br><br>
+</div>
 
+## Install 
 ```bash
 pip install continual-inference
 ```
