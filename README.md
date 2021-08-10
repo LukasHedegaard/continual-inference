@@ -56,30 +56,30 @@ This repository contains online inference-friendly versions of common network bu
 
 <!-- TODO: Replace with link to docs once they are set up -->
 - (Temporal) convolutions:
-    - [x] `ConvCo1d`
-    - [x] `ConvCo2d`
-    - [x] `ConvCo3d`
+    - `ConvCo1d`
+    - `ConvCo2d`
+    - `ConvCo3d`
 
 - (Temporal) batch normalisation:
-    - [x] `BatchNormCo2d`
+    - `BatchNormCo2d`
 
 - (Temporal) pooling:
-    - [x] `AvgPoolCo1d`
-    - [x] `AvgPoolCo2d`
-    - [ ] `AvgPoolCo3d`
-    - [ ] `MaxPoolCo1d`
-    - [x] `MaxPoolCo2d`
-    - [ ] `MaxPoolCo3d`
-    - [ ] `AdaptiveAvgPoolCo1d`
-    - [x] `AdaptiveAvgPoolCo2d`
-    - [ ] `AdaptiveAvgPoolCo3d`
-    - [ ] `AdaptiveMaxPoolCo1d`
-    - [x] `AdaptiveMaxPoolCo2d`
-    - [ ] `AdaptiveMaxPoolCo3d`
+    - `AvgPoolCo1d`
+    - `AvgPoolCo2d`
+    <!-- - [ ] `AvgPoolCo3d`
+    - [ ] `MaxPoolCo1d` -->
+    - `MaxPoolCo2d`
+    <!-- - [ ] `MaxPoolCo3d`
+    - [ ] `AdaptiveAvgPoolCo1d` -->
+    - `AdaptiveAvgPoolCo2d`
+    <!-- - [ ] `AdaptiveAvgPoolCo3d`
+    - [ ] `AdaptiveMaxPoolCo1d` -->
+    - `AdaptiveMaxPoolCo2d`
+    <!-- - [ ] `AdaptiveMaxPoolCo3d` -->
 
 - Other
-    - [x] `Delay` - pure delay module
-    - [x] `Continual` - functional wrapper for non-continual modules
+    - `Delay` - pure delay module
+    - `Continual` - functional wrapper for non-continual modules
 
 ### Continual Convolutions
 Continual Convolutions can lead to major improvements in computational efficiency when online / frame-by-frame predictions are required.
@@ -87,12 +87,12 @@ Continual Convolutions can lead to major improvements in computational efficienc
 Below, principle sketches comparing regular and continual convolutions are shown:
 
 <div align="center">
-<img src="figures/regular-convolution.png" width="500">
+<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual-convolution.png" width="500">
   <br>
   Regular Convolution. 
 	A regular temporal convolutional layer leads to redundant computations during online processing of video clips, as illustrated by the repeated convolution of inputs (green b,c,d) with a kernel (blue α,β) in the temporal dimen- sion. Moreover, prior inputs (b,c,d) must be stored be- tween time-steps for online processing tasks.
   <br><br>  
-  <img src="figures/continual-convolution.png" width="500">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/regular-convolution.png" width="500">
   <br>
   Continual Convolution. 
 	An input (green d or e) is convolved with a kernel (blue α, β). The intermediary feature-maps corresponding to all but the last temporal position are stored, while the last feature map and prior memory are summed to produce the resulting output. For a continual stream of inputs, Continual Convolutions produce identical outputs to regular convolutions.
@@ -156,7 +156,7 @@ Specifically, extra care was taken to ensure out-of-the-box compatibility with:
 ## Projects
 For full-fledged examples of complex Continual Inference Networks, see:
 
-- [Continual 3D](https://github.com/LukasHedegaard/co3d) [![Paper](http://img.shields.io/badge/paper-arxiv.2106.00050-B31B1B.svg)](https://arxiv.org/abs/2106.00050)
+- [Continual 3D](https://github.com/LukasHedegaard/co3d)
 <!-- - [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons) -->
 
 
