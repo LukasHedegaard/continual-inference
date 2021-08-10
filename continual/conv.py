@@ -1,3 +1,4 @@
+from logging import getLogger
 from typing import Callable, Tuple
 
 import torch
@@ -9,17 +10,16 @@ from torch.nn.modules.conv import (
     Conv3d,
     _ConvNd,
     _pair,
-    _triple,
     _reverse_repeat_tuple,
     _single,
     _size_1_t,
     _size_2_t,
     _size_3_t,
+    _triple,
 )
 
 from .interface import _CoModule
 from .utils import FillMode, TensorPlaceholder, temporary_parameter
-from logging import getLogger
 
 logger = getLogger(__name__)
 
@@ -27,8 +27,8 @@ State = Tuple[Tensor, int, int]
 
 # Attempt pytorch_lightning compatible logging
 try:
-    from pytorch_lightning.utilities.warnings import rank_zero_warn as warn
     from pytorch_lightning.utilities.distributed import rank_zero_only
+    from pytorch_lightning.utilities.warnings import rank_zero_warn as warn
 
     debug = rank_zero_only(logger.debug)
 
