@@ -37,6 +37,10 @@ setup(
     author_email="lukasxhedegaard@gmail.com",
     url="https://github.com/LukasHedegaard/continual-inference",
     install_requires=from_file("requirements.txt"),
-    extras_require={"dev": from_file("requirements-dev.txt")},
+    extras_require={
+        "build": from_file("requirements/build.txt"),
+        "dev": from_file("requirements/dev.txt"),
+        "docs": from_file("requirements/docs.txt"),
+    },
     packages=find_packages(exclude=["tests, docs"]),
 )

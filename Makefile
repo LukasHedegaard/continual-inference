@@ -55,6 +55,20 @@ lint:
 	flake8 . --max-complexity=12 --max-line-length=88 --select=C,E,F,W,B,B950,BLK --ignore=E203,E231,E501,W503 --exclude=.cache
 
 
+## Build library
+build:
+	python setup.py sdist bdist_wheel  
+
+
+## Upload to PyPI
+publish:
+	python -m twine upload dist/*
+
+
+## Upload to TestPyPI
+testpublish:
+	python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+
 
 #################################################################################
 # Self Documenting Commands                                                     #
