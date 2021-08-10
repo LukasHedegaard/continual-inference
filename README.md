@@ -15,7 +15,7 @@ Continual Inference Networks are a type of neural network, which operate on a co
 All networks and network-modules, that do not utilise temporal information can be used for an Online Inference Network (e.g. `Conv1d` and `Conv2d` on spatial data such as an image). 
 Moreover, recurrent modules (e.g. `LSTM` and `GRU`), that summarize past events in an internal state are also useable in CINs.
 
-__A CIN__:
+__CIN__:
 ```
   O       O       O      (output)
   ↑       ↑       ↑       
@@ -28,7 +28,7 @@ Conv2D  Conv2D  Conv2D   (spatial 2D conv)
 
 However, modules that operate on temporal data with the assumption that the more temporal context is available than the current frame (e.g. the spatio-temporal `Conv3d` used by many SotA video recognition models) cannot be directly applied.
 
-__Not a CIN__:
+__Not CIN__:
 ```
           Θ              (output)   
           ↑              
@@ -41,7 +41,7 @@ __Not a CIN__:
 
 Sometimes, though, the computations in such modules, can be cleverly restructured to work for online inference as well! 
 
-__A CIN__:
+__CIN__:
 ```
    O         O         Θ      (output)
    ↑         ↑         ↑    
@@ -157,7 +157,7 @@ Specifically, extra care was taken to ensure out-of-the-box compatibility with:
 For full-fledged examples of complex Continual Inference Networks, see:
 
 - [Continual 3D](https://github.com/LukasHedegaard/co3d) [![Paper](http://img.shields.io/badge/paper-arxiv.2106.00050-B31B1B.svg)](https://arxiv.org/abs/2106.00050)
-- [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons)
+<!-- - [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons) -->
 
 
 ## Citations
@@ -181,7 +181,7 @@ This library
 }
 ```
 
-[Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons)
+<!-- [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons)
 ```bibtex
 @article{hedegaard2021coskelleton,
   title={Continual Skeletons for Efficient Online Activity Recognition},
@@ -189,4 +189,4 @@ This library
   journal={TBD},
   year={2021}
 }
-```
+``` -->
