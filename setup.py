@@ -29,7 +29,7 @@ def from_file(file_name: str = "requirements.txt", comment_char: str = "#"):
 
 setup(
     name="continual-inference",
-    version="0.1.0",
+    version="0.1.1",
     description="Building blocks for Continual Inference Networks in PyTorch",
     long_description=long_description(),
     long_description_content_type="text/markdown",
@@ -42,5 +42,28 @@ setup(
         "dev": from_file("requirements/dev.txt"),
         "docs": from_file("requirements/docs.txt"),
     },
-    packages=find_packages(exclude=["tests, docs"]),
+    packages=find_packages(exclude=["tests", "docs", "figures", "requirements"]),
+    keywords=["deep learning", "pytorch", "AI", "online", "inference", "continual"],
+    classifiers=[
+        "Environment :: Console",
+        "Natural Language :: English",
+        # How mature is this project? Common values are
+        #   3 - Alpha, 4 - Beta, 5 - Production/Stable
+        "Development Status :: 3 - Alpha",
+        # Indicate who your project is intended for
+        "Intended Audience :: Developers",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Image Recognition",
+        "Topic :: Scientific/Engineering :: Information Analysis",
+        # Pick your license as you wish
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        # Specify the Python versions you support here. In particular, ensure
+        # that you indicate whether you support Python 2, Python 3 or both.
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+    ],
 )
