@@ -182,7 +182,7 @@ This library
 @article{hedegaard2021colib,
   title={Continual Inference Library},
   author={Lukas Hedegaard},
-  journal={TBD},
+  journal={GitHub. Note: https://github.com/LukasHedegaard/continual-inference},
   year={2021}
 }
 ```
@@ -192,7 +192,7 @@ This library
 @article{hedegaard2021co3d,
   title={Continual 3D Convolutional Neural Networks for Real-time Processing of Videos},
   author={Lukas Hedegaard and Alexandros Iosifidis},
-  journal={TBD},
+  journal={preprint, arXiv:2106.00050},
   year={2021}
 }
 ```
