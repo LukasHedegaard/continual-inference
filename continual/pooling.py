@@ -2,17 +2,17 @@ from abc import abstractmethod
 from typing import Callable, Tuple, Type, TypeVar
 
 import torch
-from torch import Tensor
 import torch.nn.functional as F
+from torch import Tensor
 from torch.nn.modules.pooling import (
     AdaptiveAvgPool1d,
-    AdaptiveMaxPool1d,
-    AvgPool1d,
-    MaxPool1d,
-    AvgPool2d,
-    MaxPool2d,
     AdaptiveAvgPool2d,
+    AdaptiveMaxPool1d,
     AdaptiveMaxPool2d,
+    AvgPool1d,
+    AvgPool2d,
+    MaxPool1d,
+    MaxPool2d,
 )
 
 from .interface import _CoModule

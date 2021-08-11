@@ -1,17 +1,18 @@
 import torch
 from torch.nn.modules.pooling import (
-    AvgPool1d,
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
     AdaptiveMaxPool3d,
+    AvgPool1d,
     AvgPool3d,
     MaxPool3d,
 )
+
 from continual import (
     AdaptiveAvgPoolCo2d,
-    AvgPoolCo1d,
     AdaptiveAvgPoolCo3d,
     AdaptiveMaxPoolCo3d,
+    AvgPoolCo1d,
     AvgPoolCo3d,
     MaxPoolCo3d,
 )
