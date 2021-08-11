@@ -20,7 +20,7 @@ jobs:
         pip install .[build]
     - name: Build
       run: |
-        python setup.py sdist bdist_wheel --test
+        python setup.py sdist bdist_wheel
     - name: Publish to Test PyPI
       uses: pypa/gh-action-pypi-publish@v1.1.0
       with:
