@@ -1,7 +1,22 @@
 import torch
-from torch.nn import AdaptiveAvgPool2d, AvgPool1d
+from torch.nn.modules.pooling import (
+    AvgPool1d,
+    AdaptiveAvgPool2d,
+    AdaptiveAvgPool3d,
+    AdaptiveMaxPool3d,
+    AvgPool3d,
+    MaxPool3d,
+)
+from continual import (
+    AdaptiveAvgPoolCo2d,
+    AvgPoolCo1d,
+    AdaptiveAvgPoolCo3d,
+    AdaptiveMaxPoolCo3d,
+    AvgPoolCo3d,
+    MaxPoolCo3d,
+)
 
-from continual import AdaptiveAvgPoolCo2d, AvgPoolCo1d
+torch.manual_seed(42)
 
 
 def test_AvgPoolCo1d():
@@ -51,3 +66,80 @@ def test_AdaptiveAvgPoolCo2d():
     # Whole time-series
     output = co_pool.forward_regular(sample)
     assert torch.allclose(target, output)
+
+    output2 = co_pool.forward_regular_unrolled(sample)
+    assert torch.allclose(target, output2)
+
+
+example_clip = torch.normal(mean=torch.zeros(2 * 4 * 4 * 4)).reshape((1, 2, 4, 4, 4))
+example_long = torch.normal(mean=torch.zeros(2 * 8 * 4 * 4)).reshape((1, 2, 8, 4, 4))
+next_example_frame = torch.normal(mean=torch.zeros(2 * 1 * 4 * 4)).reshape((1, 2, 4, 4))
+next_example_clip = torch.stack(
+    [
+        example_clip[:, :, 1],
+        example_clip[:, :, 2],
+        example_clip[:, :, 3],
+        next_example_frame,
+    ],
+    dim=2,
+)
+
+
+def test_AvgPoolCo3d():
+    target = AvgPool3d((2, 2, 2))(example_clip)
+    output = AvgPoolCo3d(window_size=2, kernel_size=(2, 2)).forward_regular(
+        example_clip
+    )
+    sub_output = torch.stack(
+        [
+            output[:, :, 0],
+            output[:, :, 2],
+        ],
+        dim=2,
+    )
+    assert torch.allclose(sub_output, target)
+
+
+def test_AdaptiveAvgPoolCo3d():
+    pool = AdaptiveAvgPool3d((1, 1, 1))
+    rpool = AdaptiveAvgPoolCo3d(window_size=4, output_size=(1, 1))
+
+    target = pool(example_clip)
+    output = rpool.forward_regular(example_clip)
+    assert torch.allclose(output, target)
+
+    # Now that memory is full (via `forward_regular`), pooling works as expected for subsequent frames
+    target_next = pool(next_example_clip).squeeze(2)
+    output_frame_next = rpool(next_example_frame)
+    assert torch.allclose(target_next, output_frame_next)
+
+
+def test_MaxPoolCo3d():
+    target = MaxPool3d((2, 2, 2))(example_clip)
+    output = MaxPoolCo3d(window_size=2, kernel_size=(2, 2)).forward_regular(
+        example_clip
+    )
+    sub_output = torch.stack(
+        [
+            output[:, :, 0],
+            output[:, :, 2],
+        ],
+        dim=2,
+    )
+    assert torch.allclose(sub_output, target)
+
+
+def test_AdaptiveMaxPoolCo3d():
+    target = AdaptiveMaxPool3d((1, 1, 1))(example_clip)
+    output = AdaptiveMaxPoolCo3d(window_size=4, output_size=(1, 1)).forward_regular(
+        example_clip
+    )
+    assert torch.allclose(output, target)
+
+
+def test_MaxPoolCo3d_dilation():
+    target = MaxPool3d((2, 2, 2), dilation=(2, 1, 1))(example_long)
+    output = MaxPoolCo3d(
+        window_size=4, kernel_size=(2, 2), temporal_dilation=2
+    ).forward_regular(example_long)
+    assert torch.allclose(target, output.index_select(2, torch.tensor([0, 2, 4])))

@@ -4,6 +4,10 @@ from torch import Tensor
 
 
 class _CoModule(ABC):
+    """Base class for continual modules.
+    Deriving from this class enforces that neccessary class methods are implemented
+    """
+
     def __init_subclass__(cls) -> None:
         for fn, description in [
             ("forward", "frame-wise forward computation"),

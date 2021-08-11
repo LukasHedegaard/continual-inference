@@ -82,16 +82,16 @@ This repository contains online inference-friendly versions of common network bu
 - (Temporal) pooling:
     - `AvgPoolCo1d`
     - `AvgPoolCo2d`
-    <!-- - [ ] `AvgPoolCo3d`
-    - [ ] `MaxPoolCo1d` -->
+    - `AvgPoolCo3d`
+    - `MaxPoolCo1d`
     - `MaxPoolCo2d`
-    <!-- - [ ] `MaxPoolCo3d`
-    - [ ] `AdaptiveAvgPoolCo1d` -->
+    - `MaxPoolCo3d`
+    - `AdaptiveAvgPoolCo1d`
     - `AdaptiveAvgPoolCo2d`
-    <!-- - [ ] `AdaptiveAvgPoolCo3d`
-    - [ ] `AdaptiveMaxPoolCo1d` -->
+    - `AdaptiveAvgPoolCo3d`
+    - `AdaptiveMaxPoolCo1d`
     - `AdaptiveMaxPoolCo2d`
-    <!-- - [ ] `AdaptiveMaxPoolCo3d` -->
+    - `AdaptiveMaxPoolCo3d`
 
 - Other
     - `Delay` - pure delay module
