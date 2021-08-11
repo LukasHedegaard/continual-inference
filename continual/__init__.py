@@ -14,4 +14,4 @@ from .pooling import (  # noqa: F401
     MaxPoolCo2d,
     MaxPoolCo3d,
 )
-from .utils import Continual, TensorPlaceholder, Zero  # noqa: F401
+from .utils import continual, TensorPlaceholder, Zero  # noqa: F401
