@@ -61,8 +61,8 @@ class _ConvCoNd(_ConvNd, _CoModule):
         ), "The ConvClass should be a subclass of `_ConvNd`"
         self._ConvClass = ConvClass
         self._conv_func = conv_func
-        self._input_shape_description = input_shape_desciption
-        self._input_len = len(self._input_shape_description)
+        self.input_shape_desciption = input_shape_desciption
+        self._input_len = len(self.input_shape_desciption)
 
         kernel_size = size_fn(kernel_size)
 
@@ -113,7 +113,7 @@ class _ConvCoNd(_ConvNd, _CoModule):
     ) -> State:
         padding = self.make_padding(first_output)
         state_buffer = padding.repeat(
-            self.kernel_size[0] - 1, *[1 for _ in self._input_shape_description]
+            self.kernel_size[0] - 1, *[1 for _ in self.input_shape_desciption]
         )
         state_index = 0
         stride_index = 0
@@ -142,7 +142,7 @@ class _ConvCoNd(_ConvNd, _CoModule):
     def _forward(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         assert (
             len(input.shape) == self._input_len - 1
-        ), f"A tensor of shape {(*self._input_shape_description[:2], *self._input_shape_description[3:])} should be passed as input."
+        ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input."
 
         # e.g. B, C -> B, C, 1
         x = input.unsqueeze(2)
@@ -225,7 +225,7 @@ class _ConvCoNd(_ConvNd, _CoModule):
         """
         assert (
             len(input.shape) == self._input_len
-        ), f"A tensor of shape {self._input_shape_description} should be passed as input."
+        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
         T = input.shape[2]
         self.clean_state()
 
@@ -269,7 +269,7 @@ class _ConvCoNd(_ConvNd, _CoModule):
         """
         assert (
             len(input.shape) == self._input_len
-        ), f"A tensor of shape {self._input_shape_description} should be passed as input."
+        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
         with temporary_parameter(self, "padding", (0, *self.padding[1:])):
             output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
         return output
