@@ -29,7 +29,7 @@ def from_file(file_name: str = "requirements.txt", comment_char: str = "#"):
 
 setup(
     name="continual-inference",
-    version="0.1.1",
+    version="0.1.2",
     description="Building blocks for Continual Inference Networks in PyTorch",
     long_description=long_description(),
     long_description_content_type="text/markdown",
