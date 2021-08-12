@@ -25,13 +25,13 @@ class FillMode(Enum):
 
 
 class Zero(Module, _CoModule):
+    def forward_step(self, input: Tensor) -> Tensor:
+        return 0
+
+    def forward_steps(self, input: Tensor) -> Tensor:
+        return 0
+
     def forward(self, input: Tensor) -> Tensor:
-        return 0
-
-    def forward_regular(self, input: Tensor) -> Tensor:
-        return 0
-
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
         return 0
 
 
@@ -46,8 +46,8 @@ def continual(instance: Module, dim: int = 2):
 
         return call
 
-    instance.forward_regular_unrolled = instance.forward
-    instance.forward_regular = instance.forward
+    instance.forward = instance.forward
+    instance.forward_steps = instance.forward
     instance.forward = decorator(instance.forward)
 
     return instance

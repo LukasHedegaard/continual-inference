@@ -29,18 +29,18 @@ def test_AvgPool1d():
 
     # Frame by frame
     for i in range(sample.shape[2]):
-        output.append(co_pool(sample[:, :, i]))
+        output.append(co_pool.forward_step(sample[:, :, i]))
 
     # Match after delay of T - 1
     for t in range(sample.shape[2] - (T - 1)):
         assert torch.allclose(target[:, :, t], output[t + (T - 1)])
 
     # Whole time-series
-    output = co_pool.forward_regular(sample)
+    output = co_pool.forward_steps(sample)
     assert torch.allclose(target, output)
 
     # Exact
-    output2 = co_pool.forward_regular_unrolled(sample)
+    output2 = co_pool.forward(sample)
     assert torch.equal(target, output2)
 
 
@@ -58,10 +58,10 @@ def test_AdaptiveAvgPool2d():
     co_pool = AdaptiveAvgPool2d(window_size=L, output_size=(1,))
 
     # Whole time-series
-    output = co_pool.forward_regular(sample)
+    output = co_pool.forward_steps(sample)
     assert torch.allclose(target, output)
 
-    output2 = co_pool.forward_regular_unrolled(sample)
+    output2 = co_pool.forward(sample)
     assert torch.allclose(target, output2)
 
 
@@ -81,7 +81,7 @@ next_example_clip = torch.stack(
 
 def test_AvgPool3d():
     target = nn.AvgPool3d((2, 2, 2))(example_clip)
-    output = AvgPool3d(window_size=2, kernel_size=(2, 2)).forward_regular(example_clip)
+    output = AvgPool3d(window_size=2, kernel_size=(2, 2)).forward_steps(example_clip)
     sub_output = torch.stack(
         [
             output[:, :, 0],
@@ -94,21 +94,21 @@ def test_AvgPool3d():
 
 def test_AdaptiveAvgPool3d():
     pool = nn.AdaptiveAvgPool3d((1, 1, 1))
-    rpool = AdaptiveAvgPool3d(window_size=4, output_size=(1, 1))
+    copool = AdaptiveAvgPool3d(window_size=4, output_size=(1, 1))
 
     target = pool(example_clip)
-    output = rpool.forward_regular(example_clip)
+    output = copool.forward_steps(example_clip)
     assert torch.allclose(output, target)
 
-    # Now that memory is full (via `forward_regular`), pooling works as expected for subsequent frames
+    # Now that memory is full (via `forward_steps`), pooling works as expected for subsequent frames
     target_next = pool(next_example_clip).squeeze(2)
-    output_frame_next = rpool(next_example_frame)
+    output_frame_next = copool.forward_step(next_example_frame)
     assert torch.allclose(target_next, output_frame_next)
 
 
 def test_MaxPool3d():
     target = nn.MaxPool3d((2, 2, 2))(example_clip)
-    output = MaxPool3d(window_size=2, kernel_size=(2, 2)).forward_regular(example_clip)
+    output = MaxPool3d(window_size=2, kernel_size=(2, 2)).forward_steps(example_clip)
     sub_output = torch.stack(
         [
             output[:, :, 0],
@@ -121,7 +121,7 @@ def test_MaxPool3d():
 
 def test_AdaptiveMaxPool3d():
     target = nn.AdaptiveMaxPool3d((1, 1, 1))(example_clip)
-    output = AdaptiveMaxPool3d(window_size=4, output_size=(1, 1)).forward_regular(
+    output = AdaptiveMaxPool3d(window_size=4, output_size=(1, 1)).forward_steps(
         example_clip
     )
     assert torch.allclose(output, target)
@@ -131,5 +131,5 @@ def test_MaxPool3d_dilation():
     target = nn.MaxPool3d((2, 2, 2), dilation=(2, 1, 1))(example_long)
     output = MaxPool3d(
         window_size=4, kernel_size=(2, 2), temporal_dilation=2
-    ).forward_regular(example_long)
+    ).forward_steps(example_long)
     assert torch.allclose(target, output.index_select(2, torch.tensor([0, 2, 4])))

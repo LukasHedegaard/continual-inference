@@ -34,14 +34,14 @@ class BatchNorm2d(_BatchNorm, _CoModule):
                 "expected 2D, 3D, or 4D input (got {}D input)".format(input.dim())
             )
 
-    def forward(self, input: Tensor) -> Tensor:
+    def forward_step(self, input: Tensor) -> Tensor:
         output = _BatchNorm.forward(self, input)
         return output
 
-    def forward_regular(self, input: Tensor) -> Tensor:
-        return self.forward_regular_unrolled(input)
+    def forward_steps(self, input: Tensor) -> Tensor:
+        return self.forward(input)
 
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         with temporary_parameter(self, "momentum", self.unnormalised_momentum):
             output = _BatchNorm.forward(self, input)
         return output

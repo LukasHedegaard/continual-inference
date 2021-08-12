@@ -10,14 +10,14 @@ class _CoModule(ABC):
 
     def __init_subclass__(cls) -> None:
         for fn, description in [
-            ("forward", "frame-wise forward computation"),
+            ("forward_step", "forward computation for a single temporal step"),
             (
-                "forward_regular",
-                "clip-wise forward computation with state initialisation",
+                "forward_step",
+                "forward computation for multiple temporal step",
             ),
             (
-                "forward_regular_unrolled",
-                "clip-wise forward without state initialisation, but which is identical to the non-continual component",
+                "forward",
+                "a forward computation which is identical to a regular non-continual forward.",
             ),
         ]:
             assert callable(
@@ -28,15 +28,15 @@ class _CoModule(ABC):
             type(getattr(cls, "delay", None)) == property
         ), "A CoModule should implement a `delay` property."
 
+    def forward_step(self, input: Tensor) -> Tensor:
+        """Clip-wise forward computation with state initialisation"""
+        ...  # pragma: no cover
+
+    def forward_steps(self, input: Tensor) -> Tensor:
+        """Clip-wise forward computation with state initialisation"""
+        ...  # pragma: no cover
+
     def forward(self, input: Tensor) -> Tensor:
-        """Clip-wise forward computation with state initialisation"""
-        ...  # pragma: no cover
-
-    def forward_regular(self, input: Tensor) -> Tensor:
-        """Clip-wise forward computation with state initialisation"""
-        ...  # pragma: no cover
-
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
         """Clip-wise forward without state initialisation, but which is identical to the non-continual component"""
         ...  # pragma: no cover
 

@@ -67,7 +67,7 @@ class _ConvCoNd(_ConvNd, _CoModule):
         padding = size_fn(padding)
         if padding[0] != 0:
             debug(
-                "Padding along the temporal dimension only affects the computation in `forward_regular`. In `forward` it is omitted."
+                "Padding along the temporal dimension only affects the computation in `forward_steps`. In `forward` it is omitted."
             )
 
         stride = size_fn(stride)
@@ -103,7 +103,7 @@ class _ConvCoNd(_ConvNd, _CoModule):
             (self.kernel_size[0] - 1, *self.padding[1:]), 2
         )
 
-        # init_state is called in `_forward`
+        # init_state is called in `_forward_step`
 
     def init_state(
         self,
@@ -137,7 +137,7 @@ class _ConvCoNd(_ConvNd, _CoModule):
         else:
             return None
 
-    def _forward(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
+    def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         assert (
             len(input.shape) == self._input_len - 1
         ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input."
@@ -198,19 +198,19 @@ class _ConvCoNd(_ConvNd, _CoModule):
 
         return x_out, (next_buffer, next_index, next_stride_index)
 
-    def forward(self, input: Tensor, update_state=True) -> Tensor:
+    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
         output, (
             new_buffer,
             new_state_index,
             new_stride_index,
-        ) = self._forward(input, self.get_state())
+        ) = self._forward_step(input, self.get_state())
         if update_state:
             self.state_buffer = new_buffer
             self.state_index = new_state_index
             self.stride_index = new_stride_index
         return output
 
-    def forward_regular(self, input: Tensor):
+    def forward_steps(self, input: Tensor):
         """Performs a layer-wise forward computation using the continual block.
         The computation is performed frame-by-frame, and continual states are updated accordingly.
         The output-input mapping the exact same as that of a regular convolution.
@@ -234,16 +234,18 @@ class _ConvCoNd(_ConvNd, _CoModule):
         # Recurrently pass through, updating state
         outs = []
         for t, i in enumerate([*pad_start, *inputs]):
-            o, (self.state_buffer, self.state_index, self.stride_index) = self._forward(
-                i, self.get_state()
-            )
+            o, (
+                self.state_buffer,
+                self.state_index,
+                self.stride_index,
+            ) = self._forward_step(i, self.get_state())
             if self.kernel_size[0] - 1 <= t and type(o) is not TensorPlaceholder:
                 outs.append(o)
 
         # Don't save state for the end-padding
         tmp_buffer, tmp_index, tmp_stride_index = self.get_state()
         for t, i in enumerate(pad_end):
-            o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward(
+            o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
                 i, (tmp_buffer, tmp_index, tmp_stride_index)
             )
             if o is not None and type(o) is not TensorPlaceholder:
@@ -255,7 +257,7 @@ class _ConvCoNd(_ConvNd, _CoModule):
             outs = torch.tensor([])
         return outs
 
-    def forward_regular_unrolled(self, input: Tensor):
+    def forward(self, input: Tensor):
         """Performs a full forward computation exactly as the regular layer would.
         This method is handy for effient training on clip-based data.
 
@@ -313,7 +315,7 @@ class Conv1d(_ConvCoNd):
             dilation (int or tuple, optional): Spacing between kernel elements. NB: dilation > 1 over the first channel is not supported. Default: 1
             groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
             bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
-            temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_regular` along the temporal dimension. Default: ``'replicate'``
+            temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_steps` along the temporal dimension. Default: ``'replicate'``
 
         Attributes:
             weight (Tensor): the learnable weights of the module of shape
@@ -413,7 +415,7 @@ class Conv2d(_ConvCoNd):
             dilation (int or tuple, optional): Spacing between kernel elements. NB: dilation > 1 over the first channel is not supported. Default: 1
             groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
             bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
-            temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_regular` along the temporal dimension. Default: ``'replicate'``
+            temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_steps` along the temporal dimension. Default: ``'replicate'``
 
         Attributes:
             weight (Tensor): the learnable weights of the module of shape
@@ -497,7 +499,7 @@ class Conv3d(_ConvCoNd):
         Assuming an input of shape `(B, C, T, H, W)`, it computes the convolution over one temporal instant `t` at a time
         where `t` ∈ `range(T)`, and keeps an internal state. Two forward modes are supported here.
 
-        `forward_regular` operates identically to `nn.Conv3d.forward`
+        `forward_steps` operates identically to `nn.Conv3d.forward`
 
         `forward`   takes an input of shape `(B, C, H, W)`, and computes a single-frame output (B, C', H', W') based on its internal state.
                     On the first execution, the state is initialised with either ``'zeros'`` (corresponding to a zero padding of kernel_size[0]-1)
@@ -515,7 +517,7 @@ class Conv3d(_ConvCoNd):
             dilation (int or tuple, optional): Spacing between kernel elements. NB: dilation > 1 over the first channel is not supported. Default: 1
             groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
             bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
-            temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_regular` along the temporal dimension. Default: ``'replicate'``
+            temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_steps` along the temporal dimension. Default: ``'replicate'``
 
         Attributes:
             weight (Tensor): the learnable weights of the module of shape

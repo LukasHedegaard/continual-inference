@@ -161,7 +161,7 @@ def _co_window_pooled(  # noqa: C901
             else:
                 return None
 
-        def _forward(
+        def _forward_step(
             self,
             input: Tensor,
             prev_state: State,
@@ -198,13 +198,13 @@ def _co_window_pooled(  # noqa: C901
 
             return pooled_window, (new_buffer, new_index)
 
-        def forward(self, input: Tensor) -> Tensor:
-            output, (self.state_buffer, self.state_index) = self._forward(
+        def forward_step(self, input: Tensor) -> Tensor:
+            output, (self.state_buffer, self.state_index) = self._forward_step(
                 input, self.get_state()
             )
             return output
 
-        def forward_regular(self, input: Tensor):
+        def forward_steps(self, input: Tensor):
             """Performs a full forward computation in a frame-wise manner, updating layer states along the way.
 
             If input.shape[2] == self.window_size, a global pooling along temporal dimension is performed
@@ -222,7 +222,7 @@ def _co_window_pooled(  # noqa: C901
 
             outs = []
             for t in range(input.shape[2]):
-                o = self.forward(input[:, :, t])
+                o = self.forward_step(input[:, :, t])
                 if self.window_size - 1 <= t:
                     outs.append(o)
 
@@ -230,14 +230,14 @@ def _co_window_pooled(  # noqa: C901
                 return torch.tensor([])
 
             if input.shape[2] == self.window_size:
-                # In order to be compatible with downstream forward_regular, select only last frame
+                # In order to be compatible with downstream forward_steps, select only last frame
                 # This corrsponds to the regular global pool
                 return outs[-1].unsqueeze(2)
 
             else:
                 return torch.stack(outs, dim=2)
 
-        def forward_regular_unrolled(self, input: Tensor) -> Tensor:
+        def forward(self, input: Tensor) -> Tensor:
             """Performs a full forward computation exactly as the regular layer would.
 
             Args:
@@ -246,7 +246,7 @@ def _co_window_pooled(  # noqa: C901
             Returns:
                 Tensor: Layer output
             """
-            # For now, use implementation in forward_regular
+            # For now, use implementation in forward_steps
             # TODO: Update impl
             assert len(input.shape) == len(
                 self.input_shape_desciption
@@ -261,7 +261,7 @@ def _co_window_pooled(  # noqa: C901
                     count_include_pad=True,
                 )
             else:
-                return self.forward_regular(input)
+                return self.forward_steps(input)
 
         @property
         def delay(self):

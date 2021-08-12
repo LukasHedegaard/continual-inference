@@ -10,6 +10,11 @@ State = Tuple[Tensor, int]
 
 
 class Delay(torch.nn.Module, _CoModule):
+    """Continual delay modules
+
+    NB: This module only introduces a delay in the continual modes, i.e. on `forward_step` and `forward_steps`
+    """
+
     def __init__(
         self,
         delay: int,
@@ -51,13 +56,13 @@ class Delay(torch.nn.Module, _CoModule):
         else:
             return None
 
-    def forward(self, input: Tensor) -> Tensor:
-        output, (self.state_buffer, self.state_index) = self._forward(
+    def forward_step(self, input: Tensor) -> Tensor:
+        output, (self.state_buffer, self.state_index) = self._forward_step(
             input, self.get_state()
         )
         return output
 
-    def _forward(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
+    def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         if prev_state is None:
             buffer, index = self.init_state(input)
         else:
@@ -72,15 +77,15 @@ class Delay(torch.nn.Module, _CoModule):
 
         return output, (buffer, new_index)
 
-    def forward_regular(self, input: Tensor) -> Tensor:
+    def forward_steps(self, input: Tensor) -> Tensor:
         # Pass into delay line, but discard output
         self.forward(input)
 
-        # No delay during forward_regular
+        # No delay during forward_steps
         return input
 
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
-        # No delay during forward_regular
+    def forward(self, input: Tensor) -> Tensor:
+        # No delay during forward_steps
         return input
 
     @property

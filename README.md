@@ -147,7 +147,7 @@ For more information, we refer to the [seminal paper on Continual Convolutions](
 ## Forward modes
 The library components feature three distinct forward modes, which are handy for different situations.
 
-### `forward`
+### `forward_step`
 Performs a forward computation for a single frame and continual states are updated accordingly. This is the mode to use for continual inference.
 
 ```
@@ -158,7 +158,7 @@ O+S O+S O+S O+S   (O: output, S: updated internal state)
  I   I   I   I    (I: input frame)
 ```
 
-### `forward_regular`
+### `forward_steps`
 Performs a layer-wise forward computation using the continual module.
 The computation is performed frame-by-frame and continual states are updated accordingly.
 The output-input mapping the exact same as that of a regular module.
@@ -174,7 +174,7 @@ This mode is handy for initialising the network on a whole clip (multipleframes)
  P   I   I   I   P    (I: input frame, P: padding)
 ```
 
-### `forward_regular_unrolled`
+### `forward`
 Performs a full forward computation exactly as the regular layer would.
 This method is handy for effient training on clip-based data.
 

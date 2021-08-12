@@ -12,19 +12,23 @@ def test_delay_3d():
     zeros = torch.zeros_like(example_input[:, :, 0])
     ones = torch.ones_like(example_input[:, :, 0])
 
-    assert torch.equal(delay(example_input[:, :, 0]), zeros)
+    assert torch.equal(delay.forward_step(example_input[:, :, 0]), zeros)
 
-    assert torch.equal(delay(example_input[:, :, 1]), zeros)
+    assert torch.equal(delay.forward_step(example_input[:, :, 1]), zeros)
 
-    assert torch.equal(delay(example_input[:, :, 2]), example_input[:, :, 0])
+    assert torch.equal(
+        delay.forward_step(example_input[:, :, 2]), example_input[:, :, 0]
+    )
 
-    assert torch.equal(delay(example_input[:, :, 3]), example_input[:, :, 1])
+    assert torch.equal(
+        delay.forward_step(example_input[:, :, 3]), example_input[:, :, 1]
+    )
 
-    assert torch.equal(delay(ones), example_input[:, :, 2])
+    assert torch.equal(delay.forward_step(ones), example_input[:, :, 2])
 
-    assert torch.equal(delay(ones), example_input[:, :, 3])
+    assert torch.equal(delay.forward_step(ones), example_input[:, :, 3])
 
-    assert torch.equal(delay(ones), ones)
+    assert torch.equal(delay.forward_step(ones), ones)
 
 
 def test_delay_2d():
@@ -35,16 +39,20 @@ def test_delay_2d():
     zeros = torch.zeros_like(example_input[:, :, 0])
     ones = torch.ones_like(example_input[:, :, 0])
 
-    assert torch.equal(delay(example_input[:, :, 0]), zeros)
+    assert torch.equal(delay.forward_step(example_input[:, :, 0]), zeros)
 
-    assert torch.equal(delay(example_input[:, :, 1]), zeros)
+    assert torch.equal(delay.forward_step(example_input[:, :, 1]), zeros)
 
-    assert torch.equal(delay(example_input[:, :, 2]), example_input[:, :, 0])
+    assert torch.equal(
+        delay.forward_step(example_input[:, :, 2]), example_input[:, :, 0]
+    )
 
-    assert torch.equal(delay(example_input[:, :, 3]), example_input[:, :, 1])
+    assert torch.equal(
+        delay.forward_step(example_input[:, :, 3]), example_input[:, :, 1]
+    )
 
-    assert torch.equal(delay(ones), example_input[:, :, 2])
+    assert torch.equal(delay.forward_step(ones), example_input[:, :, 2])
 
-    assert torch.equal(delay(ones), example_input[:, :, 3])
+    assert torch.equal(delay.forward_step(ones), example_input[:, :, 3])
 
-    assert torch.equal(delay(ones), ones)
+    assert torch.equal(delay.forward_step(ones), ones)
