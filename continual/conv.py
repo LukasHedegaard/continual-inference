@@ -4,10 +4,8 @@ from typing import Callable, Tuple
 import torch
 import torch.nn.functional as F
 from torch import Tensor
+from torch import nn
 from torch.nn.modules.conv import (
-    Conv1d,
-    Conv2d,
-    Conv3d,
     _ConvNd,
     _pair,
     _reverse_repeat_tuple,
@@ -279,7 +277,7 @@ class _ConvCoNd(_ConvNd, _CoModule):
         return self.kernel_size[0] - 1 - self.padding[0]
 
 
-class ConvCo1d(_ConvCoNd):
+class Conv1d(_ConvCoNd):
     def __init__(
         self,
         in_channels: int,
@@ -334,7 +332,7 @@ class ConvCo1d(_ConvCoNd):
         """
         _ConvCoNd.__init__(
             self,
-            Conv1d,
+            nn.Conv1d,
             F.conv1d,
             ("batch_size", "channel", "time"),
             _single,
@@ -352,15 +350,15 @@ class ConvCo1d(_ConvCoNd):
 
     @staticmethod
     def from_regular(
-        module: Conv1d, temporal_fill: FillMode = "replicate"
-    ) -> "ConvCo1d":
+        module: nn.Conv1d, temporal_fill: FillMode = "replicate"
+    ) -> "Conv1d":
         dilation = (1, *module.dilation[1:])
         if dilation != module.dilation:
             warn(
-                f"Using dilation = {dilation} for ConvCo1d (converted from {module.dilation})"
+                f"Using dilation = {dilation} for Conv1d (converted from {module.dilation})"
             )
 
-        rmodule = ConvCo1d(
+        rmodule = Conv1d(
             in_channels=module.in_channels,
             out_channels=module.out_channels,
             kernel_size=module.kernel_size,
@@ -379,7 +377,7 @@ class ConvCo1d(_ConvCoNd):
         return rmodule
 
 
-class ConvCo2d(_ConvCoNd):
+class Conv2d(_ConvCoNd):
     def __init__(
         self,
         in_channels: int,
@@ -434,7 +432,7 @@ class ConvCo2d(_ConvCoNd):
         """
         _ConvCoNd.__init__(
             self,
-            Conv2d,
+            nn.Conv2d,
             F.conv2d,
             ("batch_size", "channel", "time", "space"),
             _pair,
@@ -452,15 +450,15 @@ class ConvCo2d(_ConvCoNd):
 
     @staticmethod
     def from_regular(
-        module: Conv2d, temporal_fill: FillMode = "replicate"
-    ) -> "ConvCo2d":
+        module: nn.Conv2d, temporal_fill: FillMode = "replicate"
+    ) -> "Conv2d":
         dilation = (1, *module.dilation[1:])
         if dilation != module.dilation:
             warn(
-                f"Using dilation = {dilation} for ConvCo2d (converted from {module.dilation})"
+                f"Using dilation = {dilation} for Conv2d (converted from {module.dilation})"
             )
 
-        rmodule = ConvCo2d(
+        rmodule = Conv2d(
             in_channels=module.in_channels,
             out_channels=module.out_channels,
             kernel_size=module.kernel_size,
@@ -479,7 +477,7 @@ class ConvCo2d(_ConvCoNd):
         return rmodule
 
 
-class ConvCo3d(_ConvCoNd):
+class Conv3d(_ConvCoNd):
     def __init__(
         self,
         in_channels: int,
@@ -499,7 +497,7 @@ class ConvCo3d(_ConvCoNd):
         Assuming an input of shape `(B, C, T, H, W)`, it computes the convolution over one temporal instant `t` at a time
         where `t` ∈ `range(T)`, and keeps an internal state. Two forward modes are supported here.
 
-        `forward_regular` operates identically to `Conv3d.forward`
+        `forward_regular` operates identically to `nn.Conv3d.forward`
 
         `forward`   takes an input of shape `(B, C, H, W)`, and computes a single-frame output (B, C', H', W') based on its internal state.
                     On the first execution, the state is initialised with either ``'zeros'`` (corresponding to a zero padding of kernel_size[0]-1)
@@ -536,7 +534,7 @@ class ConvCo3d(_ConvCoNd):
         """
         _ConvCoNd.__init__(
             self,
-            Conv2d,
+            nn.Conv2d,
             F.conv3d,
             ("batch_size", "channel", "time", "height", "width"),
             _triple,
@@ -554,8 +552,8 @@ class ConvCo3d(_ConvCoNd):
 
     @staticmethod
     def from_regular(
-        module: Conv3d, temporal_fill: FillMode = "replicate"
-    ) -> "ConvCo3d":
+        module: nn.Conv3d, temporal_fill: FillMode = "replicate"
+    ) -> "Conv3d":
         stride = (1, *module.stride[1:])
         dilation = (1, *module.dilation[1:])
         for shape, name in zip(
@@ -571,7 +569,7 @@ class ConvCo3d(_ConvCoNd):
                     f"Using {name} = {shape} for ConvCo3D (converted from {prev_shape})"
                 )
 
-        rmodule = ConvCo3d(
+        rmodule = Conv3d(
             in_channels=module.in_channels,
             out_channels=module.out_channels,
             kernel_size=module.kernel_size,
@@ -594,9 +592,9 @@ class ConvCo3d(_ConvCoNd):
 try:
     from ptflops import flops_counter as fc
 
-    fc.MODULES_MAPPING[ConvCo1d] = fc.conv_flops_counter_hook
-    fc.MODULES_MAPPING[ConvCo2d] = fc.conv_flops_counter_hook
-    fc.MODULES_MAPPING[ConvCo3d] = fc.conv_flops_counter_hook
+    fc.MODULES_MAPPING[Conv1d] = fc.conv_flops_counter_hook
+    fc.MODULES_MAPPING[Conv2d] = fc.conv_flops_counter_hook
+    fc.MODULES_MAPPING[Conv3d] = fc.conv_flops_counter_hook
 except ModuleNotFoundError:
     pass
 except Exception as e:

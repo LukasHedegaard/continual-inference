@@ -9,7 +9,7 @@ def normalise_momentum(num_frames: int, base_mom=0.1):
     return 2 / (num_frames * (2 / base_mom - 1) + 1)
 
 
-class BatchNormCo2d(_BatchNorm, _CoModule):
+class BatchNorm2d(_BatchNorm, _CoModule):
     def __init__(
         self,
         num_features,
@@ -19,7 +19,7 @@ class BatchNormCo2d(_BatchNorm, _CoModule):
         track_running_stats=True,
         window_size=1,
     ):
-        super(BatchNormCo2d, self).__init__(
+        super(BatchNorm2d, self).__init__(
             num_features, eps, momentum, affine, track_running_stats
         )
         # Normalise momentum w.r.t. the expected clip size

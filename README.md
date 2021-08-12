@@ -25,10 +25,34 @@ Building blocks for Continual Inference Networks in PyTorch
 pip install continual-inference
 ```
 
+## Usage
+```python3
+import torch
+from torch import nn
+import continual as co
+                                                           # B, C, T, H, W
+example = torch.normal(mean=torch.zeros(4 * 3 * 3)).reshape((1, 1, 4, 3, 3))
+
+# Acts as a drop-in replacement for torch.nn modules ✅
+co_conv = co.nn.Conv3d(in_channels=1, out_channels=1, kernel_size=(3, 3, 3))
+nn_conv = nn.nn.Conv3d(in_channels=1, out_channels=1, kernel_size=(3, 3, 3))
+
+co_output = co_conv(example) # Same exact computation
+nn_output = nn_conv(example) # Same exact computation
+assert torch.allequals(co_output, nn_output)
+
+# But can also perform online inference efficiently 🎉
+firsts = co_conv.forward_steps(example[:,:,:3])
+last = co_conv.forward_step(example[:,:,3])
+
+assert nn_output[:,:,:] == firsts[:,:,co_conv.delay:]
+assert nn_output[:,:,co_conv.delay] == last
+```
+
 ## Continual Inference Networks (CINs)
 Continual Inference Networks are a type of neural network, which operate on a continual input stream of data and infer a new prediction for each new time-step.
 
-All networks and network-modules, that do not utilise temporal information can be used for an Online Inference Network (e.g. `Conv1d` and `Conv2d` on spatial data such as an image). 
+All networks and network-modules, that do not utilise temporal information can be used for an Online Inference Network (e.g. `nn.Conv1d` and `nn.Conv2d` on spatial data such as an image). 
 Moreover, recurrent modules (e.g. `LSTM` and `GRU`), that summarize past events in an internal state are also useable in CINs.
 
 __CIN__:
@@ -42,7 +66,7 @@ Conv2D  Conv2D  Conv2D   (spatial 2D conv)
   I       I       I      (input frame)
 ```
 
-However, modules that operate on temporal data with the assumption that the more temporal context is available than the current frame (e.g. the spatio-temporal `Conv3d` used by many SotA video recognition models) cannot be directly applied.
+However, modules that operate on temporal data with the assumption that the more temporal context is available than the current frame (e.g. the spatio-temporal `nn.Conv3d` used by many SotA video recognition models) cannot be directly applied.
 
 __Not CIN__:
 ```
@@ -72,30 +96,32 @@ This repository contains online inference-friendly versions of common network bu
 
 <!-- TODO: Replace with link to docs once they are set up -->
 - (Temporal) convolutions:
-    - `ConvCo1d`
-    - `ConvCo2d`
-    - `ConvCo3d`
+    - `co.Conv1d`
+    - `co.Conv2d`
+    - `co.Conv3d`
 
 - (Temporal) batch normalisation:
-    - `BatchNormCo2d`
+    - `co.BatchNorm2d`
 
 - (Temporal) pooling:
-    - `AvgPoolCo1d`
-    - `AvgPoolCo2d`
-    - `AvgPoolCo3d`
-    - `MaxPoolCo1d`
-    - `MaxPoolCo2d`
-    - `MaxPoolCo3d`
-    - `AdaptiveAvgPoolCo1d`
-    - `AdaptiveAvgPoolCo2d`
-    - `AdaptiveAvgPoolCo3d`
-    - `AdaptiveMaxPoolCo1d`
-    - `AdaptiveMaxPoolCo2d`
-    - `AdaptiveMaxPoolCo3d`
+    - `co.AvgPool1d`
+    - `co.AvgPool2d`
+    - `co.AvgPool3d`
+    - `co.MaxPool1d`
+    - `co.MaxPool2d`
+    - `co.MaxPool3d`
+    - `co.AdaptiveAvgPool1d`
+    - `co.AdaptiveAvgPool2d`
+    - `co.AdaptiveAvgPool3d`
+    - `co.AdaptiveMaxPool1d`
+    - `co.AdaptiveMaxPool2d`
+    - `co.AdaptiveMaxPool3d`
 
 - Other
-    - `Delay` - pure delay module
-    - `Continual` - functional wrapper for non-continual modules
+    <!-- - `co.Sequential` -->
+    - `co.Delay` - pure delay module
+    <!-- - `co.Residual` - residual connection, which automatically adds delay if needed -->
+    - `co.continual` - functional wrapper for non-continual modules
 
 ### Continual Convolutions
 Continual Convolutions can lead to major improvements in computational efficiency when online / frame-by-frame predictions are required.

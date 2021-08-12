@@ -1,24 +1,24 @@
 import torch
-from torch.nn import Conv1d, Conv2d
+from torch import nn
 
-from continual import ConvCo1d, ConvCo2d, ConvCo3d
+from continual import Conv1d, Conv2d, Conv3d
 from continual.utils import TensorPlaceholder
 
 torch.manual_seed(42)
 
 
-def test_ConvCo1d():
+def test_Conv1d():
     C = 2
     T = 3
     L = 5
     sample = torch.normal(mean=torch.zeros(L * C)).reshape((1, C, L))
 
     # Regular
-    conv = Conv1d(in_channels=C, out_channels=1, kernel_size=T, bias=True)
+    conv = nn.Conv1d(in_channels=C, out_channels=1, kernel_size=T, bias=True)
     target = conv(sample)
 
     # Continual
-    co_conv = ConvCo1d.from_regular(conv, "zeros")
+    co_conv = Conv1d.from_regular(conv, "zeros")
     output = []
 
     # Frame by frame
@@ -38,7 +38,7 @@ def test_ConvCo1d():
     assert torch.equal(target, output2)
 
 
-def test_ConvCo1d_stride():
+def test_Conv1d_stride():
     C = 2
     T = 3
     L = 5
@@ -46,11 +46,11 @@ def test_ConvCo1d_stride():
     sample = torch.normal(mean=torch.zeros(L * C)).reshape((1, C, L))
 
     # Regular
-    conv = Conv1d(in_channels=C, out_channels=1, kernel_size=T, bias=True, stride=S)
+    conv = nn.Conv1d(in_channels=C, out_channels=1, kernel_size=T, bias=True, stride=S)
     target = conv(sample)
 
     # Continual
-    co_conv = ConvCo1d.from_regular(conv, "zeros")
+    co_conv = Conv1d.from_regular(conv, "zeros")
     output = []
 
     # Frame by frame
@@ -69,7 +69,7 @@ def test_ConvCo1d_stride():
     assert torch.allclose(target, output)
 
 
-def test_ConvCo2d():
+def test_Conv2d():
     C = 2
     T = 3
     S = 2
@@ -78,11 +78,11 @@ def test_ConvCo2d():
     sample = torch.normal(mean=torch.zeros(L * C * H)).reshape((1, C, L, H))
 
     # Regular
-    conv = Conv2d(in_channels=C, out_channels=1, kernel_size=(T, S), bias=True)
+    conv = nn.Conv2d(in_channels=C, out_channels=1, kernel_size=(T, S), bias=True)
     target = conv(sample)
 
     # Continual
-    co_conv = ConvCo2d.from_regular(conv, "zeros")
+    co_conv = Conv2d.from_regular(conv, "zeros")
     output = []
 
     # Frame by frame
@@ -102,7 +102,7 @@ def test_ConvCo2d():
     assert torch.equal(target, output2)
 
 
-def test_ConvCo2d_stride():
+def test_Conv2d_stride():
     C = 2
     T = 3
     S = 2
@@ -112,13 +112,13 @@ def test_ConvCo2d_stride():
     sample = torch.normal(mean=torch.zeros(L * C * H)).reshape((1, C, L, H))
 
     # Regular
-    conv = Conv2d(
+    conv = nn.Conv2d(
         in_channels=C, out_channels=1, kernel_size=(T, S), bias=True, stride=stride
     )
     target = conv(sample)
 
     # Continual
-    co_conv = ConvCo2d.from_regular(conv, "zeros")
+    co_conv = Conv2d.from_regular(conv, "zeros")
     output = []
 
     # Frame by frame
@@ -205,8 +205,8 @@ def test_basic_forward():
     )
     target = conv(example_clip)
 
-    coconv = ConvCo3d.from_regular(conv)
-    # coconv = ConvCo3d(
+    coconv = Conv3d.from_regular(conv)
+    # coconv = Conv3d(
     #     in_channels=1,
     #     out_channels=1,
     #     kernel_size=(S, T, T),
@@ -234,8 +234,8 @@ def test_forward_long_kernel():
     )
     target = conv(example_clip)
 
-    coconv = ConvCo3d.from_regular(conv)
-    # coconv = ConvCo3d(
+    coconv = Conv3d.from_regular(conv)
+    # coconv = Conv3d(
     #     in_channels=1,
     #     out_channels=1,
     #     kernel_size=(T, S, S),
@@ -263,7 +263,7 @@ def test_from_conv3d():
     )
     target = regular(example_clip)
 
-    co3 = ConvCo3d.from_regular(regular)
+    co3 = Conv3d.from_regular(regular)
 
     output = []
     for i in range(example_clip.shape[2]):
@@ -290,7 +290,7 @@ def test_from_conv3d_bad_shape():
     )
 
     # Also warns
-    co3 = ConvCo3d.from_regular(regular)
+    co3 = Conv3d.from_regular(regular)
 
     # Changed               V
     assert co3.dilation == (1, 2, 2)
@@ -319,7 +319,7 @@ def test_complex():
     )
     regular_output = regular(example_clip_large).detach()
 
-    co3 = ConvCo3d.from_regular(regular, temporal_fill="zeros")
+    co3 = Conv3d.from_regular(regular, temporal_fill="zeros")
     co3_output = co3.forward_regular(example_clip_large)
 
     assert torch.allclose(regular_output, co3_output, atol=5e-8)
@@ -334,7 +334,7 @@ def test_forward_continuation():
         padding=(1, 1, 1),
         padding_mode="zeros",
     )
-    coconv = ConvCo3d.from_regular(conv, temporal_fill="zeros")
+    coconv = Conv3d.from_regular(conv, temporal_fill="zeros")
 
     # Run batch inference and fill memory
     target1 = conv(example_clip)
@@ -378,9 +378,9 @@ def test_stacked_impulse_response():
 
     # Init continual
     cnn = torch.nn.Sequential(
-        ConvCo3d.from_regular(conv1, temporal_fill="zeros"),
-        ConvCo3d.from_regular(conv2, temporal_fill="zeros"),
-        ConvCo3d.from_regular(conv2, temporal_fill="zeros"),
+        Conv3d.from_regular(conv1, temporal_fill="zeros"),
+        Conv3d.from_regular(conv2, temporal_fill="zeros"),
+        Conv3d.from_regular(conv2, temporal_fill="zeros"),
     )
 
     cnn(ones)  # Impulse
@@ -422,8 +422,8 @@ def test_stacked_no_pad():
     )
 
     # Init continual
-    rconv1 = ConvCo3d.from_regular(conv1, temporal_fill="zeros")
-    rconv2 = ConvCo3d.from_regular(conv2, temporal_fill="zeros")
+    rconv1 = Conv3d.from_regular(conv1, temporal_fill="zeros")
+    rconv2 = Conv3d.from_regular(conv2, temporal_fill="zeros")
 
     # Targets
     target11 = conv1(long_example_clip)

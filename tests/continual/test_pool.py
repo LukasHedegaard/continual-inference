@@ -1,5 +1,7 @@
 import torch
-from torch.nn.modules.pooling import (
+from torch import nn
+
+from continual import (
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
     AdaptiveMaxPool3d,
@@ -8,30 +10,21 @@ from torch.nn.modules.pooling import (
     MaxPool3d,
 )
 
-from continual import (
-    AdaptiveAvgPoolCo2d,
-    AdaptiveAvgPoolCo3d,
-    AdaptiveMaxPoolCo3d,
-    AvgPoolCo1d,
-    AvgPoolCo3d,
-    MaxPoolCo3d,
-)
-
 torch.manual_seed(42)
 
 
-def test_AvgPoolCo1d():
+def test_AvgPool1d():
     C = 2
     T = 3
     L = 5
     sample = torch.normal(mean=torch.zeros(L * C)).reshape((1, C, L))
 
     # Regular
-    pool = AvgPool1d(T, stride=1)
+    pool = nn.AvgPool1d(T, stride=1)
     target = pool(sample)
 
     # Continual
-    co_pool = AvgPoolCo1d(T)
+    co_pool = AvgPool1d(T)
     output = []
 
     # Frame by frame
@@ -51,18 +44,18 @@ def test_AvgPoolCo1d():
     assert torch.equal(target, output2)
 
 
-def test_AdaptiveAvgPoolCo2d():
+def test_AdaptiveAvgPool2d():
     C = 2
     L = 5
     S = 3
     sample = torch.normal(mean=torch.zeros(L * C * S)).reshape((1, C, L, S))
 
     # Regular
-    pool = AdaptiveAvgPool2d((1, 1))
+    pool = nn.AdaptiveAvgPool2d((1, 1))
     target = pool(sample)
 
     # Continual
-    co_pool = AdaptiveAvgPoolCo2d(window_size=L, output_size=(1,))
+    co_pool = AdaptiveAvgPool2d(window_size=L, output_size=(1,))
 
     # Whole time-series
     output = co_pool.forward_regular(sample)
@@ -86,11 +79,9 @@ next_example_clip = torch.stack(
 )
 
 
-def test_AvgPoolCo3d():
-    target = AvgPool3d((2, 2, 2))(example_clip)
-    output = AvgPoolCo3d(window_size=2, kernel_size=(2, 2)).forward_regular(
-        example_clip
-    )
+def test_AvgPool3d():
+    target = nn.AvgPool3d((2, 2, 2))(example_clip)
+    output = AvgPool3d(window_size=2, kernel_size=(2, 2)).forward_regular(example_clip)
     sub_output = torch.stack(
         [
             output[:, :, 0],
@@ -101,9 +92,9 @@ def test_AvgPoolCo3d():
     assert torch.allclose(sub_output, target)
 
 
-def test_AdaptiveAvgPoolCo3d():
-    pool = AdaptiveAvgPool3d((1, 1, 1))
-    rpool = AdaptiveAvgPoolCo3d(window_size=4, output_size=(1, 1))
+def test_AdaptiveAvgPool3d():
+    pool = nn.AdaptiveAvgPool3d((1, 1, 1))
+    rpool = AdaptiveAvgPool3d(window_size=4, output_size=(1, 1))
 
     target = pool(example_clip)
     output = rpool.forward_regular(example_clip)
@@ -115,11 +106,9 @@ def test_AdaptiveAvgPoolCo3d():
     assert torch.allclose(target_next, output_frame_next)
 
 
-def test_MaxPoolCo3d():
-    target = MaxPool3d((2, 2, 2))(example_clip)
-    output = MaxPoolCo3d(window_size=2, kernel_size=(2, 2)).forward_regular(
-        example_clip
-    )
+def test_MaxPool3d():
+    target = nn.MaxPool3d((2, 2, 2))(example_clip)
+    output = MaxPool3d(window_size=2, kernel_size=(2, 2)).forward_regular(example_clip)
     sub_output = torch.stack(
         [
             output[:, :, 0],
@@ -130,17 +119,17 @@ def test_MaxPoolCo3d():
     assert torch.allclose(sub_output, target)
 
 
-def test_AdaptiveMaxPoolCo3d():
-    target = AdaptiveMaxPool3d((1, 1, 1))(example_clip)
-    output = AdaptiveMaxPoolCo3d(window_size=4, output_size=(1, 1)).forward_regular(
+def test_AdaptiveMaxPool3d():
+    target = nn.AdaptiveMaxPool3d((1, 1, 1))(example_clip)
+    output = AdaptiveMaxPool3d(window_size=4, output_size=(1, 1)).forward_regular(
         example_clip
     )
     assert torch.allclose(output, target)
 
 
-def test_MaxPoolCo3d_dilation():
-    target = MaxPool3d((2, 2, 2), dilation=(2, 1, 1))(example_long)
-    output = MaxPoolCo3d(
+def test_MaxPool3d_dilation():
+    target = nn.MaxPool3d((2, 2, 2), dilation=(2, 1, 1))(example_long)
+    output = MaxPool3d(
         window_size=4, kernel_size=(2, 2), temporal_dilation=2
     ).forward_regular(example_long)
     assert torch.allclose(target, output.index_select(2, torch.tensor([0, 2, 4])))

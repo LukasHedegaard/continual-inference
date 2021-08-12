@@ -3,16 +3,7 @@ from typing import Callable, Tuple, Type, TypeVar
 import torch
 import torch.nn.functional as F
 from torch import Tensor
-from torch.nn.modules.pooling import (
-    AdaptiveAvgPool1d,
-    AdaptiveAvgPool2d,
-    AdaptiveMaxPool1d,
-    AdaptiveMaxPool2d,
-    AvgPool1d,
-    AvgPool2d,
-    MaxPool1d,
-    MaxPool2d,
-)
+from torch import nn
 
 from .interface import _CoModule
 from .utils import FillMode
@@ -22,16 +13,16 @@ State = Tuple[Tensor, int]
 T = TypeVar("T")
 
 __all__ = [
-    "AvgPoolCo1d",
-    "MaxPoolCo1d",
-    "AvgPoolCo2d",
-    "MaxPoolCo2d",
-    "AdaptiveAvgPoolCo2d",
-    "AdaptiveMaxPoolCo2d",
-    "AvgPoolCo3d",
-    "MaxPoolCo3d",
-    "AdaptiveAvgPoolCo3d",
-    "AdaptiveMaxPoolCo3d",
+    "AvgPool1d",
+    "MaxPool1d",
+    "AvgPool2d",
+    "MaxPool2d",
+    "AdaptiveAvgPool2d",
+    "AdaptiveMaxPool2d",
+    "AvgPool3d",
+    "MaxPool3d",
+    "AdaptiveAvgPool3d",
+    "AdaptiveMaxPool3d",
 ]
 
 State = Tuple[Tensor, int]
@@ -60,14 +51,14 @@ def _co_window_pooled(  # noqa: C901
     assert cls in {
         _DummyAvgPool,
         _DummyMaxPool,
-        AdaptiveAvgPool1d,
-        MaxPool1d,
-        AvgPool1d,
-        AdaptiveMaxPool1d,
-        AvgPool2d,
-        MaxPool2d,
-        AdaptiveAvgPool2d,
-        AdaptiveMaxPool2d,
+        nn.AdaptiveAvgPool1d,
+        nn.MaxPool1d,
+        nn.AvgPool1d,
+        nn.AdaptiveMaxPool1d,
+        nn.AvgPool2d,
+        nn.MaxPool2d,
+        nn.AdaptiveAvgPool2d,
+        nn.AdaptiveMaxPool2d,
     }
 
     class CoPool1d(_CoModule, cls):
@@ -98,7 +89,7 @@ def _co_window_pooled(  # noqa: C901
             ]
 
             self.temporal_pool = (
-                AdaptiveAvgPool1d if "avg" in class_name else AdaptiveMaxPool1d
+                nn.AdaptiveAvgPool1d if "avg" in class_name else nn.AdaptiveMaxPool1d
             )(1)
 
             if self.temporal_dilation > 1:
@@ -279,7 +270,7 @@ def _co_window_pooled(  # noqa: C901
     return CoPool1d
 
 
-class AvgPoolCo1d(_co_window_pooled(_DummyAvgPool, F.avg_pool1d)):
+class AvgPool1d(_co_window_pooled(_DummyAvgPool, F.avg_pool1d)):
     """
     Continual Average Pool in 1D
 
@@ -289,7 +280,7 @@ class AvgPoolCo1d(_co_window_pooled(_DummyAvgPool, F.avg_pool1d)):
     ...
 
 
-class MaxPoolCo1d(_co_window_pooled(_DummyMaxPool, F.max_pool1d)):
+class MaxPool1d(_co_window_pooled(_DummyMaxPool, F.max_pool1d)):
     """
     Continual Max Pool in 1D
 
@@ -299,7 +290,7 @@ class MaxPoolCo1d(_co_window_pooled(_DummyMaxPool, F.max_pool1d)):
     ...
 
 
-class AvgPoolCo2d(_co_window_pooled(AvgPool1d, F.avg_pool2d)):
+class AvgPool2d(_co_window_pooled(nn.AvgPool1d, F.avg_pool2d)):
     """
     Continual Average Pool in 2D
 
@@ -309,7 +300,7 @@ class AvgPoolCo2d(_co_window_pooled(AvgPool1d, F.avg_pool2d)):
     ...
 
 
-class MaxPoolCo2d(_co_window_pooled(MaxPool1d, F.max_pool2d)):
+class MaxPool2d(_co_window_pooled(nn.MaxPool1d, F.max_pool2d)):
     """
     Continual Max Pool in 2D
 
@@ -319,7 +310,7 @@ class MaxPoolCo2d(_co_window_pooled(MaxPool1d, F.max_pool2d)):
     ...
 
 
-class AdaptiveAvgPoolCo2d(_co_window_pooled(AdaptiveAvgPool1d)):
+class AdaptiveAvgPool2d(_co_window_pooled(nn.AdaptiveAvgPool1d)):
     """
     Continual Adaptive Average Pool in 2D
 
@@ -329,7 +320,7 @@ class AdaptiveAvgPoolCo2d(_co_window_pooled(AdaptiveAvgPool1d)):
     ...
 
 
-class AdaptiveMaxPoolCo2d(_co_window_pooled(AdaptiveMaxPool1d)):
+class AdaptiveMaxPool2d(_co_window_pooled(nn.AdaptiveMaxPool1d)):
     """
     Continual Adaptive Max Pool in 2D
 
@@ -339,7 +330,7 @@ class AdaptiveMaxPoolCo2d(_co_window_pooled(AdaptiveMaxPool1d)):
     ...
 
 
-class AvgPoolCo3d(_co_window_pooled(AvgPool2d, F.avg_pool3d)):
+class AvgPool3d(_co_window_pooled(nn.AvgPool2d, F.avg_pool3d)):
     """
     Continual Average Pool in 3D
 
@@ -349,7 +340,7 @@ class AvgPoolCo3d(_co_window_pooled(AvgPool2d, F.avg_pool3d)):
     ...
 
 
-class MaxPoolCo3d(_co_window_pooled(MaxPool2d, F.max_pool3d)):
+class MaxPool3d(_co_window_pooled(nn.MaxPool2d, F.max_pool3d)):
     """
     Continual Max Pool in 3D
 
@@ -359,21 +350,21 @@ class MaxPoolCo3d(_co_window_pooled(MaxPool2d, F.max_pool3d)):
     ...
 
 
-class AdaptiveAvgPoolCo3d(_co_window_pooled(AdaptiveAvgPool2d)):
+class AdaptiveAvgPool3d(_co_window_pooled(nn.AdaptiveAvgPool2d)):
     """
     Continual Adaptive Average Pool in 3D
 
-    This is the continual version of the regular :class:`torch.nn.AdaptiveAvgPool3d`
+    This is the continual version of the regular :class:`torch.nn.nn.AdaptiveAvgPool3d`
     """
 
     ...
 
 
-class AdaptiveMaxPoolCo3d(_co_window_pooled(AdaptiveMaxPool2d)):
+class AdaptiveMaxPool3d(_co_window_pooled(nn.AdaptiveMaxPool2d)):
     """
     Continual Adaptive Max Pool in 3D
 
-    This is the continual version of the regular :class:`torch.nn.AdaptiveMaxPool3d`
+    This is the continual version of the regular :class:`torch.nn.nn.AdaptiveMaxPool3d`
     """
 
     ...
