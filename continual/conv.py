@@ -350,9 +350,7 @@ class Conv1d(_ConvCoNd):
         )
 
     @staticmethod
-    def from_regular(
-        module: nn.Conv1d, temporal_fill: FillMode = "replicate"
-    ) -> "Conv1d":
+    def like(module: nn.Conv1d, temporal_fill: FillMode = "replicate") -> "Conv1d":
         dilation = (1, *module.dilation[1:])
         if dilation != module.dilation:
             warn(
@@ -450,9 +448,7 @@ class Conv2d(_ConvCoNd):
         )
 
     @staticmethod
-    def from_regular(
-        module: nn.Conv2d, temporal_fill: FillMode = "replicate"
-    ) -> "Conv2d":
+    def like(module: nn.Conv2d, temporal_fill: FillMode = "replicate") -> "Conv2d":
         dilation = (1, *module.dilation[1:])
         if dilation != module.dilation:
             warn(
@@ -552,9 +548,7 @@ class Conv3d(_ConvCoNd):
         )
 
     @staticmethod
-    def from_regular(
-        module: nn.Conv3d, temporal_fill: FillMode = "replicate"
-    ) -> "Conv3d":
+    def like(module: nn.Conv3d, temporal_fill: FillMode = "replicate") -> "Conv3d":
         stride = (1, *module.stride[1:])
         dilation = (1, *module.dilation[1:])
         for shape, name in zip(
