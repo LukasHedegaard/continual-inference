@@ -2,8 +2,7 @@ from typing import Callable, Tuple, Type, TypeVar
 
 import torch
 import torch.nn.functional as F
-from torch import Tensor
-from torch import nn
+from torch import Tensor, nn
 
 from .interface import _CoModule
 from .utils import FillMode

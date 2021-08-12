@@ -3,8 +3,7 @@ from typing import Callable, Tuple
 
 import torch
 import torch.nn.functional as F
-from torch import Tensor
-from torch import nn
+from torch import Tensor, nn
 from torch.nn.modules.conv import (
     _ConvNd,
     _pair,
