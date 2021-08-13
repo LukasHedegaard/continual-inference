@@ -465,10 +465,10 @@ class Conv2d(_ConvCoNd):
             padding_mode=module.padding_mode,
             temporal_fill=temporal_fill,
         )
+
         with torch.no_grad():
-            comodule.weight.copy_(module.weight)
-            if module.bias is not None:
-                comodule.bias.copy_(module.bias)
+            comodule.load_state_dict(module.state_dict())
+            
         return comodule
 
 

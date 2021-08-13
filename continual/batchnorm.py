@@ -1,3 +1,4 @@
+import torch
 from torch import Tensor
 from torch import nn
 from torch.nn.modules.batchnorm import _BatchNorm
@@ -49,7 +50,7 @@ class BatchNorm2d(_BatchNorm, CoModule):
 
     @staticmethod
     def build_from(module: nn.BatchNorm2d):
-        return BatchNorm2d(
+        comodule = BatchNorm2d(
             num_features=module.num_features,
             eps=module.eps,
             momentum=module.momentum,
@@ -57,6 +58,11 @@ class BatchNorm2d(_BatchNorm, CoModule):
             track_running_stats=module.track_running_stats,
             window_size=1,
         )
+
+        with torch.no_grad():
+            comodule.load_state_dict(module.state_dict())
+
+        return comodule
 
     @property
     def delay(self) -> int:
