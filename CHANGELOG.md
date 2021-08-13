@@ -10,7 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Changed
 - Naming to match `torch.nn`. This lets the continual modules be used as drop-in replacements for `torch.nn` modules.
 - Renamed `forward_regular_unrolled` to `forward`, `forward_regular` to `forward_steps`, and `forward` for `forward_step`.
-- Renamed `from_regular` for `like`.
+- Renamed `from_regular` to `build_from`.
+- Renamed `continual` to `unsqueezed`.
+
+## Added
+- `Sequential`
+- `continual` conversion function
+- `register` function for 3rd party modules to register their conversion
+- Additional tests
 
 ## [0.1.2] - 2021-08-1
 ### Added
