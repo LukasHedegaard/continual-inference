@@ -6,3 +6,4 @@ pytest
 pytest-cov
 ptflops>=0.6
 numpy
+pytorch_lightning
