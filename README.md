@@ -31,22 +31,23 @@ import torch
 from torch import nn
 import continual as co
                                                            # B, C, T, H, W
-example = torch.normal(mean=torch.zeros(4 * 3 * 3)).reshape((1, 1, 4, 3, 3))
+example = torch.normal(mean=torch.zeros(5 * 3 * 3)).reshape((1, 1, 5, 3, 3))
 
-# Acts as a drop-in replacement for torch.nn modules ✅
-co_conv = co.nn.Conv3d(in_channels=1, out_channels=1, kernel_size=(3, 3, 3))
-nn_conv = nn.nn.Conv3d(in_channels=1, out_channels=1, kernel_size=(3, 3, 3))
+  # Acts as a drop-in replacement for torch.nn modules ✅
+  co_conv = co.Conv3d(in_channels=1, out_channels=1, kernel_size=(3, 3, 3))
+  nn_conv = nn.Conv3d(in_channels=1, out_channels=1, kernel_size=(3, 3, 3))
+  co_conv.load_state_dict(nn_conv.state_dict()) # ensure identical weights
 
-co_output = co_conv(example) # Same exact computation
-nn_output = nn_conv(example) # Same exact computation
-assert torch.allequals(co_output, nn_output)
+  co_output = co_conv(example)  # Same exact computation
+  nn_output = nn_conv(example)  # Same exact computation
+  assert torch.equal(co_output, nn_output)
 
-# But can also perform online inference efficiently 🎉
-firsts = co_conv.forward_steps(example[:,:,:3])
-last = co_conv.forward_step(example[:,:,3])
+  # But can also perform online inference efficiently 🚀
+  firsts = co_conv.forward_steps(example[:, :, :4])
+  last = co_conv.forward_step(example[:, :, 4])
 
-assert nn_output[:,:,:] == firsts[:,:,co_conv.delay:]
-assert nn_output[:,:,co_conv.delay] == last
+  assert torch.allclose(nn_output[:, :, : co_conv.delay], firsts)
+  assert torch.allclose(nn_output[:, :, co_conv.delay], last)
 ```
 
 ## Continual Inference Networks (CINs)
@@ -118,7 +119,7 @@ This repository contains online inference-friendly versions of common network bu
     - `co.AdaptiveMaxPool3d`
 
 - Other
-    <!-- - `co.Sequential` -->
+    - `co.Sequential`
     - `co.Delay` - pure delay module
     <!-- - `co.Residual` - residual connection, which automatically adds delay if needed -->
     - `co.continual` - functional wrapper for non-continual modules
