@@ -24,7 +24,7 @@ def test_AvgPool1d():
     target = pool(sample)
 
     # Continual
-    co_pool = AvgPool1d(T)
+    co_pool = AvgPool1d.build_from(pool)
     output = []
 
     # Frame by frame
@@ -55,7 +55,7 @@ def test_AdaptiveAvgPool2d():
     target = pool(sample)
 
     # Continual
-    co_pool = AdaptiveAvgPool2d(window_size=L, output_size=(1,))
+    co_pool = AdaptiveAvgPool2d(temporal_kernel_size=L, output_size=(1,))
 
     # Whole time-series
     output = co_pool.forward_steps(sample)
@@ -81,7 +81,9 @@ next_example_clip = torch.stack(
 
 def test_AvgPool3d():
     target = nn.AvgPool3d((2, 2, 2))(example_clip)
-    output = AvgPool3d(window_size=2, kernel_size=(2, 2)).forward_steps(example_clip)
+    output = AvgPool3d(temporal_kernel_size=2, kernel_size=(2, 2)).forward_steps(
+        example_clip
+    )
     sub_output = torch.stack(
         [
             output[:, :, 0],
@@ -94,7 +96,7 @@ def test_AvgPool3d():
 
 def test_AdaptiveAvgPool3d():
     pool = nn.AdaptiveAvgPool3d((1, 1, 1))
-    copool = AdaptiveAvgPool3d(window_size=4, output_size=(1, 1))
+    copool = AdaptiveAvgPool3d(temporal_kernel_size=4, output_size=(1, 1))
 
     target = pool(example_clip)
     output = copool.forward_steps(example_clip)
@@ -108,7 +110,9 @@ def test_AdaptiveAvgPool3d():
 
 def test_MaxPool3d():
     target = nn.MaxPool3d((2, 2, 2))(example_clip)
-    output = MaxPool3d(window_size=2, kernel_size=(2, 2)).forward_steps(example_clip)
+    output = MaxPool3d(temporal_kernel_size=2, kernel_size=(2, 2)).forward_steps(
+        example_clip
+    )
     sub_output = torch.stack(
         [
             output[:, :, 0],
@@ -121,15 +125,15 @@ def test_MaxPool3d():
 
 def test_AdaptiveMaxPool3d():
     target = nn.AdaptiveMaxPool3d((1, 1, 1))(example_clip)
-    output = AdaptiveMaxPool3d(window_size=4, output_size=(1, 1)).forward_steps(
-        example_clip
-    )
+    output = AdaptiveMaxPool3d(
+        temporal_kernel_size=4, output_size=(1, 1)
+    ).forward_steps(example_clip)
     assert torch.allclose(output, target)
 
 
 def test_MaxPool3d_dilation():
     target = nn.MaxPool3d((2, 2, 2), dilation=(2, 1, 1))(example_long)
     output = MaxPool3d(
-        window_size=4, kernel_size=(2, 2), temporal_dilation=2
+        temporal_kernel_size=4, kernel_size=(2, 2), temporal_dilation=2
     ).forward_steps(example_long)
     assert torch.allclose(target, output.index_select(2, torch.tensor([0, 2, 4])))

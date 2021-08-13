@@ -1,8 +1,6 @@
-from logging import getLogger
-from typing import Callable, Tuple
-
 import torch
 import torch.nn.functional as F
+from typing import Callable, Tuple
 from torch import Tensor, nn
 from torch.nn.modules.conv import (
     _ConvNd,
@@ -15,27 +13,23 @@ from torch.nn.modules.conv import (
     _triple,
 )
 
-from .interface import _CoModule
-from .utils import FillMode, TensorPlaceholder, temporary_parameter
+from .interface import CoModule, FillMode, TensorPlaceholder
+from .utils import temporary_parameter
+from .logging import getLogger
 
 logger = getLogger(__name__)
 
 State = Tuple[Tensor, int, int]
 
-# Attempt pytorch_lightning compatible logging
-try:
-    from pytorch_lightning.utilities.distributed import rank_zero_only
-    from pytorch_lightning.utilities.warnings import rank_zero_warn as warn
 
-    debug = rank_zero_only(logger.debug)
-
-except ModuleNotFoundError:
-    from warnings import warn
-
-    debug = logger.debug
+__all__ = [
+    "Conv1d",
+    "Conv2d",
+    "Conv3d",
+]
 
 
-class _ConvCoNd(_ConvNd, _CoModule):
+class _ConvCoNd(_ConvNd, CoModule):
     def __init__(
         self,
         ConvClass: torch.nn.Module,
@@ -65,13 +59,13 @@ class _ConvCoNd(_ConvNd, _CoModule):
 
         padding = size_fn(padding)
         if padding[0] != 0:
-            debug(
+            logger.debug(
                 "Padding along the temporal dimension only affects the computation in `forward_steps`. In `forward` it is omitted."
             )
 
         stride = size_fn(stride)
         if stride[0] > 1:
-            warn(
+            logger.warning(
                 f"Temporal stride of {stride[0]} will result in skipped outputs every {stride[0]-1} / {stride[0]} steps"
             )
 
@@ -350,14 +344,16 @@ class Conv1d(_ConvCoNd):
         )
 
     @staticmethod
-    def like(module: nn.Conv1d, temporal_fill: FillMode = "replicate") -> "Conv1d":
+    def build_from(
+        module: nn.Conv1d, temporal_fill: FillMode = "replicate"
+    ) -> "Conv1d":
         dilation = (1, *module.dilation[1:])
         if dilation != module.dilation:
-            warn(
+            logger.warning(
                 f"Using dilation = {dilation} for Conv1d (converted from {module.dilation})"
             )
 
-        rmodule = Conv1d(
+        comodule = Conv1d(
             in_channels=module.in_channels,
             out_channels=module.out_channels,
             kernel_size=module.kernel_size,
@@ -370,10 +366,10 @@ class Conv1d(_ConvCoNd):
             temporal_fill=temporal_fill,
         )
         with torch.no_grad():
-            rmodule.weight.copy_(module.weight)
+            comodule.weight.copy_(module.weight)
             if module.bias is not None:
-                rmodule.bias.copy_(module.bias)
-        return rmodule
+                comodule.bias.copy_(module.bias)
+        return comodule
 
 
 class Conv2d(_ConvCoNd):
@@ -448,14 +444,16 @@ class Conv2d(_ConvCoNd):
         )
 
     @staticmethod
-    def like(module: nn.Conv2d, temporal_fill: FillMode = "replicate") -> "Conv2d":
+    def build_from(
+        module: nn.Conv2d, temporal_fill: FillMode = "replicate"
+    ) -> "Conv2d":
         dilation = (1, *module.dilation[1:])
         if dilation != module.dilation:
-            warn(
+            logger.warning(
                 f"Using dilation = {dilation} for Conv2d (converted from {module.dilation})"
             )
 
-        rmodule = Conv2d(
+        comodule = Conv2d(
             in_channels=module.in_channels,
             out_channels=module.out_channels,
             kernel_size=module.kernel_size,
@@ -468,10 +466,10 @@ class Conv2d(_ConvCoNd):
             temporal_fill=temporal_fill,
         )
         with torch.no_grad():
-            rmodule.weight.copy_(module.weight)
+            comodule.weight.copy_(module.weight)
             if module.bias is not None:
-                rmodule.bias.copy_(module.bias)
-        return rmodule
+                comodule.bias.copy_(module.bias)
+        return comodule
 
 
 class Conv3d(_ConvCoNd):
@@ -531,7 +529,7 @@ class Conv3d(_ConvCoNd):
         """
         _ConvCoNd.__init__(
             self,
-            nn.Conv2d,
+            nn.Conv3d,
             F.conv3d,
             ("batch_size", "channel", "time", "height", "width"),
             _triple,
@@ -548,7 +546,9 @@ class Conv3d(_ConvCoNd):
         )
 
     @staticmethod
-    def like(module: nn.Conv3d, temporal_fill: FillMode = "replicate") -> "Conv3d":
+    def build_from(
+        module: nn.Conv3d, temporal_fill: FillMode = "replicate"
+    ) -> "Conv3d":
         stride = (1, *module.stride[1:])
         dilation = (1, *module.dilation[1:])
         for shape, name in zip(
@@ -560,11 +560,11 @@ class Conv3d(_ConvCoNd):
         ):
             prev_shape = getattr(module, name)
             if shape != prev_shape:
-                warn(
+                logger.warning(
                     f"Using {name} = {shape} for ConvCo3D (converted from {prev_shape})"
                 )
 
-        rmodule = Conv3d(
+        comodule = Conv3d(
             in_channels=module.in_channels,
             out_channels=module.out_channels,
             kernel_size=module.kernel_size,
@@ -577,20 +577,7 @@ class Conv3d(_ConvCoNd):
             temporal_fill=temporal_fill,
         )
         with torch.no_grad():
-            rmodule.weight.copy_(module.weight)
+            comodule.weight.copy_(module.weight)
             if module.bias is not None:
-                rmodule.bias.copy_(module.bias)
-        return rmodule
-
-
-# Make sure the flops are counted in `ptflops`
-try:
-    from ptflops import flops_counter as fc
-
-    fc.MODULES_MAPPING[Conv1d] = fc.conv_flops_counter_hook
-    fc.MODULES_MAPPING[Conv2d] = fc.conv_flops_counter_hook
-    fc.MODULES_MAPPING[Conv3d] = fc.conv_flops_counter_hook
-except ModuleNotFoundError:
-    pass
-except Exception as e:
-    warn(f"Failed to add flops_counter_hook: {e}")
+                comodule.bias.copy_(module.bias)
+        return comodule

@@ -1,7 +1,8 @@
 from torch import Tensor
+from torch import nn
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from .interface import _CoModule
+from .interface import CoModule
 from .utils import temporary_parameter
 
 
@@ -9,7 +10,7 @@ def normalise_momentum(num_frames: int, base_mom=0.1):
     return 2 / (num_frames * (2 / base_mom - 1) + 1)
 
 
-class BatchNorm2d(_BatchNorm, _CoModule):
+class BatchNorm2d(_BatchNorm, CoModule):
     def __init__(
         self,
         num_features,
@@ -45,6 +46,17 @@ class BatchNorm2d(_BatchNorm, _CoModule):
         with temporary_parameter(self, "momentum", self.unnormalised_momentum):
             output = _BatchNorm.forward(self, input)
         return output
+
+    @staticmethod
+    def build_from(module: nn.BatchNorm2d):
+        return BatchNorm2d(
+            num_features=module.num_features,
+            eps=module.eps,
+            momentum=module.momentum,
+            affine=module.affine,
+            track_running_stats=module.track_running_stats,
+            window_size=1,
+        )
 
     @property
     def delay(self) -> int:

@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 import continual as co
-from continual.utils import TensorPlaceholder
+from continual.interface import TensorPlaceholder
 
 torch.manual_seed(42)
 
@@ -18,7 +18,7 @@ def test_Conv1d():
     target = conv(sample)
 
     # Continual
-    co_conv = co.Conv1d.like(conv, "zeros")
+    co_conv = co.Conv1d.build_from(conv, "zeros")
     output = []
 
     # Frame by frame
@@ -50,7 +50,7 @@ def test_Conv1d_stride():
     target = conv(sample)
 
     # Continual
-    co_conv = co.Conv1d.like(conv, "zeros")
+    co_conv = co.Conv1d.build_from(conv, "zeros")
     output = []
 
     # Frame by frame
@@ -82,7 +82,7 @@ def test_Conv2d():
     target = conv(sample)
 
     # Continual
-    co_conv = co.Conv2d.like(conv, "zeros")
+    co_conv = co.Conv2d.build_from(conv, "zeros")
     output = []
 
     # Frame by frame
@@ -118,7 +118,7 @@ def test_Conv2d_stride():
     target = conv(sample)
 
     # Continual
-    co_conv = co.Conv2d.like(conv, "zeros")
+    co_conv = co.Conv2d.build_from(conv, "zeros")
     output = []
 
     # Frame by frame
@@ -205,7 +205,7 @@ def test_basic_forward():
     )
     target = conv(example_clip)
 
-    coconv = co.Conv3d.like(conv)
+    coconv = co.Conv3d.build_from(conv)
     # coconv = co.Conv3d(
     #     in_channels=1,
     #     out_channels=1,
@@ -234,7 +234,7 @@ def test_forward_long_kernel():
     )
     target = conv(example_clip)
 
-    coconv = co.Conv3d.like(conv)
+    coconv = co.Conv3d.build_from(conv)
     # coconv = co.Conv3d(
     #     in_channels=1,
     #     out_channels=1,
@@ -263,7 +263,7 @@ def test_from_conv3d():
     )
     target = regular(example_clip)
 
-    co3 = co.Conv3d.like(regular)
+    co3 = co.Conv3d.build_from(regular)
 
     output = []
     for i in range(example_clip.shape[2]):
@@ -289,7 +289,7 @@ def test_from_conv3d_bad_shape():
     )
 
     # Also warns
-    co3 = co.Conv3d.like(regular)
+    co3 = co.Conv3d.build_from(regular)
 
     # Changed               V
     assert co3.dilation == (1, 2, 2)
@@ -318,7 +318,7 @@ def test_complex():
     )
     regular_output = regular(example_clip_large).detach()
 
-    co3 = co.Conv3d.like(regular, temporal_fill="zeros")
+    co3 = co.Conv3d.build_from(regular, temporal_fill="zeros")
     co3_output = co3.forward_steps(example_clip_large)
 
     assert torch.allclose(regular_output, co3_output, atol=5e-8)
@@ -333,12 +333,12 @@ def test_forward_continuation():
         padding=(1, 1, 1),
         padding_mode="zeros",
     )
-    coconv = co.Conv3d.like(conv, temporal_fill="zeros")
+    coconv = co.Conv3d.build_from(conv, temporal_fill="zeros")
 
     # Run batch inference and fill memory
     target1 = conv(example_clip)
     output1 = coconv.forward_steps(example_clip)
-    assert torch.allclose(target1, output1)
+    assert torch.allclose(target1, output1, atol=1e-7)
 
     # Next forward
     target2 = conv(next_example_clip)
@@ -379,9 +379,9 @@ def test_stacked_impulse_response():
 
     # Init continual
     cnn = [
-        co.Conv3d.like(conv1, temporal_fill="zeros"),
-        co.Conv3d.like(conv2, temporal_fill="zeros"),
-        co.Conv3d.like(conv2, temporal_fill="zeros"),
+        co.Conv3d.build_from(conv1, temporal_fill="zeros"),
+        co.Conv3d.build_from(conv2, temporal_fill="zeros"),
+        co.Conv3d.build_from(conv2, temporal_fill="zeros"),
     ]
 
     # Impulse
@@ -427,8 +427,8 @@ def test_stacked_no_pad():
     )
 
     # Init continual
-    coconv1 = co.Conv3d.like(conv1, temporal_fill="zeros")
-    coconv2 = co.Conv3d.like(conv2, temporal_fill="zeros")
+    coconv1 = co.Conv3d.build_from(conv1, temporal_fill="zeros")
+    coconv2 = co.Conv3d.build_from(conv2, temporal_fill="zeros")
 
     # Targets
     target11 = conv1(long_example_clip)

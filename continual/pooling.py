@@ -4,12 +4,13 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
-from .interface import _CoModule
-from .utils import FillMode
+from .interface import CoModule, FillMode
+from functools import partial
 
 State = Tuple[Tensor, int]
 
 T = TypeVar("T")
+U = TypeVar("U")
 
 __all__ = [
     "AvgPool1d",
@@ -38,40 +39,30 @@ class _DummyMaxPool(torch.nn.Module):
 
 
 def _co_window_pooled(  # noqa: C901
-    cls: T,
-    functional_fn: Callable[[Tensor, Tuple, Tuple, int, bool, bool], Tensor] = None,
+    InnerClass: Type[T],
+    FromClass: Type[U],
+    functional_fn: Callable[[Tensor, Tuple, Tuple, int, bool, bool], Tensor],
 ) -> Type[T]:
     """Wraps a pooling module to create a recursive version which pools across execusions
 
     Args:
-        cls (T): A pooling module
+        InnerClass (T): A pooling module to be used for pooling internally
+        FromClass (T): The torch.nn.Module which this module can be `build_from`
         functional_fn (Callable): A torch.nn.function pooling function.
     """
-    assert cls in {
-        _DummyAvgPool,
-        _DummyMaxPool,
-        nn.AdaptiveAvgPool1d,
-        nn.MaxPool1d,
-        nn.AvgPool1d,
-        nn.AdaptiveMaxPool1d,
-        nn.AvgPool2d,
-        nn.MaxPool2d,
-        nn.AdaptiveAvgPool2d,
-        nn.AdaptiveMaxPool2d,
-    }
 
-    class CoPool1d(_CoModule, cls):
+    class CoPool(CoModule, InnerClass):
         def __init__(
             self,
-            window_size: int,
-            temporal_fill: FillMode = "replicate",
+            temporal_kernel_size: int,
             temporal_dilation: int = 1,
+            temporal_fill: FillMode = "replicate",
             *args,
             **kwargs,
         ):
-            cls.__init__(self, *args, **kwargs)
+            InnerClass.__init__(self, *args, **kwargs)
 
-            class_name = cls.__name__.lower()
+            class_name = InnerClass.__name__.lower()
 
             self.input_shape_desciption = ("batch_size", "channel", "time")
             if "1d" in class_name:
@@ -79,9 +70,9 @@ def _co_window_pooled(  # noqa: C901
             elif "2d" in class_name:
                 self.input_shape_desciption += ("height", "width")
 
-            assert window_size > 0
+            assert temporal_kernel_size > 0
             assert temporal_fill in {"zeros", "replicate"}
-            self.window_size = window_size
+            self.temporal_kernel_size = temporal_kernel_size
             self.temporal_dilation = temporal_dilation
             self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
                 temporal_fill
@@ -93,22 +84,22 @@ def _co_window_pooled(  # noqa: C901
 
             if self.temporal_dilation > 1:
                 self.frame_index_selection = torch.tensor(
-                    range(0, self.window_size, self.temporal_dilation)
+                    range(0, self.temporal_kernel_size, self.temporal_dilation)
                 )
 
             # Directly assign other kwargs to self. This is need to make AdaptiveAvgPool work
             for k, v in kwargs.items():
                 setattr(self, k, v)
 
-            # Select reshape mode depending on dimensionality
-            def apply_1d_pooling(frame_selection: Tensor) -> Tensor:
+            # Select forward reshape mode depending on dimensionality
+            def pooling_with_1d_reshape(frame_selection: Tensor) -> Tensor:
                 _, B, C = frame_selection.shape
                 x = self.temporal_pool(
                     frame_selection.permute(1, 2, 0)  # T, B, C -> B, C, T
                 ).reshape(B, C)
                 return x
 
-            def apply_2d_pooling(frame_selection: Tensor) -> Tensor:
+            def pooling_with_2d_reshape(frame_selection: Tensor) -> Tensor:
                 T, B, C, S = frame_selection.shape
                 x = frame_selection.permute(1, 3, 2, 0)  # B, S, C, T
                 x = x.reshape(B * S, C, T)
@@ -117,7 +108,7 @@ def _co_window_pooled(  # noqa: C901
                 x = x.permute(0, 2, 1)  # B, C, S
                 return x
 
-            def apply_3d_pooling(frame_selection: Tensor) -> Tensor:
+            def pooling_with_3d_reshape(frame_selection: Tensor) -> Tensor:
                 T, B, C, H, W = frame_selection.shape
                 x = frame_selection.permute(1, 3, 4, 2, 0)  # B, H, W, C, T
                 x = x.reshape(B * H * W, C, T)
@@ -126,11 +117,33 @@ def _co_window_pooled(  # noqa: C901
                 x = x.permute(0, 3, 1, 2)  # B, C, H, W
                 return x
 
-            self.apply_pooling = {
-                3: apply_1d_pooling,
-                4: apply_2d_pooling,
-                5: apply_3d_pooling,
+            self._apply_pooling = {
+                3: pooling_with_1d_reshape,
+                4: pooling_with_2d_reshape,
+                5: pooling_with_3d_reshape,
             }[len(self.input_shape_desciption)]
+
+            # Select functional call depending on module type
+            if InnerClass in {_DummyAvgPool, _DummyMaxPool}:
+                self._functional_call = partial(
+                    functional_fn,
+                    kernel_size=(self.temporal_kernel_size,),
+                    stride=(self.temporal_dilation,),
+                )
+            elif "Adaptive" in FromClass.__name__:
+                self._functional_call = partial(
+                    functional_fn,
+                    output_size=(
+                        getattr(self, "_temporal_adaptive_output_size", 1),
+                        *self.output_size,
+                    ),
+                )
+            else:
+                self._functional_call = partial(
+                    functional_fn,
+                    kernel_size=(self.temporal_kernel_size, *self.kernel_size),
+                    stride=(self.temporal_dilation, *self.stride),
+                )
 
         def init_state(
             self,
@@ -138,7 +151,7 @@ def _co_window_pooled(  # noqa: C901
         ) -> State:
             padding = self.make_padding(first_output)
             state_buffer = torch.stack(
-                [padding for _ in range(self.window_size)], dim=0
+                [padding for _ in range(self.temporal_kernel_size)], dim=0
             )
             state_index = 0
             if not hasattr(self, "state_buffer"):
@@ -170,7 +183,7 @@ def _co_window_pooled(  # noqa: C901
             ), f"A tensor of size {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input."
 
             pooled_frame = (
-                cls.forward(self, input)  # 2D and 3D pooling
+                InnerClass.forward(self, input)  # 2D and 3D pooling
                 if len(self.input_shape_desciption) > 3
                 else input  # 1D pooling
             )
@@ -190,9 +203,9 @@ def _co_window_pooled(  # noqa: C901
                 )
 
             # Pool along temporal dimension
-            pooled_window = self.apply_pooling(frame_selection)
+            pooled_window = self._apply_pooling(frame_selection)
 
-            new_index = (index + 1) % self.window_size
+            new_index = (index + 1) % self.temporal_kernel_size
             new_buffer = buffer  # .clone() if self.training else buffer.detach()
 
             return pooled_window, (new_buffer, new_index)
@@ -206,7 +219,7 @@ def _co_window_pooled(  # noqa: C901
         def forward_steps(self, input: Tensor):
             """Performs a full forward computation in a frame-wise manner, updating layer states along the way.
 
-            If input.shape[2] == self.window_size, a global pooling along temporal dimension is performed
+            If input.shape[2] == self.temporal_kernel_size, a global pooling along temporal dimension is performed
             Otherwise, the pooling is performed per frame
 
             Args:
@@ -222,17 +235,16 @@ def _co_window_pooled(  # noqa: C901
             outs = []
             for t in range(input.shape[2]):
                 o = self.forward_step(input[:, :, t])
-                if self.window_size - 1 <= t:
+                if self.temporal_kernel_size - 1 <= t:
                     outs.append(o)
 
             if len(outs) == 0:
                 return torch.tensor([])
 
-            if input.shape[2] == self.window_size:
+            if input.shape[2] == self.temporal_kernel_size:
                 # In order to be compatible with downstream forward_steps, select only last frame
                 # This corrsponds to the regular global pool
                 return outs[-1].unsqueeze(2)
-
             else:
                 return torch.stack(outs, dim=2)
 
@@ -245,31 +257,54 @@ def _co_window_pooled(  # noqa: C901
             Returns:
                 Tensor: Layer output
             """
-            # For now, use implementation in forward_steps
-            # TODO: Update impl
             assert len(input.shape) == len(
                 self.input_shape_desciption
             ), f"A tensor of size {self.input_shape_desciption} should be passed as input."
-            if functional_fn:
-                return functional_fn(
-                    input,
-                    kernel_size=self.window_size,
-                    stride=self.temporal_dilation,
-                    padding=0,
-                    ceil_mode=False,
-                    count_include_pad=True,
-                )
-            else:
-                return self.forward_steps(input)
+
+            return self._functional_call(input)
 
         @property
         def delay(self):
-            return self.window_size - 1
+            return self.temporal_dilation * (self.temporal_kernel_size - 1)
 
-    return CoPool1d
+        @staticmethod
+        def build_from(
+            module: FromClass, temporal_kernel_size: int = 1, *args, **kwargs
+        ) -> "CoPool":
+            FromType = type(module)
+            assert FromType == FromClass, f"Can only build from {FromClass.__name__}"
+
+            def unpack(tuple_or_int, index_or_slice):
+                if type(tuple_or_int) == tuple:
+                    return tuple_or_int[index_or_slice]
+                else:
+                    assert type(tuple_or_int) == int
+                    return tuple_or_int
+
+            if FromType in {nn.AvgPool1d, nn.MaxPool1d}:
+                kwargs = dict(temporal_kernel_size=unpack(module.kernel_size, 0))
+            elif "Adaptive" in FromType.__name__:
+                kwargs = dict(
+                    temporal_kernel_size=temporal_kernel_size,
+                    output_size=unpack(module.output_size, slice(1, None)),
+                    _temporal_adaptive_output_size=unpack(module.output_size, 0),
+                )
+            else:
+                kwargs = dict(
+                    temporal_kernel_size=unpack(module.kernel_size, 0),
+                    temporal_dilation=unpack(module.stride, 0),
+                    kernel_size=unpack(module.kernel_size, slice(1, None)),
+                    stride=unpack(module.stride, slice(1, None)),
+                    padding=unpack(module.padding, slice(1, None)),
+                    ceil_mode=module.ceil_mode,
+                )
+
+            return CoPool(**kwargs)
+
+    return CoPool
 
 
-class AvgPool1d(_co_window_pooled(_DummyAvgPool, F.avg_pool1d)):
+class AvgPool1d(_co_window_pooled(_DummyAvgPool, nn.AvgPool1d, F.avg_pool1d)):
     """
     Continual Average Pool in 1D
 
@@ -279,17 +314,7 @@ class AvgPool1d(_co_window_pooled(_DummyAvgPool, F.avg_pool1d)):
     ...
 
 
-class MaxPool1d(_co_window_pooled(_DummyMaxPool, F.max_pool1d)):
-    """
-    Continual Max Pool in 1D
-
-    This is the continual version of the regular :class:`torch.nn.MaxPool1d`
-    """
-
-    ...
-
-
-class AvgPool2d(_co_window_pooled(nn.AvgPool1d, F.avg_pool2d)):
+class AvgPool2d(_co_window_pooled(nn.AvgPool1d, nn.AvgPool2d, F.avg_pool2d)):
     """
     Continual Average Pool in 2D
 
@@ -299,37 +324,7 @@ class AvgPool2d(_co_window_pooled(nn.AvgPool1d, F.avg_pool2d)):
     ...
 
 
-class MaxPool2d(_co_window_pooled(nn.MaxPool1d, F.max_pool2d)):
-    """
-    Continual Max Pool in 2D
-
-    This is the continual version of the regular :class:`torch.nn.MaxPool2d`
-    """
-
-    ...
-
-
-class AdaptiveAvgPool2d(_co_window_pooled(nn.AdaptiveAvgPool1d)):
-    """
-    Continual Adaptive Average Pool in 2D
-
-    This is the continual version of the regular :class:`torch.nn.AdaptiveAvgPool2d`
-    """
-
-    ...
-
-
-class AdaptiveMaxPool2d(_co_window_pooled(nn.AdaptiveMaxPool1d)):
-    """
-    Continual Adaptive Max Pool in 2D
-
-    This is the continual version of the regular :class:`torch.nn.AdaptiveMaxPool2d`
-    """
-
-    ...
-
-
-class AvgPool3d(_co_window_pooled(nn.AvgPool2d, F.avg_pool3d)):
+class AvgPool3d(_co_window_pooled(nn.AvgPool2d, nn.AvgPool3d, F.avg_pool3d)):
     """
     Continual Average Pool in 3D
 
@@ -339,7 +334,27 @@ class AvgPool3d(_co_window_pooled(nn.AvgPool2d, F.avg_pool3d)):
     ...
 
 
-class MaxPool3d(_co_window_pooled(nn.MaxPool2d, F.max_pool3d)):
+class MaxPool1d(_co_window_pooled(_DummyMaxPool, nn.MaxPool1d, F.max_pool1d)):
+    """
+    Continual Max Pool in 1D
+
+    This is the continual version of the regular :class:`torch.nn.MaxPool1d`
+    """
+
+    ...
+
+
+class MaxPool2d(_co_window_pooled(nn.MaxPool1d, nn.MaxPool2d, F.max_pool2d)):
+    """
+    Continual Max Pool in 2D
+
+    This is the continual version of the regular :class:`torch.nn.MaxPool2d`
+    """
+
+    ...
+
+
+class MaxPool3d(_co_window_pooled(nn.MaxPool2d, nn.MaxPool3d, F.max_pool3d)):
     """
     Continual Max Pool in 3D
 
@@ -349,21 +364,49 @@ class MaxPool3d(_co_window_pooled(nn.MaxPool2d, F.max_pool3d)):
     ...
 
 
-class AdaptiveAvgPool3d(_co_window_pooled(nn.AdaptiveAvgPool2d)):
+class AdaptiveAvgPool2d(
+    _co_window_pooled(nn.AdaptiveAvgPool1d, nn.AdaptiveAvgPool2d, F.adaptive_avg_pool2d)
+):
     """
-    Continual Adaptive Average Pool in 3D
+    Continual Adaptive Average Pool in 2D
 
-    This is the continual version of the regular :class:`torch.nn.nn.AdaptiveAvgPool3d`
+    This is the continual version of the regular :class:`torch.nn.AdaptiveAvgPool2d`
     """
 
     ...
 
 
-class AdaptiveMaxPool3d(_co_window_pooled(nn.AdaptiveMaxPool2d)):
+class AdaptiveAvgPool3d(
+    _co_window_pooled(nn.AdaptiveAvgPool2d, nn.AdaptiveAvgPool3d, F.adaptive_avg_pool3d)
+):
+    """
+    Continual Adaptive Average Pool in 3D
+
+    This is the continual version of the regular :class:`torch.nn.AdaptiveAvgPool3d`
+    """
+
+    ...
+
+
+class AdaptiveMaxPool2d(
+    _co_window_pooled(nn.AdaptiveMaxPool1d, nn.AdaptiveMaxPool2d, F.adaptive_max_pool2d)
+):
+    """
+    Continual Adaptive Max Pool in 2D
+
+    This is the continual version of the regular :class:`torch.nn.AdaptiveMaxPool2d`
+    """
+
+    ...
+
+
+class AdaptiveMaxPool3d(
+    _co_window_pooled(nn.AdaptiveMaxPool2d, nn.AdaptiveMaxPool3d, F.adaptive_max_pool3d)
+):
     """
     Continual Adaptive Max Pool in 3D
 
-    This is the continual version of the regular :class:`torch.nn.nn.AdaptiveMaxPool3d`
+    This is the continual version of the regular :class:`torch.nn.AdaptiveMaxPool3d`
     """
 
     ...
