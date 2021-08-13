@@ -2,8 +2,8 @@ from contextlib import contextmanager
 from functools import reduce, wraps
 from typing import Callable
 
-from torch import Tensor
-from torch import nn
+from torch import Tensor, nn
+
 from .interface import CoModule
 
 

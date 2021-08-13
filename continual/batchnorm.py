@@ -1,6 +1,5 @@
 import torch
-from torch import Tensor
-from torch import nn
+from torch import Tensor, nn
 from torch.nn.modules.batchnorm import _BatchNorm
 
 from .interface import CoModule

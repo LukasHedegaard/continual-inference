@@ -1,7 +1,9 @@
-from torch import nn
-from .interface import CoModule
-from typing import Optional
 from collections import OrderedDict
+from typing import Optional
+
+from torch import nn
+
+from .interface import CoModule
 
 __all__ = ["Sequential"]
 

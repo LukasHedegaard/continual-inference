@@ -1,7 +1,7 @@
 """ PyTorch Lightning compatible logging """
 
-from functools import wraps
 import logging
+from functools import wraps
 
 
 def _process_rank():

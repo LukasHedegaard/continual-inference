@@ -1,6 +1,7 @@
+from typing import Callable, Tuple
+
 import torch
 import torch.nn.functional as F
-from typing import Callable, Tuple
 from torch import Tensor, nn
 from torch.nn.modules.conv import (
     _ConvNd,
@@ -14,8 +15,8 @@ from torch.nn.modules.conv import (
 )
 
 from .interface import CoModule, FillMode, TensorPlaceholder
-from .utils import temporary_parameter
 from .logging import getLogger
+from .utils import temporary_parameter
 
 logger = getLogger(__name__)
 
@@ -468,7 +469,7 @@ class Conv2d(_ConvCoNd):
 
         with torch.no_grad():
             comodule.load_state_dict(module.state_dict())
-            
+
         return comodule
 
 

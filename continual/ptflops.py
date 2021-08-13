@@ -1,20 +1,20 @@
 """ Register modules with `ptflops` """
 
-from .conv import Conv1d, Conv2d, Conv3d
-from .pooling import (
-    AvgPool1d,
-    MaxPool1d,
-    AvgPool2d,
-    MaxPool2d,
-    AdaptiveAvgPool2d,
-    AdaptiveMaxPool2d,
-    AvgPool3d,
-    MaxPool3d,
-    AdaptiveAvgPool3d,
-    AdaptiveMaxPool3d,
-)
 from .batchnorm import BatchNorm2d
+from .conv import Conv1d, Conv2d, Conv3d
 from .logging import getLogger
+from .pooling import (
+    AdaptiveAvgPool2d,
+    AdaptiveAvgPool3d,
+    AdaptiveMaxPool2d,
+    AdaptiveMaxPool3d,
+    AvgPool1d,
+    AvgPool2d,
+    AvgPool3d,
+    MaxPool1d,
+    MaxPool2d,
+    MaxPool3d,
+)
 
 logger = getLogger(__name__)
 

@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Callable, Tuple, Type, TypeVar
 
 import torch
@@ -5,7 +6,6 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 
 from .interface import CoModule, FillMode
-from functools import partial
 
 State = Tuple[Tensor, int]
 
