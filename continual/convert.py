@@ -34,40 +34,31 @@ class ModuleNotRegisteredError(Exception):
 
 
 def register(TorchNnModule: Type[nn.Module], CoClass: Type[CoModule]):
-    if not callable(getattr(CoClass, "build_from", None)):
-        raise ModuleNotRegisteredError(
-            f"To register {CoClass.__name__}, it should implement a `build_from` method:"
-            """
-            from continual.utils import register
-
-            @register(TorchModule)
-            class ContinualModule:
-
-                @staticmethod
-                def build_from(module: TorchModule) -> "ContinualModule":
-                    ...
+    CoModule._validate_class(CoClass)
+    assert callable(getattr(CoClass, "build_from", None)), (
+        f"To register {CoClass.__name__}, it should implement a `build_from` method:"
         """
-        )
+        class MyContinualModule:
+
+            @staticmethod
+            def build_from(module: MyTorchModule) -> "MyContinualModule":
+                ...
+        """
+    )
     MODULE_MAPPING[TorchNnModule] = CoClass
     return CoClass
 
 
 def continual(module: nn.Module) -> CoModule:
-    if type(module) not in MODULE_MAPPING:
-        raise ModuleNotRegisteredError(
-            f"A registered conversion for {module.__name__} was not found. "
-            "You can register a custom conversion as follows:"
-            """
-            from continual.utils import register
+    assert type(module) in MODULE_MAPPING, (
+        f"A registered conversion for {module.__name__} was not found. "
+        "You can register a custom conversion as follows:"
+        """
+        from continual.utils import register
 
-            @register(TorchModule)
-            class ContinualModule:
-
-                @staticmethod
-                def build_from(module: TorchModule) -> "ContinualModule":
-                    ...
-            """
-        )
+        register(MyTorchModule, MyContinualModule)
+        """
+    )
     return MODULE_MAPPING[type(module)].build_from(module)
 
 
@@ -121,8 +112,7 @@ try:
     fc.MODULES_MAPPING[AdaptiveAvgPool3d] = fc.pool_flops_counter_hook
     fc.MODULES_MAPPING[AdaptiveMaxPool3d] = fc.pool_flops_counter_hook
 
-
-except ModuleNotFoundError:
+except ModuleNotFoundError:  # pragma: no cover
     pass
-except Exception as e:
+except Exception as e:  # pragma: no cover
     logger.warning(f"Failed to add flops_counter_hook: {e}")
