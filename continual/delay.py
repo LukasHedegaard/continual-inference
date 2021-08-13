@@ -80,13 +80,19 @@ class Delay(torch.nn.Module, CoModule):
 
     def forward_steps(self, input: Tensor) -> Tensor:
         # Pass into delay line, but discard output
-        self.forward(input)
+        outs = []
+        for t in range(input.shape[3]):
+            outs.append(self.forward_step(input[:, :, t]))
 
-        # No delay during forward_steps
-        return input
+        if len(outs) > 0:
+            outs = torch.stack(outs, dim=2)
+        else:
+            outs = torch.tensor([])  # pragma: no cover
+
+        return outs
 
     def forward(self, input: Tensor) -> Tensor:
-        # No delay during forward_steps
+        # No delay during regular forward
         return input
 
     @property

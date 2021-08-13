@@ -8,7 +8,7 @@ def _process_rank():
     try:
         import pytorch_lightning as pl
 
-        if pl.utilities._HOROVOD_AVAILABLE:
+        if pl.utilities._HOROVOD_AVAILABLE:  # pragma: no cover
             import horovod.torch as hvd
 
             hvd.init()
@@ -16,7 +16,7 @@ def _process_rank():
         else:
             return pl.utilities.rank_zero_only.rank
 
-    except ModuleNotFoundError:
+    except ModuleNotFoundError:  # pragma: no cover
         return 0
 
 

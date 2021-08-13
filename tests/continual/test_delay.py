@@ -56,3 +56,30 @@ def test_delay_2d():
     assert torch.equal(delay.forward_step(ones), example_input[:, :, 3])
 
     assert torch.equal(delay.forward_step(ones), ones)
+
+
+def test_state():
+    example_input = torch.rand((2, 2, 4, 3))
+    delay = Delay(delay=2, temporal_fill="zeros")
+
+    # State stays clean
+    assert getattr(delay, "state_buffer", None) is None
+    assert getattr(delay, "state_index", None) is None
+
+    delay.forward(example_input)
+
+    assert getattr(delay, "state_buffer", None) is None
+    assert getattr(delay, "state_index", None) is None
+
+    # State is populated
+    delay.forward_steps(example_input)
+
+    assert torch.equal(delay.state_buffer[1], example_input[:, :, 1])
+    assert torch.equal(delay.state_buffer[0], example_input[:, :, 2])
+    assert delay.state_index == 1
+
+    # State can be cleaned
+    delay.clean_state()
+
+    assert getattr(delay, "state_buffer", None) is None
+    assert getattr(delay, "state_index", None) is None
