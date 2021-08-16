@@ -1,5 +1,5 @@
 from .batchnorm import BatchNorm2d  # noqa: F401
-from .container import Sequential  # noqa: F401
+from .container import Parallel, Residual, Sequential  # noqa: F401
 from .conv import Conv1d, Conv2d, Conv3d  # noqa: F401
 from .convert import continual  # noqa: F401
 from .delay import Delay  # noqa: F401
