@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="236px" height="254px" viewBox="0 0 236 254" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 63.1 (92452) - https://sketch.com -->
+    <title>Logo</title>
+    <desc>Created with Sketch.</desc>
+    <g id="Logo" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g fill="#EE4C2C" id="Rectangle">
+            <polygon opacity="0.5" points="0 60.6859506 103 0 103 193.314049 0 254"></polygon>
+            <polygon opacity="0.5" points="68 60.6859506 171 0 171 193.314049 68 254"></polygon>
+            <polygon points="133 60.6859506 236 0 236 193.314049 133 254"></polygon>
+        </g>
+    </g>
+</svg>
