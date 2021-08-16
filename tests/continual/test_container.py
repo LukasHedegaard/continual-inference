@@ -59,7 +59,7 @@ def test_sum_aggregation():
     ones = torch.ones((1, 2, 4, 3, 3))
     twos = torch.ones((1, 2, 4, 3, 3)) * 2
     res = co.container.parallel_sum([ones, ones])
-    assert torch.equal(res, twos)
+    assert torch.allclose(res, twos)
 
 
 def test_concat_aggregation():
@@ -67,8 +67,8 @@ def test_concat_aggregation():
     twos = torch.ones((1, 2, 4, 3, 3)) * 2
     res = co.container.parallel_concat([ones, twos])
     assert res.shape == (1, 4, 4, 3, 3)
-    assert torch.equal(res[:, :2], ones)
-    assert torch.equal(res[:, 2:], twos)
+    assert torch.allclose(res[:, :2], ones)
+    assert torch.allclose(res[:, 2:], twos)
 
 
 def test_residual():
@@ -87,10 +87,10 @@ def test_residual():
 
     # forward
     out_manual_res = co_conv.forward(input) + input[:, :, 1:-1]
-    assert torch.equal(out_manual_res, target)
+    assert torch.allclose(out_manual_res, target)
 
     out_res = co_res.forward(input)
-    assert torch.equal(out_res, target)
+    assert torch.allclose(out_res, target)
 
     # forward_steps
     out_firsts = co_res.forward_steps(input[:, :, :-1])
