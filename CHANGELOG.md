@@ -6,17 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0]
+## Changed
+- Naming to match `torch.nn`. This lets the continual modules be used as drop-in replacements for `torch.nn` modules.
+- Renamed `forward_regular_unrolled` to `forward`, `forward_regular` to `forward_steps`, and `forward` for `forward_step`.
+- Renamed `from_regular` to `build_from`.
+- Renamed `continual` to `unsqueezed`.
+
+## Added
+- `Sequential` wrapper for sequential application of modules
+- `Parallel` wrapper for parallel application and aggregation of inputs
+- `Residual` wrapper for adding a unity residual to a module
+- `continual` conversion function
+- `register` function for 3rd party modules to register their conversion
+- Additional tests
 
 ## [0.1.2] - 2021-08-1
 ### Added
-- Pooling modules: MaxPoolCo1d, AvgPoolCo3d, MaxPoolCo3d, AdaptiveAvgPoolCo3d, AdaptiveMaxPoolCo3d
+- Pooling modules: `MaxPool1d`, `AvgPool3d`, `MaxPool3d`, `AdaptiveAvgPool3d`, `AdaptiveMaxPool3d`.
 
 
 ## [0.1.1] - 2021-08-10
 ### Added
-- Updated README
+- Updated README.
 
 
 ## [0.1.0] - 2021-08-10
 ### Added
-- Initial publicly available implementation of the library
+- Initial publicly available implementation of the library.

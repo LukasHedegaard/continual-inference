@@ -3,17 +3,23 @@ from typing import Tuple
 import torch
 from torch import Tensor
 
-from .interface import _CoModule
-from .utils import FillMode
+from .interface import CoModule, FillMode
 
 State = Tuple[Tensor, int]
 
+__all__ = ["Delay"]
 
-class Delay(torch.nn.Module, _CoModule):
+
+class Delay(torch.nn.Module, CoModule):
+    """Continual delay modules
+
+    NB: This module only introduces a delay in the continual modes, i.e. on `forward_step` and `forward_steps`
+    """
+
     def __init__(
         self,
         delay: int,
-        temporal_fill: FillMode = "replicate",
+        temporal_fill: FillMode = "zeros",
     ):
         assert delay > 0
         assert temporal_fill in {"zeros", "replicate"}
@@ -51,13 +57,13 @@ class Delay(torch.nn.Module, _CoModule):
         else:
             return None
 
-    def forward(self, input: Tensor) -> Tensor:
-        output, (self.state_buffer, self.state_index) = self._forward(
+    def forward_step(self, input: Tensor) -> Tensor:
+        output, (self.state_buffer, self.state_index) = self._forward_step(
             input, self.get_state()
         )
         return output
 
-    def _forward(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
+    def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         if prev_state is None:
             buffer, index = self.init_state(input)
         else:
@@ -72,17 +78,23 @@ class Delay(torch.nn.Module, _CoModule):
 
         return output, (buffer, new_index)
 
-    def forward_regular(self, input: Tensor) -> Tensor:
-        # Pass into delay line, but discard output
-        self.forward(input)
+    def forward_steps(self, input: Tensor) -> Tensor:
+        outs = [self.forward_step(input[:, :, t]) for t in range(input.shape[2])]
 
-        # No delay during forward_regular
-        return input
+        if len(outs) > 0:
+            outs = torch.stack(outs, dim=2)
+        else:
+            outs = torch.tensor([])  # pragma: no cover
 
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
-        # No delay during forward_regular
+        return outs
+
+    def forward(self, input: Tensor) -> Tensor:
+        # No delay during regular forward
         return input
 
     @property
     def delay(self) -> int:
         return self._delay
+
+    def extra_repr(self):
+        return f"{self.delay}"

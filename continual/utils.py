@@ -1,41 +1,31 @@
 from contextlib import contextmanager
-from enum import Enum
 from functools import reduce, wraps
-from typing import Callable, Tuple
+from typing import Callable
 
-from torch import Tensor
-from torch.nn import Module
+from torch import Tensor, nn
 
-from .interface import _CoModule
-
-
-class TensorPlaceholder:
-    shape: Tuple[int]
-
-    def __init__(self, shape: Tuple[int]):
-        self.shape = shape
-
-    def size(self):
-        return self.shape
+from .interface import CoModule
 
 
-class FillMode(Enum):
-    REPLICATE = "replicate"
-    ZEROS = "zeros"
+class Zero(nn.Module, CoModule):
+    def forward_step(self, input: Tensor) -> Tensor:
+        return 0
 
+    def forward_steps(self, input: Tensor) -> Tensor:
+        return 0
 
-class Zero(Module, _CoModule):
     def forward(self, input: Tensor) -> Tensor:
         return 0
 
-    def forward_regular(self, input: Tensor) -> Tensor:
+    @property
+    def delay(self) -> int:
         return 0
 
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
-        return 0
+    def clean_state(self):
+        ...
 
 
-def continual(instance: Module, dim: int = 2):
+def unsqueezed(instance: nn.Module, dim: int = 2):
     def decorator(func: Callable[[Tensor], Tensor]):
         @wraps(func)
         def call(x: Tensor) -> Tensor:
@@ -46,8 +36,8 @@ def continual(instance: Module, dim: int = 2):
 
         return call
 
-    instance.forward_regular_unrolled = instance.forward
-    instance.forward_regular = instance.forward
+    instance.forward = instance.forward
+    instance.forward_steps = instance.forward
     instance.forward = decorator(instance.forward)
 
     return instance

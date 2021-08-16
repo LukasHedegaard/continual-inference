@@ -1,7 +1,8 @@
-from torch import Tensor
+import torch
+from torch import Tensor, nn
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from .interface import _CoModule
+from .interface import CoModule
 from .utils import temporary_parameter
 
 
@@ -9,7 +10,7 @@ def normalise_momentum(num_frames: int, base_mom=0.1):
     return 2 / (num_frames * (2 / base_mom - 1) + 1)
 
 
-class BatchNormCo2d(_BatchNorm, _CoModule):
+class BatchNorm2d(_BatchNorm, CoModule):
     def __init__(
         self,
         num_features,
@@ -19,7 +20,7 @@ class BatchNormCo2d(_BatchNorm, _CoModule):
         track_running_stats=True,
         window_size=1,
     ):
-        super(BatchNormCo2d, self).__init__(
+        super(BatchNorm2d, self).__init__(
             num_features, eps, momentum, affine, track_running_stats
         )
         # Normalise momentum w.r.t. the expected clip size
@@ -34,18 +35,37 @@ class BatchNormCo2d(_BatchNorm, _CoModule):
                 "expected 2D, 3D, or 4D input (got {}D input)".format(input.dim())
             )
 
-    def forward(self, input: Tensor) -> Tensor:
+    def forward_step(self, input: Tensor) -> Tensor:
         output = _BatchNorm.forward(self, input)
         return output
 
-    def forward_regular(self, input: Tensor) -> Tensor:
-        return self.forward_regular_unrolled(input)
+    def forward_steps(self, input: Tensor) -> Tensor:
+        return self.forward(input)
 
-    def forward_regular_unrolled(self, input: Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         with temporary_parameter(self, "momentum", self.unnormalised_momentum):
             output = _BatchNorm.forward(self, input)
         return output
 
+    @staticmethod
+    def build_from(module: nn.BatchNorm2d):
+        comodule = BatchNorm2d(
+            num_features=module.num_features,
+            eps=module.eps,
+            momentum=module.momentum,
+            affine=module.affine,
+            track_running_stats=module.track_running_stats,
+            window_size=1,
+        )
+
+        with torch.no_grad():
+            comodule.load_state_dict(module.state_dict())
+
+        return comodule
+
     @property
     def delay(self) -> int:
         return 0
+
+    def clean_state(self):
+        ...

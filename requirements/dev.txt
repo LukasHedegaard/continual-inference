@@ -5,3 +5,5 @@ isort>=5.7
 pytest
 pytest-cov
 ptflops>=0.6
+numpy
+pytorch_lightning
