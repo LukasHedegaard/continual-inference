@@ -1,7 +1,7 @@
-# Continual Inference
-Building blocks for Continual Inference Networks in PyTorch
-
 <div align="left">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" width=400 height="120">
+  <br>
+  <br>
   <a href="https://pypi.org/project/continual-inference/">
     <img src="https://img.shields.io/pypi/pyversions/continual-inference" height="20" >
   </a>
@@ -17,8 +17,11 @@ Building blocks for Continual Inference Networks in PyTorch
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" height="20">
   </a>
-  <br><br>
+  <br>
+  <br>
 </div>
+
+Building blocks for Continual Inference Networks in PyTorch
 
 ## Install 
 ```bash
