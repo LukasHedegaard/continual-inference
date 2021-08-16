@@ -128,13 +128,15 @@ def test_Conv2d_stride():
     # Match after delay of T - 1
     for t in range(sample.shape[2] - (T - 1)):
         if t % S == 0:
-            assert torch.allclose(target[:, :, t // stride], output[t + (T - 1)])
+            assert torch.allclose(
+                target[:, :, t // stride], output[t + (T - 1)], atol=1e-7
+            )
         else:
             assert type(output[t + (T - 1)]) is TensorPlaceholder
 
     # Whole time-series
     output = co_conv.forward_steps(sample)
-    assert torch.allclose(target, output)
+    assert torch.allclose(target, output, atol=1e-7)
 
 
 T = S = 3
@@ -345,13 +347,13 @@ def test_forward_continuation():
     output2 = coconv.forward_step(next_example_frame)
 
     # Next-to-last frame matches
-    assert torch.allclose(target2[:, :, -2], output2, atol=5e-8)
+    assert torch.allclose(target2[:, :, -2], output2, atol=1e-7)
 
     # Passing in zeros gives same output
     output3 = coconv.forward_step(
         torch.zeros_like(next_example_frame), update_state=False
     )
-    assert torch.allclose(target2[:, :, -1], output3, atol=5e-8)
+    assert torch.allclose(target2[:, :, -1], output3, atol=1e-7)
 
 
 def test_stacked_impulse_response():

@@ -74,9 +74,9 @@ def test_state():
     # State is populated
     delay.forward_steps(example_input)
 
-    assert torch.equal(delay.state_buffer[1], example_input[:, :, 1])
     assert torch.equal(delay.state_buffer[0], example_input[:, :, 2])
-    assert delay.state_index == 1
+    assert torch.equal(delay.state_buffer[1], example_input[:, :, 3])
+    assert delay.state_index == 0
 
     # State can be cleaned
     delay.clean_state()
