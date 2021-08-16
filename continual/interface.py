@@ -25,6 +25,7 @@ class CoModule(ABC):
                 "forward",
                 "a forward computation which is identical to a regular non-continual forward.",
             ),
+            ("clean_state", "an internal state clean-up."),
         ]:
             assert callable(
                 getattr(cls, fn, None)
@@ -47,20 +48,20 @@ class CoModule(ABC):
         """Clip-wise forward without state initialisation, but which is identical to the non-continual component"""
         ...  # pragma: no cover
 
-    @property
-    def delay(self) -> int:
-        """Temporal delay of the module
+    # @property
+    # def delay(self) -> int:
+    #     """Temporal delay of the module
 
-        Returns:
-            int: Temporal delay of the module
-        """
-        ...  # pragma: no cover
+    #     Returns:
+    #         int: Temporal delay of the module
+    #     """
+    #     ...  # pragma: no cover
 
-    def clean_state(self):
-        """Clean module state
-        This serves as a dummy function for modules which do not require state-cleanup
-        """
-        ...  # pragma: no cover
+    # def clean_state(self):
+    #     """Clean module state
+    #     This serves as a dummy function for modules which do not require state-cleanup
+    #     """
+    #     ...  # pragma: no cover
 
 
 class TensorPlaceholder:

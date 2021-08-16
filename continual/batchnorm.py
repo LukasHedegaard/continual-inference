@@ -66,3 +66,6 @@ class BatchNorm2d(_BatchNorm, CoModule):
     @property
     def delay(self) -> int:
         return 0
+
+    def clean_state(self):
+        ...

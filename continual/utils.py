@@ -21,6 +21,9 @@ class Zero(nn.Module, CoModule):
     def delay(self) -> int:
         return 0
 
+    def clean_state(self):
+        ...
+
 
 def unsqueezed(instance: nn.Module, dim: int = 2):
     def decorator(func: Callable[[Tensor], Tensor]):
