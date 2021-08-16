@@ -119,10 +119,13 @@ This repository contains online inference-friendly versions of common network bu
     - `co.AdaptiveMaxPool3d`
 
 - Other
-    - `co.Sequential`
+    - `co.Sequential` - sequential wrapper for modules
+    - `co.Parallel` - parallel wrapper for modules
+    - `co.Residual` - residual wrapper for modules
     - `co.Delay` - pure delay module
     <!-- - `co.Residual` - residual connection, which automatically adds delay if needed -->
-    - `co.continual` - functional wrapper for non-continual modules
+    - `co.unsqueezed` - functional wrapper for non-continual modules
+    - `co.continual` - conversion function from non-continual modules to continual moduls
 
 ### Continual Convolutions
 Continual Convolutions can lead to major improvements in computational efficiency when online / frame-by-frame predictions are required.

@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed `continual` to `unsqueezed`.
 
 ## Added
-- `Sequential`
+- `Sequential` wrapper for sequential application of modules
+- `Parallel` wrapper for parallel application and aggregation of inputs
+- `Residual` wrapper for adding a unity residual to a module
 - `continual` conversion function
 - `register` function for 3rd party modules to register their conversion
 - Additional tests
