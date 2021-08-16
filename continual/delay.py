@@ -19,7 +19,7 @@ class Delay(torch.nn.Module, CoModule):
     def __init__(
         self,
         delay: int,
-        temporal_fill: FillMode = "replicate",
+        temporal_fill: FillMode = "zeros",
     ):
         assert delay > 0
         assert temporal_fill in {"zeros", "replicate"}
@@ -79,10 +79,7 @@ class Delay(torch.nn.Module, CoModule):
         return output, (buffer, new_index)
 
     def forward_steps(self, input: Tensor) -> Tensor:
-        # Pass into delay line, but discard output
-        outs = []
-        for t in range(input.shape[3]):
-            outs.append(self.forward_step(input[:, :, t]))
+        outs = [self.forward_step(input[:, :, t]) for t in range(input.shape[2])]
 
         if len(outs) > 0:
             outs = torch.stack(outs, dim=2)
@@ -98,3 +95,6 @@ class Delay(torch.nn.Module, CoModule):
     @property
     def delay(self) -> int:
         return self._delay
+
+    def extra_repr(self):
+        return f"{self.delay}"

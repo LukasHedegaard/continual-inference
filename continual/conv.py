@@ -46,7 +46,7 @@ class _ConvCoNd(_ConvNd, CoModule):
         groups: int = 1,
         bias: bool = True,
         padding_mode: FillMode = "zeros",
-        temporal_fill: FillMode = "replicate",
+        temporal_fill: FillMode = "zeros",
     ):
         assert issubclass(
             ConvClass, _ConvNd
@@ -285,7 +285,7 @@ class Conv1d(_ConvCoNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: FillMode = "zeros",
-        temporal_fill: FillMode = "replicate",
+        temporal_fill: FillMode = "zeros",
     ):
         r"""Applies a continual 1D convolution over an input signal composed of several input
         planes.
@@ -345,9 +345,7 @@ class Conv1d(_ConvCoNd):
         )
 
     @staticmethod
-    def build_from(
-        module: nn.Conv1d, temporal_fill: FillMode = "replicate"
-    ) -> "Conv1d":
+    def build_from(module: nn.Conv1d, temporal_fill: FillMode = "zeros") -> "Conv1d":
         dilation = (1, *module.dilation[1:])
         if dilation != module.dilation:
             logger.warning(
@@ -385,7 +383,7 @@ class Conv2d(_ConvCoNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: FillMode = "zeros",
-        temporal_fill: FillMode = "replicate",
+        temporal_fill: FillMode = "zeros",
     ):
         r"""Applies a continual 2D convolution over an input signal composed of several input
         planes.
@@ -445,9 +443,7 @@ class Conv2d(_ConvCoNd):
         )
 
     @staticmethod
-    def build_from(
-        module: nn.Conv2d, temporal_fill: FillMode = "replicate"
-    ) -> "Conv2d":
+    def build_from(module: nn.Conv2d, temporal_fill: FillMode = "zeros") -> "Conv2d":
         dilation = (1, *module.dilation[1:])
         if dilation != module.dilation:
             logger.warning(
@@ -485,7 +481,7 @@ class Conv3d(_ConvCoNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: FillMode = "zeros",
-        temporal_fill: FillMode = "replicate",
+        temporal_fill: FillMode = "zeros",
     ):
         r"""Applies a continual 3D convolution over an input signal composed of several input
         planes.
@@ -547,9 +543,7 @@ class Conv3d(_ConvCoNd):
         )
 
     @staticmethod
-    def build_from(
-        module: nn.Conv3d, temporal_fill: FillMode = "replicate"
-    ) -> "Conv3d":
+    def build_from(module: nn.Conv3d, temporal_fill: FillMode = "zeros") -> "Conv3d":
         stride = (1, *module.stride[1:])
         dilation = (1, *module.dilation[1:])
         for shape, name in zip(

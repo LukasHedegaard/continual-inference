@@ -56,7 +56,7 @@ def _co_window_pooled(  # noqa: C901
             self,
             temporal_kernel_size: int,
             temporal_dilation: int = 1,
-            temporal_fill: FillMode = "replicate",
+            temporal_fill: FillMode = "zeros",
             *args,
             **kwargs,
         ):
