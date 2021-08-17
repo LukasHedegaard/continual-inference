@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1]
+## Changed
+- Renamed `unsqueezed` to `forward_stepping`.
+
+## Removed 
+- Unused utility `Zeros`
+
 ## [0.2.0]
 ## Changed
 - Naming to match `torch.nn`. This lets the continual modules be used as drop-in replacements for `torch.nn` modules.
