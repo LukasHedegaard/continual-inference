@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## Added
+- Automatic conversion of batch normalisation and activation functions
+
+## Fixed
+- Separate dilation and stride in pool
+
+## Changed
+- Conv forward to use temporal padding like (like nn.Conv)
+
+## Removed
+- `co.BatchNorm2d`
 
 ## [0.2.1]
 ## Changed
