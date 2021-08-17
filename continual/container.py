@@ -21,7 +21,12 @@ class Sequential(nn.Sequential, CoModule):
     """
 
     def add_module(self, name: str, module: Optional["nn.Module"]) -> None:
-        CoModule._validate_class(module)
+        if not CoModule.is_valid(module):
+            # Attempt automatic conversion
+            from continual.convert import continual  # break cyclical import
+
+            module = continual(module)
+
         nn.Module.add_module(self, name, module)
 
     def forward_step(self, input):
@@ -36,7 +41,7 @@ class Sequential(nn.Sequential, CoModule):
 
     @property
     def delay(self):
-        return sum(m.delay for m in self)
+        return sum(getattr(m, "delay", 0) for m in self)
 
     @staticmethod
     def build_from(module: nn.Sequential) -> "Sequential":
@@ -141,7 +146,7 @@ class Parallel(nn.Sequential, CoModule):
             else {
                 Aggregation.SUM: parallel_sum,
                 Aggregation.CONCAT: parallel_concat,
-            }[aggregation_fn]
+            }[Aggregation(aggregation_fn)]
         )
 
         delays = set(m.delay for m in self)
