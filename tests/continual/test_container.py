@@ -83,10 +83,10 @@ def test_residual():
     co_res = co.Residual(co_conv)
 
     # Target behavior: Discard outputs from temporal padding
-    target = (conv(input) + input)[:, :, 1:-1]
+    target = conv(input) + input
 
     # forward
-    out_manual_res = co_conv.forward(input) + input[:, :, 1:-1]
+    out_manual_res = co_conv.forward(input) + input
     assert torch.allclose(out_manual_res, target)
 
     out_res = co_res.forward(input)
@@ -94,13 +94,11 @@ def test_residual():
 
     # forward_steps
     out_firsts = co_res.forward_steps(input[:, :, :-1])
-    assert torch.allclose(
-        out_firsts[:, :, co_res.delay + t_pad : -1], target[:, :, :-2]
-    )
+    assert torch.allclose(out_firsts[:, :, co_res.delay : -1], target[:, :, :-3])
 
     # forward_step
     out_last = co_res.forward_step(input[:, :, -1])
-    assert torch.allclose(out_last, target[:, :, -1])
+    assert torch.allclose(out_last, target[:, :, -2])
 
 
 def test_parallel():
@@ -113,14 +111,16 @@ def test_parallel():
 
     # forward
     out_all = par(input)
-    assert out_all.shape == (1, 1, 3, 5, 5)
+    assert out_all.shape == (1, 1, 7, 5, 5)
 
     # forward_steps
     out_firsts = par.forward_steps(input[:, :, :-1])
-    assert torch.allclose(out_firsts[:, :, 2 * par.delay : -1], out_all[:, :, :-2])
+    assert torch.allclose(
+        out_firsts[:, :, par.delay : -1], out_all[:, :, :-4], atol=1e-7
+    )
 
     # forward_step
     out_last = par.forward_step(input[:, :, -1])
-    assert torch.allclose(out_last, out_all[:, :, -1])
+    assert torch.allclose(out_last, out_all[:, :, -3])
 
     par.clean_state()

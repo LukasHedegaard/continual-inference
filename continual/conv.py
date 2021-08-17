@@ -16,7 +16,6 @@ from torch.nn.modules.conv import (
 
 from .interface import CoModule, FillMode, TensorPlaceholder
 from .logging import getLogger
-from .utils import temporary_parameter
 
 logger = getLogger(__name__)
 
@@ -264,8 +263,7 @@ class _ConvCoNd(_ConvNd, CoModule):
         assert (
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
-        with temporary_parameter(self, "padding", (0, *self.padding[1:])):
-            output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
+        output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
         return output
 
     @property
