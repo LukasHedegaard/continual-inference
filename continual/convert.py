@@ -1,8 +1,10 @@
 """ Register modules with conversion system and 3rd-party libraries """
 
 from functools import wraps
-from typing import Type, Callable
-from torch import nn, Tensor
+from typing import Callable, Type
+
+from torch import Tensor, nn
+
 from .batchnorm import BatchNorm2d
 from .container import Sequential
 from .conv import Conv1d, Conv2d, Conv3d
