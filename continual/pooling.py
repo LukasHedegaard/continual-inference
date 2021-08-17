@@ -4,6 +4,7 @@ from typing import Callable, Tuple, Type, TypeVar
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
+from torch.nn.modules.utils import _ntuple
 
 from .interface import CoModule, FillMode
 
@@ -54,7 +55,8 @@ def _co_window_pooled(  # noqa: C901
     class CoPool(CoModule, InnerClass):
         def __init__(
             self,
-            temporal_kernel_size: int,
+            temporal_kernel_size: int = 1,
+            temporal_stride: int = 1,
             temporal_dilation: int = 1,
             temporal_fill: FillMode = "zeros",
             *args,
@@ -73,6 +75,7 @@ def _co_window_pooled(  # noqa: C901
             assert temporal_kernel_size > 0
             assert temporal_fill in {"zeros", "replicate"}
             self.temporal_kernel_size = temporal_kernel_size
+            self.temporal_stride = temporal_stride
             self.temporal_dilation = temporal_dilation
             self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
                 temporal_fill
@@ -139,11 +142,19 @@ def _co_window_pooled(  # noqa: C901
                     ),
                 )
             else:
+                # E.g. isolate the "2" in MaxPool2d and ensure the tuple matches
+                _tuple = _ntuple(int(InnerClass.__name__[-2]))
                 self._functional_call = partial(
                     functional_fn,
-                    kernel_size=(self.temporal_kernel_size, *self.kernel_size),
-                    stride=(self.temporal_dilation, *self.stride),
+                    kernel_size=(self.temporal_kernel_size, *_tuple(self.kernel_size)),
+                    stride=(self.temporal_stride, *_tuple(self.stride)),
+                    padding=(0, *_tuple(self.padding)),
                 )
+                if "Max" in FromClass.__name__:
+                    self._functional_call = partial(
+                        self._functional_call,
+                        dilation=(self.temporal_dilation, *_tuple(self.dilation)),
+                    )
 
         def init_state(
             self,
