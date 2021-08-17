@@ -1,28 +1,5 @@
 from contextlib import contextmanager
-from functools import reduce, wraps
-from typing import Callable
-
-from torch import Tensor, nn
-
-from .interface import CoModule
-
-
-class Zero(nn.Module, CoModule):
-    def forward_step(self, input: Tensor) -> Tensor:
-        return 0
-
-    def forward_steps(self, input: Tensor) -> Tensor:
-        return 0
-
-    def forward(self, input: Tensor) -> Tensor:
-        return 0
-
-    @property
-    def delay(self) -> int:
-        return 0
-
-    def clean_state(self):
-        ...
+from functools import reduce
 
 
 @contextmanager
