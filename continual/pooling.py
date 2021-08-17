@@ -73,13 +73,17 @@ def _co_window_pooled(  # noqa: C901
                 self.input_shape_desciption += ("height", "width")
 
             assert temporal_kernel_size > 0
-            assert temporal_fill in {"zeros", "replicate"}
+            temporal_fill = FillMode(temporal_fill)
             self.temporal_kernel_size = temporal_kernel_size
+            assert (
+                temporal_stride == 1
+            ), "Temporal stride > 1 is not supported currently."
             self.temporal_stride = temporal_stride
             self.temporal_dilation = temporal_dilation
-            self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
-                temporal_fill
-            ]
+            self.make_padding = {
+                temporal_fill.ZEROS: torch.zeros_like,
+                temporal_fill.REPLICATE: torch.clone,
+            }[temporal_fill]
 
             self.temporal_pool = (
                 nn.AdaptiveAvgPool1d if "avg" in class_name else nn.AdaptiveMaxPool1d
