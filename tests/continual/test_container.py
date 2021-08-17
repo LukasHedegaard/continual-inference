@@ -116,7 +116,7 @@ def test_parallel():
     # forward_steps
     out_firsts = par.forward_steps(input[:, :, :-1])
     assert torch.allclose(
-        out_firsts[:, :, par.delay : -1], out_all[:, :, :-4], atol=1e-7
+        out_firsts[:, :, par.delay : -1], out_all[:, :, :-4], atol=5e-6
     )
 
     # forward_step
