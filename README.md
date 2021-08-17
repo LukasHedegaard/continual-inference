@@ -266,19 +266,19 @@ inception_module = co.Parallel(
 ```
 
 
+For additional full-fledged examples of complex Continual Inference Networks, see:
+
+- [Continual 3D](https://github.com/LukasHedegaard/co3d)
+<!-- - [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons) -->
+
+
+
 ## Compatibility
 The library modules are built to integrate seamlessly with other PyTorch projects.
 Specifically, extra care was taken to ensure out-of-the-box compatibility with:
 - [pytorch-lightning](https://github.com/PyTorchLightning/pytorch-lightning)
 - [ptflops](https://github.com/sovrasov/flops-counter.pytorch)
 - [ride](https://github.com/LukasHedegaard/ride)
-
-
-## Projects
-For full-fledged examples of complex Continual Inference Networks, see:
-
-- [Continual 3D](https://github.com/LukasHedegaard/co3d)
-<!-- - [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons) -->
 
 
 ## Citations
