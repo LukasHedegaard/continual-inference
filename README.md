@@ -28,46 +28,49 @@ Building blocks for Continual Inference Networks in PyTorch
 pip install continual-inference
 ```
 
-## Usage
+## Simple example
+Continual Modules are a weight-compatible drop-in replacement for torch.nn Modules, with the enhanced capability of efficient continual inference.
+
 ```python3
 import torch
-from torch import nn
 import continual as co
-                                                           # B, C, T, H, W
-example = torch.normal(mean=torch.zeros(5 * 3 * 3)).reshape((1, 1, 5, 3, 3))
+                                                           
+#                      B, C, T, H, W
+example = torch.randn((1, 1, 5, 3, 3))
 
-# Acts as a drop-in replacement for torch.nn modules ✅
-co_conv = co.Conv3d(in_channels=1, out_channels=1, kernel_size=(3, 3, 3))
-nn_conv = nn.Conv3d(in_channels=1, out_channels=1, kernel_size=(3, 3, 3))
-co_conv.load_state_dict(nn_conv.state_dict()) # ensure identical weights
+conv = co.Conv3d(in_channels=1, out_channels=1, kernel_size=(3, 3, 3))
 
-co_output = co_conv(example)  # Same exact computation
-nn_output = nn_conv(example)  # Same exact computation
-assert torch.equal(co_output, nn_output)
+# Same exact computation as torch.nn.Conv3d ✅
+output = conv(example)
 
 # But can also perform online inference efficiently 🚀
-firsts = co_conv.forward_steps(example[:, :, :4])
-last = co_conv.forward_step(example[:, :, 4])
+firsts = conv.forward_steps(example[:, :, :4])
+last = conv.forward_step(example[:, :, 4])
 
-assert torch.allclose(nn_output[:, :, : co_conv.delay], firsts)
-assert torch.allclose(nn_output[:, :, co_conv.delay], last)
+assert torch.allclose(output[:, :, : conv.delay], firsts)
+assert torch.allclose(output[:, :, conv.delay], last)
 ```
+
+See also the "Advanced Examples" section.
 
 ## Continual Inference Networks (CINs)
 Continual Inference Networks are a type of neural network, which operate on a continual input stream of data and infer a new prediction for each new time-step.
+They are ideal for online detection and monitoring scenarios, but can also be used succesfully in offline situations.
 
-All networks and network-modules, that do not utilise temporal information can be used for an Online Inference Network (e.g. `nn.Conv1d` and `nn.Conv2d` on spatial data such as an image). 
+All networks and network-modules, that do not utilise temporal information can be used for an Continual Inference Network (e.g. `nn.Conv1d` and `nn.Conv2d` on spatial data such as an image). 
 Moreover, recurrent modules (e.g. `LSTM` and `GRU`), that summarize past events in an internal state are also useable in CINs.
+
+Some example CINs and non-CINs are illustrated below to 
 
 __CIN__:
 ```
-  O       O       O      (output)
-  ↑       ↑       ↑       
-LSTM    LSTM    LSTM     (temporal LSTM)
-  ↑       ↑       ↑    
-Conv2D  Conv2D  Conv2D   (spatial 2D conv)
-  ↑       ↑       ↑    
-  I       I       I      (input frame)
+   O          O          O        (output)
+   ↑          ↑          ↑       
+nn.LSTM    nn.LSTM    nn.LSTM     (temporal LSTM)
+   ↑          ↑          ↑    
+nn.Conv2D  nn.Conv2D  nn.Conv2D   (spatial 2D conv)
+   ↑          ↑          ↑    
+   I          I          I        (input frame)
 ```
 
 However, modules that operate on temporal data with the assumption that the more temporal context is available than the current frame (e.g. the spatio-temporal `nn.Conv3d` used by many SotA video recognition models) cannot be directly applied.
@@ -76,7 +79,7 @@ __Not CIN__:
 ```
           Θ              (output)   
           ↑              
-        Conv3D           (spatio-temporal 3D conv)
+      nn.Conv3D          (spatio-temporal 3D conv)
           ↑
   -----------------      (concatenate frames to clip)
   ↑       ↑       ↑    
@@ -87,69 +90,37 @@ Sometimes, though, the computations in such modules, can be cleverly restructure
 
 __CIN__:
 ```
-   O         O         Θ      (output)
-   ↑         ↑         ↑    
-ConvCo3D  ConvCo3D  ConvCo3D  (continual spatio-temporal 3D conv)
-   ↑         ↑         ↑    
-   I         I         I      (input frame)
+    O          O          Θ      (output)
+    ↑          ↑          ↑    
+co.Conv3d  co.Conv3d  co.Conv3d  (continual spatio-temporal 3D conv)
+    ↑          ↑          ↑    
+    I          I          I      (input frame)
 ```
 Here, the `ϴ` output of the `Conv3D` and `ConvCo3D` are identical! ✨
 
-## Modules
-This repository contains online inference-friendly versions of common network building blocks, inlcuding:
-
-<!-- TODO: Replace with link to docs once they are set up -->
-- (Temporal) convolutions:
-    - `co.Conv1d`
-    - `co.Conv2d`
-    - `co.Conv3d`
-
-- (Temporal) batch normalisation:
-    - `co.BatchNorm2d`
-
-- (Temporal) pooling:
-    - `co.AvgPool1d`
-    - `co.AvgPool2d`
-    - `co.AvgPool3d`
-    - `co.MaxPool1d`
-    - `co.MaxPool2d`
-    - `co.MaxPool3d`
-    - `co.AdaptiveAvgPool1d`
-    - `co.AdaptiveAvgPool2d`
-    - `co.AdaptiveAvgPool3d`
-    - `co.AdaptiveMaxPool1d`
-    - `co.AdaptiveMaxPool2d`
-    - `co.AdaptiveMaxPool3d`
-
-- Other
-    - `co.Sequential` - sequential wrapper for modules
-    - `co.Parallel` - parallel wrapper for modules
-    - `co.Residual` - residual wrapper for modules
-    - `co.Delay` - pure delay module
-    <!-- - `co.Residual` - residual connection, which automatically adds delay if needed -->
-    - `co.unsqueezed` - functional wrapper for non-continual modules
-    - `co.continual` - conversion function from non-continual modules to continual moduls
+The last conversion from a non-CIN to a CIN is possible due to a recent break-through in Online Action Detection, namely [Continual Convolutions].
 
 ### Continual Convolutions
-Continual Convolutions can lead to major improvements in computational efficiency when online / frame-by-frame predictions are required.
-
-Below, principle sketches comparing regular and continual convolutions are shown:
+Below, principle sketches are shown, which compare regular and continual convolutions during online / continual inference:
 
 <div align="center">
-<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual-convolution.png" width="500">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/improved-nn-interop/figures/continual/regular-convolution.png" width="500">
   <br>
   Regular Convolution. 
-	A regular temporal convolutional layer leads to redundant computations during online processing of video clips, as illustrated by the repeated convolution of inputs (green b,c,d) with a kernel (blue α,β) in the temporal dimen- sion. Moreover, prior inputs (b,c,d) must be stored be- tween time-steps for online processing tasks.
-  <br><br>  
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/regular-convolution.png" width="500">
+	A regular temporal convolutional layer leads to redundant computations during online processing of video clips, as illustrated by the repeated convolution of inputs (green b,c,d) with a kernel (blue α,β) in the temporal dimen- sion. Moreover, prior inputs (b,c,d) must be stored between time-steps for online processing tasks.
+  <br><br>
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/improved-nn-interop/figures/continual/continual-convolution.png" width="500">
   <br>
   Continual Convolution. 
 	An input (green d or e) is convolved with a kernel (blue α, β). The intermediary feature-maps corresponding to all but the last temporal position are stored, while the last feature map and prior memory are summed to produce the resulting output. For a continual stream of inputs, Continual Convolutions produce identical outputs to regular convolutions.
-  <br><br>
+  <br><br>  
 </div>
+
+As illustrated, Continual Convolutions can lead to major improvements in computational efficiency when online / frame-by-frame predictions are required! 🚀 
 
 
 For more information, we refer to the [seminal paper on Continual Convolutions](https://arxiv.org/abs/2106.00050).
+
 
 ## Forward modes
 The library components feature three distinct forward modes, which are handy for different situations.
@@ -194,19 +165,120 @@ This method is handy for effient training on clip-based data.
  P   I   I   I   P    (I: input frame, P: padding)
 ```
 
+
+## Modules
+The repository contains custom online inference-friendly versions of common network building blocks, as well as handy wrappers and a global conversion function from `torch.nn` to `continual` (`co`) modules.
+
+<!-- TODO: Replace with link to docs once they are set up -->
+- Convolutions:
+    - `co.Conv1d`
+    - `co.Conv2d`
+    - `co.Conv3d`
+
+- Pooling:
+    - `co.AvgPool1d`
+    - `co.AvgPool2d`
+    - `co.AvgPool3d`
+    - `co.MaxPool1d`
+    - `co.MaxPool2d`
+    - `co.MaxPool3d`
+    - `co.AdaptiveAvgPool1d`
+    - `co.AdaptiveAvgPool2d`
+    - `co.AdaptiveAvgPool3d`
+    - `co.AdaptiveMaxPool1d`
+    - `co.AdaptiveMaxPool2d`
+    - `co.AdaptiveMaxPool3d`
+
+- Containers
+    - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
+    - `co.Parallel` - Parallel wrapper for modules.
+    - `co.Residual` - Residual wrapper for modules.
+    - `co.Delay` - Pure delay module (e.g. needed in residuals).
+
+- Converters
+    <!-- - `co.Residual` - residual connection, which automatically adds delay if needed -->
+    - `co.continual` - conversion function from non-continual modules to continual modules
+    - `co.forward_stepping` - functional wrapper, which enhances temporally local non-continual modules with the forward_stepping functions
+
+
+## Advanced examples
+
+### Continual 3D [MBConv](https://arxiv.org/pdf/1801.04381.pdf)
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/improved-nn-interop/figures/examples/mb_conv.png" width="150">
+  <br>
+  MobileNetV2 Inverted residual block. Source: https://arxiv.org/pdf/1801.04381.pdf
+</div>
+
+```python3
+import continual as co
+from torch import nn
+
+mb_conv = co.Residual(
+    co.Sequential(
+      co.Conv3d(32, 64, kernel_size=(1, 1, 1)),
+      nn.BatchNorm3d(64),
+      nn.ReLU6(),
+      co.Conv3d(64, 64, kernel_size=(3, 3, 3), padding=(0, 1, 1), groups=64),
+      nn.ReLU6(),
+      co.Conv3d(64, 32, kernel_size=(1, 1, 1)),
+      nn.BatchNorm3d(32),
+    )
+)
+```
+
+### Continual 3D [Inception module](https://arxiv.org/pdf/1409.4842v1.pdf)
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/improved-nn-interop/figures/examples/inception_block.png" width="450">
+  <br>
+  Inception module with dimension reductions. Source: https://arxiv.org/pdf/1409.4842v1.pdf
+</div>
+
+```python3
+import continual as co
+from torch import nn
+
+def norm_relu(module, channels):
+    return co.Sequential(
+        module,
+        nn.BatchNorm3d(channels),
+        nn.ReLU(),
+    )
+
+inception_module = co.Parallel(
+    co.Conv3d(192, 64, kernel_size=1),
+    co.Sequential(
+        norm_relu(co.Conv3d(192, 96, kernel_size=1), 96),
+        norm_relu(co.Conv3d(96, 128, kernel_size=3, padding=1), 128),
+    ),
+    co.Sequential(
+        norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
+        norm_relu(co.Conv3d(16, 32, kernel_size=3, padding=1), 32),
+    ),
+    co.Sequential(
+        co.MaxPool3d(kernel_size=3, padding=1, stride=1),
+        norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
+    ),
+    aggregation_fn="concat",
+)
+```
+
+
+For additional full-fledged examples of complex Continual Inference Networks, see:
+
+- [Continual 3D](https://github.com/LukasHedegaard/co3d)
+<!-- - [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons) -->
+
+
+
 ## Compatibility
 The library modules are built to integrate seamlessly with other PyTorch projects.
 Specifically, extra care was taken to ensure out-of-the-box compatibility with:
 - [pytorch-lightning](https://github.com/PyTorchLightning/pytorch-lightning)
 - [ptflops](https://github.com/sovrasov/flops-counter.pytorch)
 - [ride](https://github.com/LukasHedegaard/ride)
-
-
-## Projects
-For full-fledged examples of complex Continual Inference Networks, see:
-
-- [Continual 3D](https://github.com/LukasHedegaard/co3d)
-<!-- - [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons) -->
 
 
 ## Citations

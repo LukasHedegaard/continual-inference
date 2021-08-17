@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2]
+## Added
+- Automatic conversion of batch normalisation and activation functions
+
+## Fixed
+- Separate dilation and stride in pool
+
+## Changed
+- Conv forward to use temporal padding like (like nn.Conv)
+
+## Removed
+- `co.BatchNorm2d`
+
 ## [0.2.1]
 ## Changed
 - Renamed `unsqueezed` to `forward_stepping`.

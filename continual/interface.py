@@ -36,6 +36,14 @@ class CoModule(ABC):
             property,
         }, f"{cls.__name__} should implement a `delay` property to satisfy the CoModule interface."
 
+    @staticmethod
+    def is_valid(module):
+        try:
+            CoModule._validate_class(module.__class__)
+        except AssertionError:
+            return False
+        return True
+
     def forward_step(self, input: Tensor) -> Tensor:
         """Clip-wise forward computation with state initialisation"""
         ...  # pragma: no cover

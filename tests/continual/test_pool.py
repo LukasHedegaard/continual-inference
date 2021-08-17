@@ -132,8 +132,8 @@ def test_AdaptiveMaxPool3d():
 
 
 def test_MaxPool3d_dilation():
-    target = nn.MaxPool3d((2, 2, 2), dilation=(2, 1, 1))(example_long)
+    target = nn.MaxPool3d((2, 2, 2), stride=(2, 2, 2), dilation=(2, 1, 1))(example_long)
     output = MaxPool3d(
-        temporal_kernel_size=4, kernel_size=(2, 2), temporal_dilation=2
+        temporal_kernel_size=4, kernel_size=(2, 2), stride=(2, 2), temporal_dilation=2
     ).forward_steps(example_long)
     assert torch.allclose(target, output.index_select(2, torch.tensor([0, 2, 4])))

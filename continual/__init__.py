@@ -1,4 +1,3 @@
-from .batchnorm import BatchNorm2d  # noqa: F401
 from .container import Parallel, Residual, Sequential  # noqa: F401
 from .conv import Conv1d, Conv2d, Conv3d  # noqa: F401
 from .convert import continual, forward_stepping  # noqa: F401
@@ -16,4 +15,4 @@ from .pooling import (  # noqa: F401
     MaxPool2d,
     MaxPool3d,
 )
-from .ptflops import register_ptflops  # noqa: F401
+from .ptflops import _register_ptflops  # noqa: F401

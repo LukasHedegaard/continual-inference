@@ -16,7 +16,6 @@ from torch.nn.modules.conv import (
 
 from .interface import CoModule, FillMode, TensorPlaceholder
 from .logging import getLogger
-from .utils import temporary_parameter
 
 logger = getLogger(__name__)
 
@@ -73,6 +72,9 @@ class _ConvCoNd(_ConvNd, CoModule):
         dilation = size_fn(dilation)
         assert dilation[0] == 1, "Temporal dilation > 1 is not supported currently."
 
+        temporal_fill = FillMode(temporal_fill)
+        padding_mode = FillMode(padding_mode)
+
         _ConvNd.__init__(
             self,
             in_channels,
@@ -85,13 +87,12 @@ class _ConvCoNd(_ConvNd, CoModule):
             output_padding=size_fn(0),
             groups=groups,
             bias=bias,
-            padding_mode=padding_mode,
+            padding_mode=padding_mode.value,
         )
-
-        assert temporal_fill in {"zeros", "replicate"}
-        self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
-            temporal_fill
-        ]
+        self.make_padding = {
+            FillMode.ZEROS: torch.zeros_like,
+            FillMode.REPLICATE: torch.clone,
+        }[temporal_fill]
 
         self._reversed_padding_repeated_twice = _reverse_repeat_tuple(
             (self.kernel_size[0] - 1, *self.padding[1:]), 2
@@ -264,8 +265,7 @@ class _ConvCoNd(_ConvNd, CoModule):
         assert (
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
-        with temporary_parameter(self, "padding", (0, *self.padding[1:])):
-            output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
+        output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
         return output
 
     @property

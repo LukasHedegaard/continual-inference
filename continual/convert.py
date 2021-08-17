@@ -5,7 +5,6 @@ from typing import Callable, Type
 
 from torch import Tensor, nn
 
-from .batchnorm import BatchNorm2d
 from .container import Sequential
 from .conv import Conv1d, Conv2d, Conv3d
 from .interface import CoModule
@@ -52,15 +51,55 @@ def forward_stepping(module: nn.Module, dim: int = 2):
 
         return call
 
+    def dummy(self):
+        ...  # pragma: no cover
+
     module.forward = module.forward
     module.forward_steps = module.forward
     module.forward_step = decorator(module.forward)
+    module.delay = 0
+    module.clean_state = dummy
 
     return module
 
 
 # A mapping from torch.nn modules to continual modules
 MODULE_MAPPING = {}
+
+NAIVE_MAPPING = {
+    # >> Activations
+    nn.Threshold,
+    nn.ReLU,
+    nn.RReLU,
+    nn.Hardtanh,
+    nn.ReLU6,
+    nn.Sigmoid,
+    nn.Hardsigmoid,
+    nn.Tanh,
+    nn.SiLU,
+    nn.Hardswish,
+    nn.ELU,
+    nn.CELU,
+    nn.SELU,
+    nn.GLU,  # has dim
+    nn.GELU,
+    nn.Hardshrink,
+    nn.LeakyReLU,
+    nn.LogSigmoid,
+    nn.Softplus,
+    nn.Softshrink,
+    nn.PReLU,
+    nn.Softsign,
+    nn.Tanhshrink,
+    nn.Softmin,  # has dim
+    nn.Softmax,  # has dim
+    nn.Softmax2d,
+    nn.LogSoftmax,
+    # >> Norm modules
+    nn.BatchNorm1d,
+    nn.BatchNorm2d,
+    nn.BatchNorm3d,
+}
 
 
 class ModuleNotRegisteredError(Exception):
@@ -84,13 +123,16 @@ def register(TorchNnModule: Type[nn.Module], CoClass: Type[CoModule]):
 
 
 def continual(module: nn.Module) -> CoModule:
+    if type(module) in NAIVE_MAPPING:
+        return forward_stepping(module)
+
     assert type(module) in MODULE_MAPPING, (
         f"A registered conversion for {module.__name__} was not found. "
         "You can register a custom conversion as follows:"
         """
-        from continual.utils import register
+        import continual as co
 
-        register(MyTorchModule, MyContinualModule)
+        co.convert.register(MyTorchModule, MyContinualModule)
         """
     )
     return MODULE_MAPPING[type(module)].build_from(module)
@@ -115,9 +157,6 @@ register(nn.MaxPool3d, MaxPool3d)
 register(nn.AdaptiveAvgPool3d, AdaptiveAvgPool3d)
 register(nn.AdaptiveMaxPool3d, AdaptiveMaxPool3d)
 
-# BatchNorm
-register(nn.BatchNorm2d, BatchNorm2d)
-
 # Container
 register(nn.Sequential, Sequential)
 
@@ -125,9 +164,6 @@ register(nn.Sequential, Sequential)
 # Register modules in `ptflops`
 try:
     from ptflops import flops_counter as fc
-
-    # BatchNorm
-    fc.MODULES_MAPPING[BatchNorm2d] = fc.bn_flops_counter_hook
 
     # Conv
     fc.MODULES_MAPPING[Conv1d] = fc.conv_flops_counter_hook

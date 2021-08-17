@@ -1,6 +1,5 @@
 """ Register modules with `ptflops` """
 
-from .batchnorm import BatchNorm2d
 from .conv import Conv1d, Conv2d, Conv3d
 from .logging import getLogger
 from .pooling import (
@@ -20,12 +19,9 @@ logger = getLogger(__name__)
 
 
 # Register modules in `ptflops`
-def register_ptflops():
+def _register_ptflops():
     try:
         from ptflops import flops_counter as fc
-
-        # BatchNorm
-        fc.MODULES_MAPPING[BatchNorm2d] = fc.bn_flops_counter_hook
 
         # Conv
         fc.MODULES_MAPPING[Conv1d] = fc.conv_flops_counter_hook
@@ -50,4 +46,4 @@ def register_ptflops():
         logger.warning(f"Failed to add flops_counter_hook: {e}")
 
 
-register_ptflops()
+_register_ptflops()
