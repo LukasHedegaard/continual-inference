@@ -136,12 +136,12 @@ Continual Convolutions can lead to major improvements in computational efficienc
 Below, principle sketches comparing regular and continual convolutions are shown:
 
 <div align="center">
-<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual-convolution.png" width="500">
+<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/continual-convolution.png" width="500">
   <br>
   Regular Convolution. 
 	A regular temporal convolutional layer leads to redundant computations during online processing of video clips, as illustrated by the repeated convolution of inputs (green b,c,d) with a kernel (blue α,β) in the temporal dimen- sion. Moreover, prior inputs (b,c,d) must be stored be- tween time-steps for online processing tasks.
   <br><br>  
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/regular-convolution.png" width="500">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/regular-convolution.png" width="500">
   <br>
   Continual Convolution. 
 	An input (green d or e) is convolved with a kernel (blue α, β). The intermediary feature-maps corresponding to all but the last temporal position are stored, while the last feature map and prior memory are summed to produce the resulting output. For a continual stream of inputs, Continual Convolutions produce identical outputs to regular convolutions.
@@ -193,6 +193,66 @@ This method is handy for effient training on clip-based data.
  -----------------    (-: aggregation)
  P   I   I   I   P    (I: input frame, P: padding)
 ```
+
+## Advanced examples
+
+### Continual 3D [MBConv](https://arxiv.org/pdf/1801.04381.pdf)
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/mb_conv.png" width="500">
+  <br>
+  MobileNetV2 Inverted residual block. Source: https://arxiv.org/pdf/1801.04381.pdf
+</div>
+
+```python3
+mb_conv = co.Residual(
+    co.Sequential(
+      co.Conv3d(32, 64, kernel_size=(1, 1, 1)),
+      co.BatchNorm3d(64),
+      co.Conv3d(64, 64, kernel_size=(3, 3, 3), padding=(0, 1, 1), groups=64),
+      nn.ReLU(),
+      co.Conv3d(64, 32, kernel_size=(1, 1, 1)),
+      co.BatchNorm3d(32),
+    )
+)
+```
+
+### Continual 3D [Inception module](https://arxiv.org/pdf/1409.4842v1.pdf)
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/mb_conv.png" width="500">
+  <br>
+  Inception module with dimension reductions. Source: https://arxiv.org/pdf/1409.4842v1.pdf
+</div>
+
+```python3
+def norm_relu(module, channels):
+    return co.Sequential(
+        module,
+        co.BatchNorm3d(channels),
+        nn.ReLU(),
+    )
+
+inception_module = co.Parallel(
+    co.Conv3d(192, 64, kernel_size=(1, 1, 1)),
+    co.Sequential(
+        norm_relu(co.Conv3d(192, 96, kernel_size=(1, 1, 1)), 96),
+        co.BatchNorm3d(channels),
+        nn.ReLU(),
+        norm_relu(co.Conv3d(96, 128, kernel_size=(3, 3, 3)), 128),
+    ),
+    co.Sequential(
+        norm_relu(co.Conv3d(192, 16, kernel_size=(1, 1, 1)), 16),
+        norm_relu(co.Conv3d(16, 32, kernel_size=(3, 3, 3)), 32),
+    ),
+    co.Sequential(
+        co.MaxPool3d(kernel_size=(1, 3, 3), stride=(1,3,3)),
+        norm_relu(co.Conv3d(192, 32 kernel_size=(1, 1, 1)), 32),
+    ),
+    aggregation_fn = "concat",
+)
+```
+
 
 ## Compatibility
 The library modules are built to integrate seamlessly with other PyTorch projects.
