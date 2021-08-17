@@ -1,9 +1,8 @@
 """ Register modules with conversion system and 3rd-party libraries """
 
-from typing import Type
-
-from torch import nn
-
+from functools import wraps
+from typing import Type, Callable
+from torch import nn, Tensor
 from .batchnorm import BatchNorm2d
 from .container import Sequential
 from .conv import Conv1d, Conv2d, Conv3d
@@ -23,6 +22,39 @@ from .pooling import (
 )
 
 logger = getLogger(__name__)
+
+
+def forward_stepping(module: nn.Module, dim: int = 2):
+    """Enhances torch.nn.Module with `forward_step` and `forward_steps`
+    by unsqueezing the temporal dimension.
+
+    NB: The passed module must not have time-dependent operations!
+    For instance, `module = nn.Conv3d(1, 1, kernel_size=(1,1,1))` is OK,
+    but results for `module = nn.Conv3d(1, 1, kernel_size=(3,3,3))` would be invalid.
+
+    Alternatively, one may attempt to automatically convert the module by using
+    `co.continual(module)` instead.
+
+    Args:
+        module (nn.Module): the torch.nn.Module to enchange
+        dim (int, optional): The dimension to unsqueeze during `forward_step`. Defaults to 2.
+    """
+
+    def decorator(func: Callable[[Tensor], Tensor]):
+        @wraps(func)
+        def call(x: Tensor) -> Tensor:
+            x = x.unsqueeze(dim)
+            x = func(x)
+            x = x.squeeze(dim)
+            return x
+
+        return call
+
+    module.forward = module.forward
+    module.forward_steps = module.forward
+    module.forward_step = decorator(module.forward)
+
+    return module
 
 
 # A mapping from torch.nn modules to continual modules
