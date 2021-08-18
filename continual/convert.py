@@ -99,6 +99,12 @@ NAIVE_MAPPING = {
     nn.BatchNorm1d,
     nn.BatchNorm2d,
     nn.BatchNorm3d,
+    # >> Dropout modules
+    nn.Dropout,
+    nn.Dropout2d,
+    nn.Dropout3d,
+    nn.AlphaDropout,
+    nn.FeatureAlphaDropout,
 }
 
 
