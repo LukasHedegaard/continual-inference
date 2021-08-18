@@ -11,6 +11,9 @@
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG"/>
   </a>
+  <a href="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/overview/main">
+    <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="CodeFactor" />
+  </a>
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" height="20">
   </a>
@@ -258,7 +261,7 @@ inception_module = co.Parallel(
         norm_relu(co.Conv3d(16, 32, kernel_size=3, padding=1), 32),
     ),
     co.Sequential(
-        co.MaxPool3d(kernel_size=3, padding=1, stride=1),
+        co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
         norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
     ),
     aggregation_fn="concat",

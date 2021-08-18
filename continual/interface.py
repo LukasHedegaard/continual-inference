@@ -45,15 +45,16 @@ class CoModule(ABC):
         return True
 
     def forward_step(self, input: Tensor) -> Tensor:
-        """Clip-wise forward computation with state initialisation"""
+        """Forward computation for a single step with state initialisation"""
         ...  # pragma: no cover
 
     def forward_steps(self, input: Tensor) -> Tensor:
-        """Clip-wise forward computation with state initialisation"""
+        """Forward computation for multiple steps with state initialisation"""
         ...  # pragma: no cover
 
     def forward(self, input: Tensor) -> Tensor:
-        """Clip-wise forward without state initialisation, but which is identical to the non-continual component"""
+        """Forward computation for multiple steps without state initialisation.
+        This function is identical to the non-continual module found `torch.nn`"""
         ...  # pragma: no cover
 
     # @property

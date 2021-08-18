@@ -129,8 +129,6 @@ class _ConvCoNd(_ConvNd, CoModule):
             and self.stride_index is not None
         ):
             return (self.state_buffer, self.state_index, self.stride_index)
-        else:
-            return None
 
     def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         assert (
@@ -219,22 +217,16 @@ class _ConvCoNd(_ConvNd, CoModule):
         assert (
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
-        T = input.shape[2]
-        self.clean_state()
 
         pad_start = [self.make_padding(input[:, :, 0]) for _ in range(self.padding[0])]
-        inputs = [input[:, :, t] for t in range(T)]
+        inputs = [input[:, :, t] for t in range(input.shape[2])]
         pad_end = [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
 
         # Recurrently pass through, updating state
         outs = []
         for t, i in enumerate([*pad_start, *inputs]):
-            o, (
-                self.state_buffer,
-                self.state_index,
-                self.stride_index,
-            ) = self._forward_step(i, self.get_state())
-            if self.kernel_size[0] - 1 <= t and type(o) is not TensorPlaceholder:
+            o = self.forward_step(i)
+            if self.kernel_size[0] - 1 <= t and not isinstance(o, TensorPlaceholder):
                 outs.append(o)
 
         # Don't save state for the end-padding
@@ -243,7 +235,7 @@ class _ConvCoNd(_ConvNd, CoModule):
             o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
                 i, (tmp_buffer, tmp_index, tmp_stride_index)
             )
-            if o is not None and type(o) is not TensorPlaceholder:
+            if o is not None and not isinstance(o, TensorPlaceholder):
                 outs.append(o)
 
         if len(outs) > 0:
