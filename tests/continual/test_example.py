@@ -70,7 +70,7 @@ def test_inception_module():
             norm_relu(co.Conv3d(16, 32, kernel_size=3, padding=1), 32),
         ),
         co.Sequential(
-            co.MaxPool3d(kernel_size=3, padding=1, stride=1),
+            co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
             norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
         ),
         aggregation_fn="concat",
