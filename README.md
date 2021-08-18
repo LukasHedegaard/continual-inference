@@ -107,12 +107,12 @@ The last conversion from a non-CIN to a CIN is possible due to a recent break-th
 Below, principle sketches are shown, which compare regular and continual convolutions during online / continual inference:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/improved-nn-interop/figures/continual/regular-convolution.png" width="500">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/regular-convolution.png" width="500">
   <br>
   Regular Convolution. 
 	A regular temporal convolutional layer leads to redundant computations during online processing of video clips, as illustrated by the repeated convolution of inputs (green b,c,d) with a kernel (blue α,β) in the temporal dimen- sion. Moreover, prior inputs (b,c,d) must be stored between time-steps for online processing tasks.
   <br><br>
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/improved-nn-interop/figures/continual/continual-convolution.png" width="500">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/continual-convolution.png" width="500">
   <br>
   Continual Convolution. 
 	An input (green d or e) is convolved with a kernel (blue α, β). The intermediary feature-maps corresponding to all but the last temporal position are stored, while the last feature map and prior memory are summed to produce the resulting output. For a continual stream of inputs, Continual Convolutions produce identical outputs to regular convolutions.
@@ -252,7 +252,7 @@ In addition, we support a wide range of modules from `torch.nn`:
 ### Continual 3D [MBConv](https://arxiv.org/pdf/1801.04381.pdf)
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/improved-nn-interop/figures/examples/mb_conv.png" width="150">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/mb_conv.png" width="150">
   <br>
   MobileNetV2 Inverted residual block. Source: https://arxiv.org/pdf/1801.04381.pdf
 </div>
@@ -277,7 +277,7 @@ mb_conv = co.Residual(
 ### Continual 3D [Inception module](https://arxiv.org/pdf/1409.4842v1.pdf)
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/improved-nn-interop/figures/examples/inception_block.png" width="450">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/inception_block.png" width="450">
   <br>
   Inception module with dimension reductions. Source: https://arxiv.org/pdf/1409.4842v1.pdf
 </div>
