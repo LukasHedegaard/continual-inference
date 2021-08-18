@@ -129,8 +129,6 @@ class _ConvCoNd(_ConvNd, CoModule):
             and self.stride_index is not None
         ):
             return (self.state_buffer, self.state_index, self.stride_index)
-        else:
-            return None
 
     def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         assert (
@@ -234,7 +232,7 @@ class _ConvCoNd(_ConvNd, CoModule):
                 self.state_index,
                 self.stride_index,
             ) = self._forward_step(i, self.get_state())
-            if self.kernel_size[0] - 1 <= t and type(o) is not TensorPlaceholder:
+            if self.kernel_size[0] - 1 <= t and not isinstance(o, TensorPlaceholder):
                 outs.append(o)
 
         # Don't save state for the end-padding
@@ -243,7 +241,7 @@ class _ConvCoNd(_ConvNd, CoModule):
             o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
                 i, (tmp_buffer, tmp_index, tmp_stride_index)
             )
-            if o is not None and type(o) is not TensorPlaceholder:
+            if o is not None and not isinstance(o, TensorPlaceholder):
                 outs.append(o)
 
         if len(outs) > 0:
