@@ -5,11 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+
+## [0.3.0]
 ## Added
 - Support for dilation and stride in pooling
 
 ## Changed
 - Pooling API to match torch.nn better
+- `_ConvCoNd.forward_steps` doesn't invoke `clean_state` anymore
+
 
 ## [0.2.2]
 ## Added
@@ -30,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Removed 
 - Unused utility `Zeros`
+
 
 ## [0.2.0]
 ## Changed
