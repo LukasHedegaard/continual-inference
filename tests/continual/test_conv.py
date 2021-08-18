@@ -65,6 +65,7 @@ def test_Conv1d_stride():
             assert type(output[t + (T - 1)]) is TensorPlaceholder
 
     # Whole time-series
+    co_conv.clean_state()
     output = co_conv.forward_steps(sample)
     assert torch.allclose(target, output)
 
@@ -94,6 +95,7 @@ def test_Conv2d():
         assert torch.allclose(target[:, :, t], output[t + (T - 1)])
 
     # Whole time-series
+    co_conv.clean_state()
     output = co_conv.forward_steps(sample)
     assert torch.allclose(target, output)
 
@@ -135,6 +137,7 @@ def test_Conv2d_stride():
             assert type(output[t + (T - 1)]) is TensorPlaceholder
 
     # Whole time-series
+    co_conv.clean_state()
     output = co_conv.forward_steps(sample)
     assert torch.allclose(target, output, atol=1e-7)
 

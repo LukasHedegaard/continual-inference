@@ -217,21 +217,15 @@ class _ConvCoNd(_ConvNd, CoModule):
         assert (
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
-        T = input.shape[2]
-        self.clean_state()
 
         pad_start = [self.make_padding(input[:, :, 0]) for _ in range(self.padding[0])]
-        inputs = [input[:, :, t] for t in range(T)]
+        inputs = [input[:, :, t] for t in range(input.shape[2])]
         pad_end = [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
 
         # Recurrently pass through, updating state
         outs = []
         for t, i in enumerate([*pad_start, *inputs]):
-            o, (
-                self.state_buffer,
-                self.state_index,
-                self.stride_index,
-            ) = self._forward_step(i, self.get_state())
+            o = self.forward_step(i)
             if self.kernel_size[0] - 1 <= t and not isinstance(o, TensorPlaceholder):
                 outs.append(o)
 
