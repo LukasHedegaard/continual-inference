@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.3.1]
+## Added
+- Support for dropout
+
+
 ## [0.3.0]
 ## Added
 - Support for dilation and stride in pooling
