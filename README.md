@@ -203,6 +203,49 @@ The repository contains custom online inference-friendly versions of common netw
     - `co.continual` - conversion function from non-continual modules to continual modules
     - `co.forward_stepping` - functional wrapper, which enhances temporally local non-continual modules with the forward_stepping functions
 
+In addition, we support a wide range of modules from `torch.nn`:
+
+- Activation
+    - `nn.BatchNorm1d`
+    - `nn.Threshold`
+    - `nn.ReLU`
+    - `nn.RReLU`
+    - `nn.Hardtanh`
+    - `nn.ReLU6`
+    - `nn.Sigmoid`
+    - `nn.Hardsigmoid`
+    - `nn.Tanh`
+    - `nn.SiLU`
+    - `nn.Hardswish`
+    - `nn.ELU`
+    - `nn.CELU`
+    - `nn.SELU`
+    - `nn.GLU`
+    - `nn.GELU`
+    - `nn.Hardshrink`
+    - `nn.LeakyReLU`
+    - `nn.LogSigmoid`
+    - `nn.Softplus`
+    - `nn.Softshrink`
+    - `nn.PReLU`
+    - `nn.Softsign`
+    - `nn.Tanhshrink`
+    - `nn.Softmin`
+    - `nn.Softmax`
+    - `nn.Softmax2d`
+    - `nn.LogSoftmax`
+
+- Batch Normalisation
+    - `nn.BatchNorm1d`
+    - `nn.BatchNorm2d`
+    - `nn.BatchNorm3d`
+
+- Dropout
+    - `nn.Dropout`
+    - `nn.Dropout2d`
+    - `nn.Dropout3d`
+    - `nn.AlphaDropout`
+    - `nn.FeatureAlphaDropout`
 
 ## Advanced examples
 
