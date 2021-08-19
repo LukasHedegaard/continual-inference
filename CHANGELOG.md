@@ -5,8 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.4.0]
 ## Added
-- `co.Delay` handling for padding
+- `co.Delay` handling for padding.
 - Handling of initialisation and strides in containers
 
 ## Changed
@@ -14,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pad_start` and `pad_end` args to convolution and pooling modules `forward_steps`.
 - Behavior of modules while they initialise. Now, a TensorPlaceholder is passed for initialising steps.
 
+## Removed
+- Automatic unsqueeze in pooling.
 
 
 ## [0.3.1]
