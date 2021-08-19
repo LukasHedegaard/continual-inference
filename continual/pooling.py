@@ -243,12 +243,7 @@ class _PoolNd(Padded, CoModule, nn.Module):
         if len(outs) == 0:
             return torch.tensor([])  # pragma: no cover
 
-        if input.shape[2] == self.temporal_kernel_size:
-            # In order to be compatible with downstream forward_steps, select only last frame
-            # This corrsponds to the regular global pool
-            return outs[-1].unsqueeze(2)
-        else:
-            return torch.stack(outs, dim=2)
+        return torch.stack(outs, dim=2)
 
     @property
     def delay(self):
