@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-
+import pytest
 import continual as co
 from continual.interface import TensorPlaceholder
 
@@ -293,15 +293,8 @@ def test_from_conv3d_bad_shape():
         stride=(2, 2, 2),
     )
 
-    # Also warns
-    co3 = co.Conv3d.build_from(regular)
-
-    # Changed               V
-    assert co3.dilation == (1, 2, 2)
-    assert co3.stride == (1, 2, 2)
-
-    # Not changed
-    assert co3.padding == (1, 1, 1)
+    with pytest.raises(AssertionError):
+        co3 = co.Conv3d.build_from(regular)
 
 
 example_clip_large = torch.normal(mean=torch.zeros(2 * 2 * 4 * 8 * 8)).reshape(

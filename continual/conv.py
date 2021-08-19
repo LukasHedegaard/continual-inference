@@ -337,24 +337,25 @@ class Conv1d(_ConvCoNd):
         )
 
     @staticmethod
-    def build_from(module: nn.Conv1d, temporal_fill: FillMode = "zeros") -> "Conv1d":
-        dilation = (1, *module.dilation[1:])
-        if dilation != module.dilation:
-            logger.warning(
-                f"Using dilation = {dilation} for Conv1d (converted from {module.dilation})"
-            )
-
+    def build_from(
+        module: nn.Conv1d, temporal_fill: FillMode = "zeros", **kwargs
+    ) -> "Conv1d":
         comodule = Conv1d(
-            in_channels=module.in_channels,
-            out_channels=module.out_channels,
-            kernel_size=module.kernel_size,
-            stride=module.stride,
-            padding=module.padding,
-            dilation=dilation,
-            groups=module.groups,
-            bias=module.bias is not None,
-            padding_mode=module.padding_mode,
-            temporal_fill=temporal_fill,
+            **{
+                **dict(
+                    in_channels=module.in_channels,
+                    out_channels=module.out_channels,
+                    kernel_size=module.kernel_size,
+                    stride=module.stride,
+                    padding=module.padding,
+                    dilation=module.dilation,
+                    groups=module.groups,
+                    bias=module.bias is not None,
+                    padding_mode=module.padding_mode,
+                    temporal_fill=temporal_fill,
+                ),
+                **kwargs,
+            }
         )
         with torch.no_grad():
             comodule.weight.copy_(module.weight)
@@ -435,24 +436,25 @@ class Conv2d(_ConvCoNd):
         )
 
     @staticmethod
-    def build_from(module: nn.Conv2d, temporal_fill: FillMode = "zeros") -> "Conv2d":
-        dilation = (1, *module.dilation[1:])
-        if dilation != module.dilation:
-            logger.warning(
-                f"Using dilation = {dilation} for Conv2d (converted from {module.dilation})"
-            )
-
+    def build_from(
+        module: nn.Conv2d, temporal_fill: FillMode = "zeros", **kwargs
+    ) -> "Conv2d":
         comodule = Conv2d(
-            in_channels=module.in_channels,
-            out_channels=module.out_channels,
-            kernel_size=module.kernel_size,
-            stride=module.stride,
-            padding=module.padding,
-            dilation=dilation,
-            groups=module.groups,
-            bias=module.bias is not None,
-            padding_mode=module.padding_mode,
-            temporal_fill=temporal_fill,
+            **{
+                **dict(
+                    in_channels=module.in_channels,
+                    out_channels=module.out_channels,
+                    kernel_size=module.kernel_size,
+                    stride=module.stride,
+                    padding=module.padding,
+                    dilation=module.dilation,
+                    groups=module.groups,
+                    bias=module.bias is not None,
+                    padding_mode=module.padding_mode,
+                    temporal_fill=temporal_fill,
+                ),
+                **kwargs,
+            }
         )
 
         with torch.no_grad():
@@ -535,33 +537,25 @@ class Conv3d(_ConvCoNd):
         )
 
     @staticmethod
-    def build_from(module: nn.Conv3d, temporal_fill: FillMode = "zeros") -> "Conv3d":
-        stride = (1, *module.stride[1:])
-        dilation = (1, *module.dilation[1:])
-        for shape, name in zip(
-            [
-                stride,
-                dilation,
-            ],
-            ["stride", "dilation"],
-        ):
-            prev_shape = getattr(module, name)
-            if shape != prev_shape:
-                logger.warning(
-                    f"Using {name} = {shape} for ConvCo3D (converted from {prev_shape})"
-                )
-
+    def build_from(
+        module: nn.Conv3d, temporal_fill: FillMode = "zeros", **kwargs
+    ) -> "Conv3d":
         comodule = Conv3d(
-            in_channels=module.in_channels,
-            out_channels=module.out_channels,
-            kernel_size=module.kernel_size,
-            stride=stride,
-            padding=module.padding,
-            dilation=dilation,
-            groups=module.groups,
-            bias=module.bias is not None,
-            padding_mode=module.padding_mode,
-            temporal_fill=temporal_fill,
+            **{
+                **dict(
+                    in_channels=module.in_channels,
+                    out_channels=module.out_channels,
+                    kernel_size=module.kernel_size,
+                    stride=module.stride,
+                    padding=module.padding,
+                    dilation=module.dilation,
+                    groups=module.groups,
+                    bias=module.bias is not None,
+                    padding_mode=module.padding_mode,
+                    temporal_fill=temporal_fill,
+                ),
+                **kwargs,
+            }
         )
         with torch.no_grad():
             comodule.weight.copy_(module.weight)
