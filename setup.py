@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 
 def long_description():
     text = open("README.md", encoding="utf-8").read()
-    # SVG images are not readable on PyPI, so replace them  with PNG
+    # SVG images are not readable on PyPI, so replace them with PNG
     text = text.replace(".svg", ".png")
     return text
 
