@@ -1,18 +1,25 @@
 from collections import OrderedDict
 from enum import Enum
 from functools import reduce
-from typing import Callable, Optional, Sequence, Union, overload
+from typing import Callable, Optional, Sequence, Tuple, Union, overload
 
 import torch
 from torch import Tensor, nn
 
 from .delay import Delay
-from .interface import CoModule, FillMode
+from .interface import CoModule, FillMode, Padded, TensorPlaceholder
 
 __all__ = ["Sequential", "Parallel", "Residual"]
 
 
-class Sequential(nn.Sequential, CoModule):
+def int_from(tuple_or_int: Union[int, Tuple[int, ...]], dim=0) -> int:
+    if isinstance(tuple_or_int, int):
+        return tuple_or_int
+    else:
+        return tuple_or_int[dim]
+
+
+class Sequential(nn.Sequential, Padded, CoModule):
     """Continual Sequential module
 
     This module is a drop-in replacement for `torch.nn.Sequential`
@@ -32,16 +39,35 @@ class Sequential(nn.Sequential, CoModule):
     def forward_step(self, input):
         for module in self:
             input = module.forward_step(input)
+            if isinstance(input, TensorPlaceholder):
+                return TensorPlaceholder()  # We can't infer output shape
         return input
 
-    def forward_steps(self, input):
+    def forward_steps(self, input: Tensor, pad_end=True):
         for module in self:
-            input = module.forward_steps(input)
+            if len(input) == 0:
+                return input
+            if isinstance(module, Padded):
+                input = module.forward_steps(input, pad_end)
+            else:
+                input = module.forward_steps(input)
+
         return input
 
     @property
     def delay(self):
         return sum(getattr(m, "delay", 0) for m in self)
+
+    @property
+    def stride(self) -> int:
+        tot = 1
+        for m in self:
+            tot *= int_from(getattr(m, "stride", 1))
+        return tot
+
+    @property
+    def padding(self) -> int:
+        return max(int_from(getattr(m, "padding", 0)) for m in self)
 
     @staticmethod
     def build_from(module: nn.Sequential) -> "Sequential":
@@ -75,7 +101,7 @@ def parallel_concat(modules: Sequence[Tensor]) -> Tensor:
 AggregationFunc = Union[Aggregation, Callable[[Sequence[Tensor]], Tensor]]
 
 
-class Parallel(nn.Sequential, CoModule):
+class Parallel(nn.Sequential, Padded, CoModule):
     """Continual parallel container.
 
     Args:
@@ -122,6 +148,10 @@ class Parallel(nn.Sequential, CoModule):
         else:
             modules = [(str(idx), module) for idx, module in enumerate(args)]
 
+        assert (
+            len(modules) > 1
+        ), "You should pass at least two modules for the parallel operation to make sense."
+
         if auto_delay:
             # If there is a delay mismatch, automatically add delay to match the longest
             max_delay = max([m.delay for _, m in modules])
@@ -129,13 +159,17 @@ class Parallel(nn.Sequential, CoModule):
                 (
                     key,
                     (
-                        Sequential(module, Delay(max_delay - module.delay))
+                        Sequential(Delay(max_delay - module.delay), module)
                         if module.delay < max_delay
                         else module
                     ),
                 )
                 for key, module in modules
             ]
+
+        assert (
+            len(set(int_from(getattr(m, "stride", 1)) for _, m in modules)) == 1
+        ), f"Expected all parallel modules to have the same stride, but got strides {[(int_from(getattr(m, 'stride', 1))) for _, m in modules]}"
 
         for key, module in modules:
             self.add_module(key, module)
@@ -156,41 +190,63 @@ class Parallel(nn.Sequential, CoModule):
         self._delay = delays.pop()
 
     def forward_step(self, input: Tensor) -> Tensor:
-        return self.aggregation_fn([m.forward_step(input) for m in self])
-
-    def forward_steps(self, input: Tensor) -> Tensor:
-        outs = [self.forward_step(input[:, :, t]) for t in range(input.shape[2])]
-
-        if len(outs) > 0:
-            outs = torch.stack(outs, dim=2)
+        outs = [m.forward_step(input) for m in self]
+        if all(isinstance(o, Tensor) for o in outs):
+            return self.aggregation_fn(outs)
         else:
-            outs = torch.tensor([])  # pragma: no cover
+            # Try to infer shape
+            shape = tuple()
+            for o in outs:
+                if isinstance(o, Tensor):
+                    shape = o.shape
+                    break
+            return TensorPlaceholder(shape)
 
-        return outs
+    def forward_steps(self, input: Tensor, pad_end=True) -> Tensor:
+        outs = []
+        for m in self:
+            if isinstance(m, Padded):
+                outs.append(m.forward_steps(input, pad_end))
+            else:
+                outs.append(m.forward_steps(input))
+
+        assert (
+            len(set(o.shape[2] for o in outs)) == 1
+        ), "Parallel modules should produce an equal number of temporal steps."
+
+        return self.aggregation_fn(outs)
 
     def forward(self, input: Tensor) -> Tensor:
         outs = [m.forward(input) for m in self]
 
-        ts = [x.shape[2] for x in outs]
-        min_t = min(ts)
-        if min_t == max(ts):
-            return self.aggregation_fn(outs)
+        assert (
+            len(set(o.shape[2] for o in outs)) == 1
+        ), "Parallel modules should produce an equal number of temporal steps."
+        return self.aggregation_fn(outs)
 
         # Modules may shrink the output map differently.
         # If an "even" shrink is detected, attempt to automatically
         # shrink the longest values to fit as if padding was used.
-        assert all(
-            [(t - min_t) % 2 == 0 for t in ts]
-        ), f"Found incompatible temporal output-shapes {ts}"
-        shrink = [(t - min_t) // 2 for t in ts]
+        # assert all(
+        #     [(t - min_t) % 2 == 0 for t in ts]
+        # ), f"Found incompatible temporal output-shapes {ts}"
+        # shrink = [(t - min_t) // 2 for t in ts]
 
-        return self.aggregation_fn(
-            [o[:, :, slice(s, -s or None)] for (s, o) in zip(shrink, outs)]
-        )
+        # return self.aggregation_fn(
+        #     [o[:, :, slice(s, -s or None)] for (s, o) in zip(shrink, outs)]
+        # )
 
     @property
     def delay(self) -> int:
         return self._delay
+
+    @property
+    def stride(self) -> int:
+        return getattr(next(iter(self)), "stride", 1)
+
+    @property
+    def padding(self) -> int:
+        return max(int_from(getattr(m, "padding", 0)) for m in self)
 
     def clean_state(self):
         for m in self:
