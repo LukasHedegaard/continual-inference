@@ -8,7 +8,7 @@ from torch import Tensor, nn
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _pair, _single, _triple
 
-from .interface import CoModule, FillMode, TensorPlaceholder
+from .interface import CoModule, FillMode, Padded, TensorPlaceholder
 
 State = Tuple[Tensor, int]
 
@@ -40,7 +40,7 @@ class PoolType(Enum):
     MAX = "max"
 
 
-class _PoolNd(CoModule, nn.Module):
+class _PoolNd(Padded, CoModule, nn.Module):
     """Base class for Continual Pooling modules
     This module implements a naive but flexible temporal pooling system.
 
@@ -149,7 +149,7 @@ class _PoolNd(CoModule, nn.Module):
             dim=0,
         )
         state_index = 0
-        stride_index = self.temporal_stride - buf_len
+        stride_index = self.temporal_stride - buf_len + self.temporal_padding
 
         if not hasattr(self, "state_buffer"):
             self.register_buffer("state_buffer", state_buffer, persistent=False)
@@ -214,51 +214,30 @@ class _PoolNd(CoModule, nn.Module):
         ) = self._forward_step(input, self.get_state())
         return output
 
-    def forward_steps(self, input: Tensor, pad_start=True, pad_end=True):
-        """Performs a full forward computation in a frame-wise manner, updating layer states along the way.
-
-        If input.shape[2] == self.temporal_kernel_size, a global pooling along temporal dimension is performed
-        Otherwise, the pooling is performed per frame
-
-        Args:
-            input (Tensor): Layer input
-            pad_start (bool): Whether temporal padding should be considered at the sequence start
-            pad_end (bool): Whether temporal padding should be considered at the sequence end
-
-
-        Returns:
-            Tensor: Layer output
-        """
+    def forward_steps(self, input: Tensor, pad_end=True):
         assert (
             len(input.shape) == self.num_input_dims + 2
         ), f"A tensor of size {self.input_shape_desciption} should be passed as input."
 
-        start_padding = (
-            [torch.zeros_like(input[:, :, 0]) for _ in range(self.temporal_padding)]
-            if pad_start
-            else []
-        )
-        inputs = [input[:, :, t] for t in range(input.shape[2])]
-
         outs = []
-        for t, i in enumerate([*start_padding, *inputs]):
-            o = self.forward_step(i)
-            if self.temporal_kernel_size - 1 <= t and not isinstance(
-                o, TensorPlaceholder
-            ):
+        for t in range(input.shape[2]):
+            o = self.forward_step(input[:, :, t])
+            if isinstance(o, Tensor):
                 outs.append(o)
 
         if pad_end:
-            end_padding = [
-                torch.zeros_like(input[:, :, -1]) for _ in range(self.temporal_padding)
-            ]
             # Don't save state for the end-padding
             tmp_buffer, tmp_index, tmp_stride_index = self.get_state()
-            for t, i in enumerate(end_padding):
+            for t, i in enumerate(
+                [
+                    torch.zeros_like(input[:, :, -1])
+                    for _ in range(self.temporal_padding)
+                ]
+            ):
                 o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
                     i, (tmp_buffer, tmp_index, tmp_stride_index)
                 )
-                if o is not None and not isinstance(o, TensorPlaceholder):
+                if isinstance(o, Tensor):
                     outs.append(o)
 
         if len(outs) == 0:
@@ -267,7 +246,6 @@ class _PoolNd(CoModule, nn.Module):
         if input.shape[2] == self.temporal_kernel_size:
             # In order to be compatible with downstream forward_steps, select only last frame
             # This corrsponds to the regular global pool
-            # TODO: reconsider this behavior
             return outs[-1].unsqueeze(2)
         else:
             return torch.stack(outs, dim=2)
