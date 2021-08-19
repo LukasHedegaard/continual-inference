@@ -5,33 +5,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## Added
+- `co.Delay` handling for padding
+- Handling of initialisation and strides in containers
+
 ## Changed
 - `co.Conv` `build_from` behavior to not change dilation and stride. Argument overload supported instead. 
+- `pad_start` and `pad_end` args to convolution and pooling modules `forward_steps`.
+- Behavior of modules while they initialise. Now, a TensorPlaceholder is passed for initialising steps.
+
 
 
 ## [0.3.1]
 ## Added
-- Support for dropout
+- Support for dropout.
 
 
 ## [0.3.0]
 ## Added
-- Support for dilation and stride in pooling
+- Support for dilation and stride in pooling.
 
 ## Changed
-- Pooling API to match torch.nn better
-- `_ConvCoNd.forward_steps` doesn't invoke `clean_state` anymore
+- Pooling API to match torch.nn better.
+- `_ConvCoNd.forward_steps` doesn't invoke `clean_state` anymore.
 
 
 ## [0.2.2]
 ## Added
-- Automatic conversion of batch normalisation and activation functions
+- Automatic conversion of batch normalisation and activation functions.
 
 ## Fixed
-- Separate dilation and stride in pool
+- Separate dilation and stride in pool.
 
 ## Changed
-- Conv forward to use temporal padding like (like nn.Conv)
+- Conv forward to use temporal padding like (like nn.Conv).
 
 ## Removed
 - `co.BatchNorm2d`
