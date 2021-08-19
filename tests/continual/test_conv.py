@@ -1,6 +1,7 @@
+import pytest
 import torch
 from torch import nn
-import pytest
+
 import continual as co
 from continual.interface import TensorPlaceholder
 
@@ -294,7 +295,7 @@ def test_from_conv3d_bad_shape():
     )
 
     with pytest.raises(AssertionError):
-        co3 = co.Conv3d.build_from(regular)
+        co.Conv3d.build_from(regular)
 
 
 example_clip_large = torch.normal(mean=torch.zeros(2 * 2 * 4 * 8 * 8)).reshape(
