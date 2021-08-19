@@ -203,13 +203,15 @@ class _ConvCoNd(_ConvNd, CoModule):
             self.stride_index = new_stride_index
         return output
 
-    def forward_steps(self, input: Tensor):
+    def forward_steps(self, input: Tensor, pad_start=True, pad_end=True):
         """Performs a layer-wise forward computation using the continual block.
         The computation is performed frame-by-frame, and continual states are updated accordingly.
         The output-input mapping the exact same as that of a regular convolution.
 
         Args:
             input (Tensor): Layer input
+            pad_start (bool): Whether temporal padding should be considered at the sequence start
+            pad_end (bool): Whether temporal padding should be considered at the sequence end
 
         Returns:
             Tensor: Layer output
@@ -218,25 +220,34 @@ class _ConvCoNd(_ConvNd, CoModule):
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
 
-        pad_start = [self.make_padding(input[:, :, 0]) for _ in range(self.padding[0])]
+        start_padding = (
+            [self.make_padding(input[:, :, 0]) for _ in range(self.padding[0])]
+            if pad_start
+            else []
+        )
         inputs = [input[:, :, t] for t in range(input.shape[2])]
-        pad_end = [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
 
         # Recurrently pass through, updating state
         outs = []
-        for t, i in enumerate([*pad_start, *inputs]):
+        for t, i in enumerate([*start_padding, *inputs]):
             o = self.forward_step(i)
-            if self.kernel_size[0] - 1 <= t and not isinstance(o, TensorPlaceholder):
+            if (not pad_start or self.kernel_size[0] - 1 <= t) and not isinstance(
+                o, TensorPlaceholder
+            ):
                 outs.append(o)
 
-        # Don't save state for the end-padding
-        tmp_buffer, tmp_index, tmp_stride_index = self.get_state()
-        for t, i in enumerate(pad_end):
-            o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
-                i, (tmp_buffer, tmp_index, tmp_stride_index)
-            )
-            if o is not None and not isinstance(o, TensorPlaceholder):
-                outs.append(o)
+        if pad_end:
+            end_padding = [
+                self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])
+            ]
+            # Don't save state for the end-padding
+            (tmp_buffer, tmp_index, tmp_stride_index) = self.get_state()
+            for t, i in enumerate(end_padding):
+                o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
+                    i, (tmp_buffer, tmp_index, tmp_stride_index)
+                )
+                if o is not None and not isinstance(o, TensorPlaceholder):
+                    outs.append(o)
 
         if len(outs) > 0:
             outs = torch.stack(outs, dim=2)

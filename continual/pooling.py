@@ -214,7 +214,7 @@ class _PoolNd(CoModule, nn.Module):
         ) = self._forward_step(input, self.get_state())
         return output
 
-    def forward_steps(self, input: Tensor):
+    def forward_steps(self, input: Tensor, pad_start=True, pad_end=True):
         """Performs a full forward computation in a frame-wise manner, updating layer states along the way.
 
         If input.shape[2] == self.temporal_kernel_size, a global pooling along temporal dimension is performed
@@ -222,6 +222,9 @@ class _PoolNd(CoModule, nn.Module):
 
         Args:
             input (Tensor): Layer input
+            pad_start (bool): Whether temporal padding should be considered at the sequence start
+            pad_end (bool): Whether temporal padding should be considered at the sequence end
+
 
         Returns:
             Tensor: Layer output
@@ -230,30 +233,33 @@ class _PoolNd(CoModule, nn.Module):
             len(input.shape) == self.num_input_dims + 2
         ), f"A tensor of size {self.input_shape_desciption} should be passed as input."
 
-        pad_start = [
-            torch.zeros_like(input[:, :, 0]) for _ in range(self.temporal_padding)
-        ]
+        start_padding = (
+            [torch.zeros_like(input[:, :, 0]) for _ in range(self.temporal_padding)]
+            if pad_start
+            else []
+        )
         inputs = [input[:, :, t] for t in range(input.shape[2])]
-        pad_end = [
-            torch.zeros_like(input[:, :, -1]) for _ in range(self.temporal_padding)
-        ]
 
         outs = []
-        for t, i in enumerate([*pad_start, *inputs]):
+        for t, i in enumerate([*start_padding, *inputs]):
             o = self.forward_step(i)
             if self.temporal_kernel_size - 1 <= t and not isinstance(
                 o, TensorPlaceholder
             ):
                 outs.append(o)
 
-        # Don't save state for the end-padding
-        tmp_buffer, tmp_index, tmp_stride_index = self.get_state()
-        for t, i in enumerate(pad_end):
-            o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
-                i, (tmp_buffer, tmp_index, tmp_stride_index)
-            )
-            if o is not None and not isinstance(o, TensorPlaceholder):
-                outs.append(o)
+        if pad_end:
+            end_padding = [
+                torch.zeros_like(input[:, :, -1]) for _ in range(self.temporal_padding)
+            ]
+            # Don't save state for the end-padding
+            tmp_buffer, tmp_index, tmp_stride_index = self.get_state()
+            for t, i in enumerate(end_padding):
+                o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
+                    i, (tmp_buffer, tmp_index, tmp_stride_index)
+                )
+                if o is not None and not isinstance(o, TensorPlaceholder):
+                    outs.append(o)
 
         if len(outs) == 0:
             return torch.tensor([])  # pragma: no cover
