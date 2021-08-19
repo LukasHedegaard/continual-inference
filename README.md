@@ -125,7 +125,7 @@ Below, we see principle sketches, which compare regular and continual convolutio
 Comparing Figures (1) and (2), we see that Continual Convolutions get rid of computational redundancies.
 This can speed up online inference greatly - for example, a Continual X3D model for Human Activity Recognition has __10× less Floating Point Operations per prediction__ than the vanilla X3D models 🚀. 
 
-> ✅  The longer the length of the temporal sequence, the larger the savings.
+> 💡  The longer the length of the temporal sequence, the larger the savings.
 
 For more information, we refer to the [paper on Continual Convolutions](https://arxiv.org/abs/2106.00050).
 
@@ -271,7 +271,7 @@ mb_conv = co.Residual(
       co.Conv3d(32, 64, kernel_size=(1, 1, 1)),
       nn.BatchNorm3d(64),
       nn.ReLU6(),
-      co.Conv3d(64, 64, kernel_size=(3, 3, 3), padding=(0, 1, 1), groups=64),
+      co.Conv3d(64, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1), groups=64),
       nn.ReLU6(),
       co.Conv3d(64, 32, kernel_size=(1, 1, 1)),
       nn.BatchNorm3d(32),
