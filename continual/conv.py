@@ -14,7 +14,7 @@ from torch.nn.modules.conv import (
     _triple,
 )
 
-from .interface import CoModule, FillMode, TensorPlaceholder
+from .interface import CoModule, FillMode, Padded, TensorPlaceholder
 from .logging import getLogger
 
 logger = getLogger(__name__)
@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-class _ConvCoNd(_ConvNd, CoModule):
+class _ConvCoNd(_ConvNd, Padded, CoModule):
     def __init__(
         self,
         ConvClass: torch.nn.Module,
@@ -109,7 +109,7 @@ class _ConvCoNd(_ConvNd, CoModule):
             self.kernel_size[0] - 1, *[1 for _ in self.input_shape_desciption]
         )
         state_index = 0
-        stride_index = 0
+        stride_index = self.stride[0] - len(state_buffer) - 1 + self.padding[0]
         if not hasattr(self, "state_buffer"):
             self.register_buffer("state_buffer", state_buffer, persistent=False)
         return state_buffer, state_index, stride_index
@@ -167,7 +167,8 @@ class _ConvCoNd(_ConvNd, CoModule):
         buffer, index, stride_index = prev_state or self.init_state(x_rest)
 
         tot = len(buffer)
-        if stride_index == 0:
+        # if stride_index == 0:
+        if stride_index == self.stride[0] - 1:
             x_out = x_out.clone()
             for i in range(tot):
                 x_out += buffer[(i + index) % tot, :, :, tot - i - 1]
@@ -187,7 +188,10 @@ class _ConvCoNd(_ConvNd, CoModule):
         else:
             next_buffer = buffer
             next_index = index
-        next_stride_index = (stride_index + 1) % self.stride[0]
+
+        next_stride_index = stride_index + 1
+        if next_stride_index > 0:
+            next_stride_index = next_stride_index % self.stride[0]
 
         return x_out, (next_buffer, next_index, next_stride_index)
 
@@ -203,50 +207,27 @@ class _ConvCoNd(_ConvNd, CoModule):
             self.stride_index = new_stride_index
         return output
 
-    def forward_steps(self, input: Tensor, pad_start=True, pad_end=True):
-        """Performs a layer-wise forward computation using the continual block.
-        The computation is performed frame-by-frame, and continual states are updated accordingly.
-        The output-input mapping the exact same as that of a regular convolution.
-
-        Args:
-            input (Tensor): Layer input
-            pad_start (bool): Whether temporal padding should be considered at the sequence start
-            pad_end (bool): Whether temporal padding should be considered at the sequence end
-
-        Returns:
-            Tensor: Layer output
-        """
+    def forward_steps(self, input: Tensor, pad_end=True):
         assert (
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
 
-        start_padding = (
-            [self.make_padding(input[:, :, 0]) for _ in range(self.padding[0])]
-            if pad_start
-            else []
-        )
-        inputs = [input[:, :, t] for t in range(input.shape[2])]
-
-        # Recurrently pass through, updating state
         outs = []
-        for t, i in enumerate([*start_padding, *inputs]):
-            o = self.forward_step(i)
-            if (not pad_start or self.kernel_size[0] - 1 <= t) and not isinstance(
-                o, TensorPlaceholder
-            ):
+        for t in range(input.shape[2]):
+            o = self.forward_step(input[:, :, t])
+            if isinstance(o, Tensor):
                 outs.append(o)
 
         if pad_end:
-            end_padding = [
-                self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])
-            ]
             # Don't save state for the end-padding
             (tmp_buffer, tmp_index, tmp_stride_index) = self.get_state()
-            for t, i in enumerate(end_padding):
+            for t, i in enumerate(
+                [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
+            ):
                 o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
                     i, (tmp_buffer, tmp_index, tmp_stride_index)
                 )
-                if o is not None and not isinstance(o, TensorPlaceholder):
+                if isinstance(o, Tensor):
                     outs.append(o)
 
         if len(outs) > 0:
