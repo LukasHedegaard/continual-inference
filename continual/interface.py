@@ -76,13 +76,32 @@ class CoModule(ABC):
 class TensorPlaceholder:
     shape: Tuple[int]
 
-    def __init__(self, shape: Tuple[int]):
+    def __init__(self, shape: Tuple[int] = tuple()):
         self.shape = shape
 
     def size(self):
         return self.shape
 
+    def __len__(self):
+        return 0
+
 
 class FillMode(Enum):
     REPLICATE = "replicate"
     ZEROS = "zeros"
+
+
+class Padded:
+    """Base class for continual modules with temporal padding"""
+
+    def forward_steps(self, input: Tensor, pad_end=True) -> Tensor:
+        """Forward computation for multiple steps with state initialisation
+
+        Args:
+            input (Tensor): Layer input
+            pad_end (bool): Whether results for temporal padding at sequence end should be included
+
+        Returns:
+            Tensor: Layer output
+        """
+        ...  # pragma: no cover
