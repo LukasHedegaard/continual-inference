@@ -263,9 +263,6 @@ In addition, we support interoperability with a wide range of modules from `torc
 </div>
 
 ```python3
-import continual as co
-from torch import nn
-
 mb_conv = co.Residual(
     co.Sequential(
       co.Conv3d(32, 64, kernel_size=(1, 1, 1)),
@@ -288,9 +285,6 @@ mb_conv = co.Residual(
 </div>
 
 ```python3
-import continual as co
-from torch import nn
-
 def norm_relu(module, channels):
     return co.Sequential(
         module,
