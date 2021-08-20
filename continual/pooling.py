@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
-from torch.nn.modules.utils import _pair, _single, _triple, _ntuple
+from torch.nn.modules.utils import _ntuple, _pair, _single, _triple
 
 from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
 

@@ -84,18 +84,46 @@ class Sequential(nn.Sequential, Padded, CoModule):
 
 
 class Aggregation(Enum):
+    """Types of parallel tensor aggregation.
+    Supported tupes are:
+    - SUM:    Element-wise summation
+    - CONCAT: Channel-wise concatenation
+    - MUL:    Hadamark product
+    """
+
     SUM = "sum"
     CONCAT = "concat"
+    MUL = "mul"
 
 
-def parallel_sum(modules: Sequence[Tensor]) -> Tensor:
-    if len(modules) == 0:  # pragma: no cover
-        return torch.tensor([])
-    return reduce(torch.Tensor.add_, modules, torch.zeros_like(modules[0]))
+def parallel_sum(inputs: Sequence[Tensor]) -> Tensor:
+    assert len(inputs) >= 2
+    return reduce(torch.Tensor.add, inputs[1:], inputs[0])
 
 
-def parallel_concat(modules: Sequence[Tensor]) -> Tensor:
-    return torch.cat(modules, dim=1)  # channel dim for inputs of shape (B, C, T, H, W)
+def parallel_concat(inputs: Sequence[Tensor]) -> Tensor:
+    """Channel-wise concatenation of input
+
+    Args:
+        inputs (Sequence[Tensor]): Inputs with broadcastable shapes.
+
+    Returns:
+        Tensor: Inputs concatenated in the channel dimension
+    """
+    return torch.cat(inputs, dim=1)  # channel dim for inputs of shape (B, C, T, H, W)
+
+
+def parallel_mul(inputs: Sequence[Tensor]) -> Tensor:
+    """Hadamard product between inputs
+
+    Args:
+        inputs (Sequence[Tensor]): Inputs with broadcastable shapes.
+
+    Returns:
+        Tensor: Haramard product of inputs
+    """
+    assert len(inputs) >= 2
+    return reduce(torch.Tensor.mul, inputs[1:], inputs[0])
 
 
 AggregationFunc = Union[Aggregation, Callable[[Sequence[Tensor]], Tensor]]
@@ -180,6 +208,7 @@ class Parallel(nn.Sequential, Padded, CoModule):
             else {
                 Aggregation.SUM: parallel_sum,
                 Aggregation.CONCAT: parallel_concat,
+                Aggregation.MUL: parallel_mul,
             }[Aggregation(aggregation_fn)]
         )
 
@@ -210,18 +239,19 @@ class Parallel(nn.Sequential, Padded, CoModule):
             else:
                 outs.append(m.forward_steps(input))
 
-        assert (
-            len(set(o.shape[2] for o in outs)) == 1
-        ), "Parallel modules should produce an equal number of temporal steps."
+        # assert (
+        #     len(set(o.shape[2] for o in outs)) == 1
+        # ), f"Parallel modules should produce an equal number of temporal steps, but found {[o.shape[2] for o in outs]}"
 
         return self.aggregation_fn(outs)
 
     def forward(self, input: Tensor) -> Tensor:
         outs = [m.forward(input) for m in self]
 
-        assert (
-            len(set(o.shape[2] for o in outs)) == 1
-        ), "Parallel modules should produce an equal number of temporal steps."
+        # assert (
+        #     len(set(o.shape[2] for o in outs)) == 1
+        # ), f"Parallel modules should produce an equal number of temporal steps, but found {[o.shape[2] for o in outs]}"
+
         return self.aggregation_fn(outs)
 
         # Modules may shrink the output map differently.
@@ -254,12 +284,15 @@ class Parallel(nn.Sequential, Padded, CoModule):
                 m.clean_state()
 
 
-def Residual(module: CoModule, temporal_fill: PaddingMode = None):
+def Residual(
+    module: CoModule,
+    temporal_fill: PaddingMode = None,
+    aggregation_fn: Aggregation = "sum",
+):
     return Parallel(
         OrderedDict(
             [
-                ("module", module),
-                (
+                (  # Residual first yields easier broadcasting in aggregation functions
                     "residual",
                     Delay(
                         delay=module.delay,
@@ -269,8 +302,9 @@ def Residual(module: CoModule, temporal_fill: PaddingMode = None):
                         ),
                     ),
                 ),
+                ("module", module),
             ]
         ),
-        aggregation_fn=Aggregation.SUM,
+        aggregation_fn=aggregation_fn,
         auto_delay=False,
     )
