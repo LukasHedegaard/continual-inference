@@ -1,3 +1,5 @@
+from typing import OrderedDict
+
 import torch
 from torch import nn
 
@@ -81,3 +83,29 @@ def test_inception_module():
 
     output_steps = inception_module.forward_steps(example)
     assert output_steps.shape == output.shape
+
+
+def test_se():
+    #                      B,  C, T, H, W
+    example = torch.randn((1, 256, 7, 5, 5))
+
+    se = co.Residual(
+        co.Sequential(
+            OrderedDict(
+                [
+                    ("pool", co.AdaptiveAvgPool3d((1, 1, 1), kernel_size=7)),
+                    ("down", co.Conv3d(256, 16, kernel_size=1)),
+                    ("act1", nn.ReLU()),
+                    ("up", co.Conv3d(16, 256, kernel_size=1)),
+                    ("act2", nn.Sigmoid()),
+                ]
+            )
+        ),
+        aggregation_fn="mul",
+    )
+
+    output = se.forward(example)
+    assert output.shape == example.shape
+
+    output_steps = se.forward_steps(example)
+    assert torch.allclose(output_steps, output)

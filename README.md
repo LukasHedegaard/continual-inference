@@ -317,11 +317,30 @@ inception_module = co.Parallel(
 ```
 
 
-For additional full-fledged examples of complex Continual Inference Networks, see:
+## Continual 3D [Squeeze-and-Excitation module](https://arxiv.org/pdf/1709.01507.pdf)
 
-- [Continual 3D](https://github.com/LukasHedegaard/co3d)
-<!-- - [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons) -->
+<div align="center">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/se_block.png" width="230">
+  <br>
+  Squeeze-and-Excitation block. 
+  Scale refers to a broadcastet element-wise multiplication.
+  Adapted from: https://arxiv.org/pdf/1709.01507.pdf
+</div>
 
+```python3
+se = co.Residual(
+    co.Sequential(
+        OrderedDict([
+            ("pool", co.AdaptiveAvgPool3d((1, 1, 1), kernel_size=7)),
+            ("down", co.Conv3d(256, 16, kernel_size=1)),
+            ("act1", nn.ReLU()),
+            ("up", co.Conv3d(16, 256, kernel_size=1)),
+            ("act2", nn.Sigmoid()),
+        ])
+    ),
+    aggregation_fn="mul",
+)
+```
 
 
 ## Compatibility
