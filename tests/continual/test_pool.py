@@ -141,7 +141,7 @@ def test_AdaptiveAvgPool2d():
     target = pool(sample)
 
     # Continual
-    co_pool = AdaptiveAvgPool2d.build_from(pool, temporal_kernel_size=L)
+    co_pool = AdaptiveAvgPool2d.build_from(pool, kernel_size=L)
 
     # Whole time-series
     output = co_pool.forward_steps(sample)
@@ -153,7 +153,7 @@ def test_AdaptiveAvgPool2d():
 
 def test_AdaptiveAvgPool3d():
     pool = nn.AdaptiveAvgPool3d((1, 1, 1))
-    copool = AdaptiveAvgPool3d.build_from(pool, temporal_kernel_size=4)
+    copool = AdaptiveAvgPool3d.build_from(pool, kernel_size=4)
 
     target = pool(example_clip)
     output = copool.forward_steps(example_clip)
@@ -176,7 +176,7 @@ def test_AdaptiveMaxPool2d():
     target = pool(sample)
 
     # Continual
-    co_pool = AdaptiveMaxPool2d.build_from(pool, temporal_kernel_size=L)
+    co_pool = AdaptiveMaxPool2d.build_from(pool, kernel_size=L)
 
     # Whole time-series
     output = co_pool.forward_steps(sample)
@@ -188,7 +188,7 @@ def test_AdaptiveMaxPool2d():
 
 def test_AdaptiveMaxPool3d():
     pool = nn.AdaptiveMaxPool3d((1, 1, 1))
-    copool = AdaptiveMaxPool3d.build_from(pool, temporal_kernel_size=4)
+    copool = AdaptiveMaxPool3d.build_from(pool, kernel_size=4)
 
     target = pool(example_clip)
     output = copool.forward_steps(example_clip)
