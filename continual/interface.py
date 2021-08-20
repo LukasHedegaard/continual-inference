@@ -86,7 +86,7 @@ class TensorPlaceholder:
         return 0
 
 
-class FillMode(Enum):
+class PaddingMode(Enum):
     REPLICATE = "replicate"
     ZEROS = "zeros"
 

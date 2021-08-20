@@ -14,7 +14,7 @@ from torch.nn.modules.conv import (
     _triple,
 )
 
-from .interface import CoModule, FillMode, Padded, TensorPlaceholder
+from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
 from .logging import getLogger
 
 logger = getLogger(__name__)
@@ -44,8 +44,8 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         dilation,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: FillMode = "zeros",
-        temporal_fill: FillMode = "zeros",
+        padding_mode: PaddingMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ):
         assert issubclass(
             ConvClass, _ConvNd
@@ -72,8 +72,8 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         dilation = size_fn(dilation)
         assert dilation[0] == 1, "Temporal dilation > 1 is not supported currently."
 
-        temporal_fill = FillMode(temporal_fill)
-        padding_mode = FillMode(padding_mode)
+        temporal_fill = PaddingMode(temporal_fill)
+        padding_mode = PaddingMode(padding_mode)
 
         _ConvNd.__init__(
             self,
@@ -90,8 +90,8 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
             padding_mode=padding_mode.value,
         )
         self.make_padding = {
-            FillMode.ZEROS: torch.zeros_like,
-            FillMode.REPLICATE: torch.clone,
+            PaddingMode.ZEROS: torch.zeros_like,
+            PaddingMode.REPLICATE: torch.clone,
         }[temporal_fill]
 
         self._reversed_padding_repeated_twice = _reverse_repeat_tuple(
@@ -268,8 +268,8 @@ class Conv1d(_ConvCoNd):
         dilation: _size_1_t = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: FillMode = "zeros",
-        temporal_fill: FillMode = "zeros",
+        padding_mode: PaddingMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ):
         r"""Applies a continual 1D convolution over an input signal composed of several input
         planes.
@@ -330,7 +330,7 @@ class Conv1d(_ConvCoNd):
 
     @staticmethod
     def build_from(
-        module: nn.Conv1d, temporal_fill: FillMode = "zeros", **kwargs
+        module: nn.Conv1d, temporal_fill: PaddingMode = "zeros", **kwargs
     ) -> "Conv1d":
         comodule = Conv1d(
             **{
@@ -367,8 +367,8 @@ class Conv2d(_ConvCoNd):
         dilation: _size_2_t = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: FillMode = "zeros",
-        temporal_fill: FillMode = "zeros",
+        padding_mode: PaddingMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ):
         r"""Applies a continual 2D convolution over an input signal composed of several input
         planes.
@@ -429,7 +429,7 @@ class Conv2d(_ConvCoNd):
 
     @staticmethod
     def build_from(
-        module: nn.Conv2d, temporal_fill: FillMode = "zeros", **kwargs
+        module: nn.Conv2d, temporal_fill: PaddingMode = "zeros", **kwargs
     ) -> "Conv2d":
         comodule = Conv2d(
             **{
@@ -466,8 +466,8 @@ class Conv3d(_ConvCoNd):
         dilation: _size_3_t = 1,
         groups: int = 1,
         bias: bool = True,
-        padding_mode: FillMode = "zeros",
-        temporal_fill: FillMode = "zeros",
+        padding_mode: PaddingMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ):
         r"""Applies a continual 3D convolution over an input signal composed of several input
         planes.
@@ -530,7 +530,7 @@ class Conv3d(_ConvCoNd):
 
     @staticmethod
     def build_from(
-        module: nn.Conv3d, temporal_fill: FillMode = "zeros", **kwargs
+        module: nn.Conv3d, temporal_fill: PaddingMode = "zeros", **kwargs
     ) -> "Conv3d":
         comodule = Conv3d(
             **{

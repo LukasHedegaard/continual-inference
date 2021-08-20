@@ -8,7 +8,7 @@ from torch import Tensor, nn
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from torch.nn.modules.utils import _pair, _single, _triple
 
-from .interface import CoModule, FillMode, Padded, TensorPlaceholder
+from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
 
 State = Tuple[Tensor, int]
 
@@ -65,7 +65,7 @@ class _PoolNd(Padded, CoModule, nn.Module):
         temporal_stride: int = 1,
         temporal_padding: int = 0,
         temporal_dilation: int = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ):
         nn.Module.__init__(self)
         assert temporal_kernel_size > 0
@@ -84,7 +84,7 @@ class _PoolNd(Padded, CoModule, nn.Module):
             3: ("height", "width"),
         }[num_input_dims]
 
-        temporal_fill = FillMode(temporal_fill)
+        temporal_fill = PaddingMode(temporal_fill)
         self._make_padding = {
             temporal_fill.ZEROS: torch.zeros_like,
             temporal_fill.REPLICATE: torch.clone,
@@ -265,7 +265,7 @@ class AvgPool1d(nn.AvgPool1d, _PoolNd):
         ceil_mode: bool = False,
         count_include_pad: bool = True,
         dilation: _size_1_t = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride if stride is not None else kernel_size)
@@ -290,7 +290,7 @@ class AvgPool1d(nn.AvgPool1d, _PoolNd):
     def build_from(
         module: nn.AvgPool1d,
         dilation: _size_1_t = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
         **kwargs,
     ) -> "AvgPool1d":
         return AvgPool1d(
@@ -325,7 +325,7 @@ class AvgPool2d(nn.AvgPool2d, _PoolNd):
         count_include_pad: bool = True,
         divisor_override: Optional[int] = None,
         dilation: _size_2_t = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride if stride is not None else kernel_size)
@@ -359,7 +359,7 @@ class AvgPool2d(nn.AvgPool2d, _PoolNd):
     def build_from(
         module: nn.AvgPool2d,
         dilation: _size_2_t = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
         **kwargs,
     ) -> "AvgPool2d":
         return AvgPool2d(
@@ -395,7 +395,7 @@ class AvgPool3d(nn.AvgPool3d, _PoolNd):
         count_include_pad: bool = True,
         divisor_override: Optional[int] = None,
         dilation: _size_3_t = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
         self.kernel_size = _triple(kernel_size)
         self.stride = _triple(stride if stride is not None else kernel_size)
@@ -430,7 +430,7 @@ class AvgPool3d(nn.AvgPool3d, _PoolNd):
     def build_from(
         module: nn.AvgPool3d,
         dilation: _size_3_t = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
         **kwargs,
     ) -> "AvgPool3d":
         return AvgPool3d(
@@ -465,7 +465,7 @@ class MaxPool1d(nn.MaxPool1d, _PoolNd):
         dilation: _size_1_t = 1,
         # return_indices: bool = False, # Not supported
         ceil_mode: bool = False,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride if (stride is not None) else kernel_size)
@@ -489,7 +489,7 @@ class MaxPool1d(nn.MaxPool1d, _PoolNd):
     @staticmethod
     def build_from(
         module: nn.MaxPool1d,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
         **kwargs,
     ) -> "MaxPool1d":
         return MaxPool1d(
@@ -522,7 +522,7 @@ class MaxPool2d(nn.MaxPool2d, _PoolNd):
         dilation: _size_2_t = 1,
         # return_indices: bool = False, # Not supported
         ceil_mode: bool = False,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride if (stride is not None) else kernel_size)
@@ -553,7 +553,7 @@ class MaxPool2d(nn.MaxPool2d, _PoolNd):
 
     @staticmethod
     def build_from(
-        module: nn.MaxPool2d, temporal_fill: FillMode = "zeros", **kwargs
+        module: nn.MaxPool2d, temporal_fill: PaddingMode = "zeros", **kwargs
     ) -> "MaxPool2d":
         return MaxPool2d(
             **{
@@ -585,7 +585,7 @@ class MaxPool3d(nn.MaxPool3d, _PoolNd):
         dilation: _size_3_t = 1,
         # return_indices: bool = False, # Not supported
         ceil_mode: bool = False,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
         self.kernel_size = _triple(kernel_size)
         self.stride = _triple(stride if (stride is not None) else kernel_size)
@@ -616,7 +616,7 @@ class MaxPool3d(nn.MaxPool3d, _PoolNd):
 
     @staticmethod
     def build_from(
-        module: nn.MaxPool3d, temporal_fill: FillMode = "zeros", **kwargs
+        module: nn.MaxPool3d, temporal_fill: PaddingMode = "zeros", **kwargs
     ) -> "MaxPool3d":
         return MaxPool3d(
             **{
@@ -647,7 +647,7 @@ class AdaptiveAvgPool2d(nn.AdaptiveAvgPool2d, _PoolNd):
         temporal_stride: int = 1,
         temporal_padding: int = 0,
         temporal_dilation: int = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
 
         self.output_size = _pair(output_size)
@@ -674,7 +674,7 @@ class AdaptiveAvgPool2d(nn.AdaptiveAvgPool2d, _PoolNd):
         temporal_stride: int = 1,
         temporal_padding: int = 0,
         temporal_dilation: int = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
         output_size: _size_2_t = None,
     ) -> "AdaptiveAvgPool2d":
         return AdaptiveAvgPool2d(
@@ -701,7 +701,7 @@ class AdaptiveAvgPool3d(nn.AdaptiveAvgPool3d, _PoolNd):
         temporal_stride: int = 1,
         temporal_padding: int = 0,
         temporal_dilation: int = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
 
         self.output_size = _triple(output_size)
@@ -728,7 +728,7 @@ class AdaptiveAvgPool3d(nn.AdaptiveAvgPool3d, _PoolNd):
         temporal_stride: int = 1,
         temporal_padding: int = 0,
         temporal_dilation: int = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
         output_size: _size_3_t = None,
     ) -> "AdaptiveAvgPool3d":
         return AdaptiveAvgPool3d(
@@ -755,7 +755,7 @@ class AdaptiveMaxPool2d(nn.AdaptiveMaxPool2d, _PoolNd):
         temporal_stride: int = 1,
         temporal_padding: int = 0,
         temporal_dilation: int = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
 
         self.output_size = _pair(output_size)
@@ -785,7 +785,7 @@ class AdaptiveMaxPool2d(nn.AdaptiveMaxPool2d, _PoolNd):
         temporal_stride: int = 1,
         temporal_padding: int = 0,
         temporal_dilation: int = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
         output_size: _size_2_t = None,
     ) -> "AdaptiveMaxPool2d":
         return AdaptiveMaxPool2d(
@@ -812,7 +812,7 @@ class AdaptiveMaxPool3d(nn.AdaptiveMaxPool3d, _PoolNd):
         temporal_stride: int = 1,
         temporal_padding: int = 0,
         temporal_dilation: int = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ) -> None:
 
         self.output_size = _triple(output_size)
@@ -842,7 +842,7 @@ class AdaptiveMaxPool3d(nn.AdaptiveMaxPool3d, _PoolNd):
         temporal_stride: int = 1,
         temporal_padding: int = 0,
         temporal_dilation: int = 1,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
         output_size: _size_3_t = None,
     ) -> "AdaptiveMaxPool3d":
         return AdaptiveMaxPool3d(

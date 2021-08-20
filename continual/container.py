@@ -7,7 +7,7 @@ import torch
 from torch import Tensor, nn
 
 from .delay import Delay
-from .interface import CoModule, FillMode, Padded, TensorPlaceholder
+from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
 
 __all__ = ["Sequential", "Parallel", "Residual"]
 
@@ -254,7 +254,7 @@ class Parallel(nn.Sequential, Padded, CoModule):
                 m.clean_state()
 
 
-def Residual(module: CoModule, temporal_fill: FillMode = None):
+def Residual(module: CoModule, temporal_fill: PaddingMode = None):
     return Parallel(
         OrderedDict(
             [
@@ -264,7 +264,9 @@ def Residual(module: CoModule, temporal_fill: FillMode = None):
                     Delay(
                         delay=module.delay,
                         temporal_fill=temporal_fill
-                        or getattr(module, "temporal_fill", FillMode.REPLICATE.value),
+                        or getattr(
+                            module, "temporal_fill", PaddingMode.REPLICATE.value
+                        ),
                     ),
                 ),
             ]

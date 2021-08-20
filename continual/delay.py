@@ -3,7 +3,7 @@ from typing import Tuple
 import torch
 from torch import Tensor
 
-from .interface import CoModule, FillMode, Padded, TensorPlaceholder
+from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
 
 State = Tuple[Tensor, int]
 
@@ -19,7 +19,7 @@ class Delay(torch.nn.Module, Padded, CoModule):
     def __init__(
         self,
         delay: int,
-        temporal_fill: FillMode = "zeros",
+        temporal_fill: PaddingMode = "zeros",
     ):
         assert delay > 0
         assert temporal_fill in {"zeros", "replicate"}
