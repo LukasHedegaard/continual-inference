@@ -323,7 +323,7 @@ inception_module = co.Parallel(
   <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/se_block.png" width="230">
   <br>
   Squeeze-and-Excitation block. 
-  Scale refers to a broadcastet element-wise multiplication.
+  Scale refers to a broadcasted element-wise multiplication.
   Adapted from: https://arxiv.org/pdf/1709.01507.pdf
 </div>
 
