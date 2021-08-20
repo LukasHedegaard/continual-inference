@@ -311,7 +311,7 @@ inception_module = co.Parallel(
 ```
 
 
-## Continual 3D [Squeeze-and-Excitation module](https://arxiv.org/pdf/1709.01507.pdf)
+### Continual 3D [Squeeze-and-Excitation module](https://arxiv.org/pdf/1709.01507.pdf)
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/se_block.png" width="230">
