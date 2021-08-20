@@ -13,7 +13,8 @@ __all__ = ["Delay"]
 class Delay(torch.nn.Module, Padded, CoModule):
     """Continual delay modules
 
-    NB: This module only introduces a delay in the continual modes, i.e. on `forward_step` and `forward_steps`
+    This module only introduces a delay in the continual modes, i.e. on `forward_step` and `forward_steps`.
+    This corresponds to the equvalent computations when delay is used to align continual computations.
     """
 
     def __init__(
@@ -21,7 +22,6 @@ class Delay(torch.nn.Module, Padded, CoModule):
         delay: int,
         temporal_fill: PaddingMode = "zeros",
     ):
-        assert delay > 0
         assert temporal_fill in {"zeros", "replicate"}
         self._delay = delay
         self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
@@ -58,6 +58,9 @@ class Delay(torch.nn.Module, Padded, CoModule):
             return None
 
     def forward_step(self, input: Tensor) -> Tensor:
+        if self._delay == 0:
+            return input
+
         output, (self.state_buffer, self.state_index) = self._forward_step(
             input, self.get_state()
         )
