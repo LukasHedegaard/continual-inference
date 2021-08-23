@@ -118,7 +118,6 @@ class Delay(torch.nn.Module, Padded, CoModule):
 
     def forward(self, input: Tensor) -> Tensor:
         # No delay during regular forward
-        # nan = torch.tensor(float('nan')).repeat(3,2)
         return input
 
     @property
