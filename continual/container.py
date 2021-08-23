@@ -19,7 +19,49 @@ def int_from(tuple_or_int: Union[int, Tuple[int, ...]], dim=0) -> int:
         return tuple_or_int[dim]
 
 
-class Sequential(nn.Sequential, Padded, CoModule):
+class FlattenableStateDict:
+    """Mixes in the ability to flatten state dicts.
+    It is assumed that classes that inherit this modlue also inherit from nn.Module
+    """
+
+    def state_dict(
+        self, destination=None, prefix="", keep_vars=False, flatten=False
+    ) -> OrderedDict[str, Tensor]:
+        d = nn.Module.state_dict(self, destination, prefix, keep_vars)
+        from continual.utils import _FLATTEN_STATE_DICT
+
+        if flatten or _FLATTEN_STATE_DICT:
+            flat_keys = [
+                ".".join(part for part in name.split(".") if not part.isdigit())
+                for name in list(d.keys())
+            ]
+            if len(set(flat_keys)) == len(d.keys()):
+                d = OrderedDict(list(zip(flat_keys, d.values())))
+
+        return d
+
+    def load_state_dict(
+        self,
+        state_dict: OrderedDict[str, Tensor],
+        strict: bool = True,
+        flatten=False,
+    ):
+        from continual.utils import _FLATTEN_STATE_DICT
+
+        if flatten or _FLATTEN_STATE_DICT:
+            long_keys = nn.Module.state_dict(self, keep_vars=True).keys()
+            short2long = {
+                ".".join(part for part in key.split(".") if not part.isdigit()): key
+                for key in list(long_keys)
+            }
+            state_dict = OrderedDict(
+                [(short2long[key], val) for key, val in state_dict.items()]
+            )
+
+        nn.Module.load_state_dict(self, state_dict, strict)
+
+
+class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
     """Continual Sequential module
 
     This module is a drop-in replacement for `torch.nn.Sequential`
@@ -129,7 +171,7 @@ def parallel_mul(inputs: Sequence[Tensor]) -> Tensor:
 AggregationFunc = Union[Aggregation, Callable[[Sequence[Tensor]], Tensor]]
 
 
-class Parallel(nn.Sequential, Padded, CoModule):
+class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
     """Continual parallel container.
 
     Args:

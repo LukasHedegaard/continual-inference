@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import torch
 from torch import nn
 
@@ -191,3 +193,63 @@ def test_parallel():
     par.clean_state()
     out_steps = par.forward_steps(input, pad_end=True)
     assert torch.allclose(out_steps, out_all)
+
+
+def test_flat_state_dict():
+    # >> Part 1: Save both flat and original state dicts
+
+    # If modules are not named, it can be flattened
+    seq_to_flatten = co.Sequential(nn.Conv1d(1, 1, 3))
+
+    sd = seq_to_flatten.state_dict()
+    assert set(sd) == {"0.weight", "0.bias"}
+
+    sd_flat = seq_to_flatten.state_dict(flatten=True)
+    assert set(sd_flat) == {"weight", "bias"}
+
+    seq_not_to_flatten = co.Sequential(OrderedDict([("c1", nn.Conv1d(1, 1, 3))]))
+    sd_no_flat = seq_not_to_flatten.state_dict(flatten=True)
+    assert set(sd_no_flat) == {"c1.weight", "c1.bias"}
+
+    # A nested example:
+    nested = co.Parallel(seq_to_flatten, seq_not_to_flatten)
+    sd = nested.state_dict()
+    assert set(sd) == {"0.0.weight", "0.0.bias", "1.c1.weight", "1.c1.bias"}
+
+    sd_flat = nested.state_dict(flatten=True)
+    assert set(sd_flat) == {"weight", "bias", "c1.weight", "c1.bias"}
+
+    # >> Part 2: Load flat state dict
+    nested_new = co.Parallel(
+        co.Sequential(nn.Conv1d(1, 1, 3)),
+        co.Sequential(OrderedDict([("c1", nn.Conv1d(1, 1, 3))])),
+    )
+
+    assert not torch.equal(nested[0][0].weight, nested_new[0][0].weight)
+    assert not torch.equal(nested[0][0].bias, nested_new[0][0].bias)
+    assert not torch.equal(nested[1].c1.weight, nested_new[1].c1.weight)
+    assert not torch.equal(nested[1].c1.bias, nested_new[1].c1.bias)
+
+    nested_new.load_state_dict(sd_flat, flatten=True)
+
+    assert torch.equal(nested[0][0].weight, nested_new[0][0].weight)
+    assert torch.equal(nested[0][0].bias, nested_new[0][0].bias)
+    assert torch.equal(nested[1].c1.weight, nested_new[1].c1.weight)
+    assert torch.equal(nested[1].c1.bias, nested_new[1].c1.bias)
+
+    # >> Part 3: Test context manager
+    with co.utils.flat_state_dict():
+        # Export works as above despite `flatten=False`
+        sd_flat2 = nested.state_dict(flatten=False)
+        assert sd_flat.keys() == sd_flat2.keys()
+        assert all(torch.equal(sd_flat[key], sd_flat2[key]) for key in sd_flat.keys())
+
+        # Loading works as above despite `flatten=False`
+        nested_new.load_state_dict(sd_flat, flatten=False)
+
+        assert torch.equal(nested[0][0].weight, nested_new[0][0].weight)
+        assert torch.equal(nested[0][0].bias, nested_new[0][0].bias)
+        assert torch.equal(nested[1].c1.weight, nested_new[1].c1.weight)
+        assert torch.equal(nested[1].c1.bias, nested_new[1].c1.bias)
+
+    assert True  # Need to step down here to trigger context manager __exit__

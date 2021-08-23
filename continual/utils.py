@@ -20,3 +20,22 @@ def rgetattr(obj, attr, *args):
         return getattr(obj, attr, *args)
 
     return reduce(_getattr, [obj] + attr.split("."))
+
+
+_FLATTEN_STATE_DICT: bool = False
+
+
+class flat_state_dict(object):
+    r"""Context-manager that flattens the state dict of containers.
+
+    If a container module was not explicitely named by means of an OrderedDict,
+    it will attempt to flatten the keys during both the `state_dict` and `load_state_dict` operations.
+    """
+
+    def __enter__(self):
+        global _FLATTEN_STATE_DICT
+        _FLATTEN_STATE_DICT = True
+
+    def __exit__(self, *args, **kwargs):
+        global _FLATTEN_STATE_DICT
+        _FLATTEN_STATE_DICT = False
