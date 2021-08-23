@@ -69,7 +69,7 @@ def test_Conv1d_stride():
 
     # Whole time-series
     co_conv.clean_state()
-    output = co_conv.forward_steps(sample)
+    output = co_conv.forward_steps(sample, pad_end=True)
     assert torch.allclose(target, output)
 
 
@@ -305,7 +305,7 @@ def test_complex():
     regular_output = regular(example_clip_large).detach()
 
     co3 = co.Conv3d.build_from(regular, temporal_fill="zeros")
-    co3_output = co3.forward_steps(example_clip_large)
+    co3_output = co3.forward_steps(example_clip_large, pad_end=True)
 
     assert torch.allclose(regular_output, co3_output, atol=5e-8)
 
@@ -323,7 +323,7 @@ def test_forward_continuation():
 
     # Run batch inference and fill memory
     target1 = conv(example_clip)
-    output1 = coconv.forward_steps(example_clip)
+    output1 = coconv.forward_steps(example_clip, pad_end=True)
     assert torch.allclose(target1, output1, atol=1e-7)
 
     # Next forward

@@ -207,7 +207,7 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
             self.stride_index = new_stride_index
         return output
 
-    def forward_steps(self, input: Tensor, pad_end=True):
+    def forward_steps(self, input: Tensor, pad_end=False) -> Tensor:
         assert (
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
@@ -236,7 +236,7 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
             outs = torch.tensor([])
         return outs
 
-    def forward(self, input: Tensor):
+    def forward(self, input: Tensor) -> Tensor:
         """Performs a full forward computation exactly as the regular layer would.
         This method is handy for effient training on clip-based data.
 

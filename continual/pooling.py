@@ -218,7 +218,7 @@ class _PoolNd(Padded, CoModule, nn.Module):
         ) = self._forward_step(input, self.get_state())
         return output
 
-    def forward_steps(self, input: Tensor, pad_end=True):
+    def forward_steps(self, input: Tensor, pad_end=False):
         assert (
             len(input.shape) == self.num_input_dims + 2
         ), f"A tensor of size {self.input_shape_desciption} should be passed as input."

@@ -59,7 +59,7 @@ def test_delay_forward():
     delay = Delay(delay=2, temporal_fill="zeros")
 
     assert torch.equal(example_input, delay.forward(example_input))
-    assert torch.equal(example_input, delay.forward_steps(example_input))
+    assert torch.equal(example_input, delay.forward_steps(example_input, pad_end=True))
 
 
 def test_state():

@@ -93,7 +93,7 @@ def test_sequential_with_TensorPlaceholder():
     target = seq.forward(sample)
 
     # forward_steps with padding
-    output = coseq.forward_steps(sample)
+    output = coseq.forward_steps(sample, pad_end=True)
 
     assert torch.allclose(target, output)
 

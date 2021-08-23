@@ -86,7 +86,7 @@ class Delay(torch.nn.Module, Padded, CoModule):
 
         return output, (buffer, new_index)
 
-    def forward_steps(self, input: Tensor, pad_end=True) -> Tensor:
+    def forward_steps(self, input: Tensor, pad_end=False) -> Tensor:
         outs = []
         for t in range(input.shape[2]):
             o = self.forward_step(input[:, :, t])
