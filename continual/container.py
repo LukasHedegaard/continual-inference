@@ -28,9 +28,9 @@ class FlattenableStateDict:
         self, destination=None, prefix="", keep_vars=False, flatten=False
     ) -> OrderedDict[str, Tensor]:
         d = nn.Module.state_dict(self, destination, prefix, keep_vars)
-        from continual.utils import _FLATTEN_STATE_DICT
+        from continual.utils import flat_state_dict
 
-        if flatten or _FLATTEN_STATE_DICT:
+        if flatten or flat_state_dict.flatten:
             flat_keys = [
                 ".".join(part for part in name.split(".") if not part.isdigit())
                 for name in list(d.keys())
@@ -46,9 +46,9 @@ class FlattenableStateDict:
         strict: bool = True,
         flatten=False,
     ):
-        from continual.utils import _FLATTEN_STATE_DICT
+        from continual.utils import flat_state_dict
 
-        if flatten or _FLATTEN_STATE_DICT:
+        if flatten or flat_state_dict.flatten:
             long_keys = nn.Module.state_dict(self, keep_vars=True).keys()
             short2long = {
                 ".".join(part for part in key.split(".") if not part.isdigit()): key

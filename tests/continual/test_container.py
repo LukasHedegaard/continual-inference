@@ -238,7 +238,7 @@ def test_flat_state_dict():
     assert torch.equal(nested[1].c1.bias, nested_new[1].c1.bias)
 
     # >> Part 3: Test context manager
-    with co.utils.flat_state_dict():
+    with co.utils.flat_state_dict:
         # Export works as above despite `flatten=False`
         sd_flat2 = nested.state_dict(flatten=False)
         assert sd_flat.keys() == sd_flat2.keys()
