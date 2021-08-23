@@ -5,8 +5,8 @@
   <a href="https://pypi.org/project/continual-inference/">
     <img src="https://img.shields.io/pypi/pyversions/continual-inference" height="20" >
   </a>
-  <a href="https://pypi.org/project/continual-inference/">
-    <img src="https://github.com/LukasHedegaard/continual-inference/workflows/Python%20package/badge.svg" height="20" >
+  <a href="https://badge.fury.io/py/continual-inference">
+    <img src="https://badge.fury.io/py/continual-inference.svg" height="20" >
   </a>
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG"/>
