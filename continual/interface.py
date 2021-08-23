@@ -29,17 +29,17 @@ class CoModule(ABC):
         ]:
             assert callable(
                 getattr(cls, fn, None)
-            ), f"{cls.__name__} should implement a `{fn}` function which performs {description} to satisfy the CoModule interface."
+            ), f"{cls} should implement a `{fn}` function which performs {description} to satisfy the CoModule interface."
 
         assert hasattr(cls, "delay") and type(cls.delay) in {
             int,
             property,
-        }, f"{cls.__name__} should implement a `delay` property to satisfy the CoModule interface."
+        }, f"{cls} should implement a `delay` property to satisfy the CoModule interface."
 
     @staticmethod
     def is_valid(module):
         try:
-            CoModule._validate_class(module.__class__)
+            CoModule._validate_class(module)
         except AssertionError:
             return False
         return True
@@ -94,7 +94,7 @@ class PaddingMode(Enum):
 class Padded:
     """Base class for continual modules with temporal padding"""
 
-    def forward_steps(self, input: Tensor, pad_end=True) -> Tensor:
+    def forward_steps(self, input: Tensor, pad_end=False) -> Tensor:
         """Forward computation for multiple steps with state initialisation
 
         Args:

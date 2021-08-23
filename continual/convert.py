@@ -133,7 +133,7 @@ def continual(module: nn.Module) -> CoModule:
         return forward_stepping(module)
 
     assert type(module) in MODULE_MAPPING, (
-        f"A registered conversion for {module.__name__} was not found. "
+        f"A registered conversion for {module} was not found. "
         "You can register a custom conversion as follows:"
         """
         import continual as co
