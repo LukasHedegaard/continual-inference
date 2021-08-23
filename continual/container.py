@@ -332,21 +332,13 @@ def Residual(
     aggregation_fn: Aggregation = "sum",
 ):
     return Parallel(
-        OrderedDict(
-            [
-                (  # Residual first yields easier broadcasting in aggregation functions
-                    "residual",
-                    Delay(
-                        delay=module.delay,
-                        temporal_fill=temporal_fill
-                        or getattr(
-                            module, "temporal_fill", PaddingMode.REPLICATE.value
-                        ),
-                    ),
-                ),
-                ("module", module),
-            ]
+        # Residual first yields easier broadcasting in aggregation functions
+        Delay(
+            delay=module.delay,
+            temporal_fill=temporal_fill
+            or getattr(module, "temporal_fill", PaddingMode.REPLICATE.value),
         ),
+        module,
         aggregation_fn=aggregation_fn,
         auto_delay=False,
     )

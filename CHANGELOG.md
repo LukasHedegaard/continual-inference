@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1]
+## Changed
+- `co.Residual` modules to be unnamed. This allows the module state dicts to be flattened.
+
 ## [0.6.0]
 ## Added
 - Flattened state dict export and loading via a `flatten` argument. This feature improves interoperability complex modules, that were not originally constructed with the `co.Sequential` and `co.Parallel` building blocks.
