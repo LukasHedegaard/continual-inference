@@ -5,8 +5,6 @@ from setuptools import find_packages, setup
 
 def long_description():
     text = open("README.md", encoding="utf-8").read()
-    # SVG images are not readable on PyPI, so replace them with PNG
-    text = text.replace(".svg", ".png")
     return text
 
 
@@ -29,7 +27,7 @@ def from_file(file_name: str = "requirements.txt", comment_char: str = "#"):
 
 setup(
     name="continual-inference",
-    version="0.6.0",
+    version="0.6.1",
     description="Building blocks for Continual Inference Networks in PyTorch",
     long_description=long_description(),
     long_description_content_type="text/markdown",
