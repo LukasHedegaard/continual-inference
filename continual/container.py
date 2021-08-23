@@ -1,7 +1,7 @@
-import collections
+from collections import OrderedDict
 from enum import Enum
 from functools import reduce
-from typing import Callable, Optional, OrderedDict, Sequence, Tuple, Union, overload
+from typing import Callable, Optional, Sequence, Tuple, Union, overload
 
 import torch
 from torch import Tensor, nn
@@ -26,7 +26,7 @@ class FlattenableStateDict:
 
     def state_dict(
         self, destination=None, prefix="", keep_vars=False, flatten=False
-    ) -> OrderedDict[str, Tensor]:
+    ) -> "OrderedDict[str, Tensor]":
         d = nn.Module.state_dict(self, destination, prefix, keep_vars)
         from continual.utils import flat_state_dict
 
@@ -36,13 +36,13 @@ class FlattenableStateDict:
                 for name in list(d.keys())
             ]
             if len(set(flat_keys)) == len(d.keys()):
-                d = collections.OrderedDict(list(zip(flat_keys, d.values())))
+                d = OrderedDict(list(zip(flat_keys, d.values())))
 
         return d
 
     def load_state_dict(
         self,
-        state_dict: OrderedDict[str, Tensor],
+        state_dict: "OrderedDict[str, Tensor]",
         strict: bool = True,
         flatten=False,
     ):
@@ -54,7 +54,7 @@ class FlattenableStateDict:
                 ".".join(part for part in key.split(".") if not part.isdigit()): key
                 for key in list(long_keys)
             }
-            state_dict = collections.OrderedDict(
+            state_dict = OrderedDict(
                 [(short2long[key], val) for key, val in state_dict.items()]
             )
 
@@ -116,9 +116,7 @@ class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
         from .convert import continual  # import here due to circular import
 
         return Sequential(
-            collections.OrderedDict(
-                [(k, continual(m)) for k, m in module._modules.items()]
-            )
+            OrderedDict([(k, continual(m)) for k, m in module._modules.items()])
         )
 
     def clean_state(self):
@@ -334,7 +332,7 @@ def Residual(
     aggregation_fn: Aggregation = "sum",
 ):
     return Parallel(
-        collections.OrderedDict(
+        OrderedDict(
             [
                 (  # Residual first yields easier broadcasting in aggregation functions
                     "residual",
