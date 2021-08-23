@@ -1,7 +1,7 @@
-from collections import OrderedDict
+import collections
 from enum import Enum
 from functools import reduce
-from typing import Callable, Optional, Sequence, Tuple, Union, overload
+from typing import Callable, Optional, OrderedDict, Sequence, Tuple, Union, overload
 
 import torch
 from torch import Tensor, nn
@@ -36,7 +36,7 @@ class FlattenableStateDict:
                 for name in list(d.keys())
             ]
             if len(set(flat_keys)) == len(d.keys()):
-                d = OrderedDict(list(zip(flat_keys, d.values())))
+                d = collections.OrderedDict(list(zip(flat_keys, d.values())))
 
         return d
 
@@ -54,7 +54,7 @@ class FlattenableStateDict:
                 ".".join(part for part in key.split(".") if not part.isdigit()): key
                 for key in list(long_keys)
             }
-            state_dict = OrderedDict(
+            state_dict = collections.OrderedDict(
                 [(short2long[key], val) for key, val in state_dict.items()]
             )
 
@@ -116,7 +116,9 @@ class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
         from .convert import continual  # import here due to circular import
 
         return Sequential(
-            OrderedDict([(k, continual(m)) for k, m in module._modules.items()])
+            collections.OrderedDict(
+                [(k, continual(m)) for k, m in module._modules.items()]
+            )
         )
 
     def clean_state(self):
@@ -332,7 +334,7 @@ def Residual(
     aggregation_fn: Aggregation = "sum",
 ):
     return Parallel(
-        OrderedDict(
+        collections.OrderedDict(
             [
                 (  # Residual first yields easier broadcasting in aggregation functions
                     "residual",
