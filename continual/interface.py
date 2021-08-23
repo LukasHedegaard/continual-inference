@@ -44,11 +44,11 @@ class CoModule(ABC):
             return False
         return True
 
-    def forward_step(self, input: Tensor) -> Tensor:
+    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
         """Forward computation for a single step with state initialisation"""
         ...  # pragma: no cover
 
-    def forward_steps(self, input: Tensor) -> Tensor:
+    def forward_steps(self, input: Tensor, update_state=True) -> Tensor:
         """Forward computation for multiple steps with state initialisation"""
         ...  # pragma: no cover
 
@@ -94,12 +94,13 @@ class PaddingMode(Enum):
 class Padded:
     """Base class for continual modules with temporal padding"""
 
-    def forward_steps(self, input: Tensor, pad_end=False) -> Tensor:
+    def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         """Forward computation for multiple steps with state initialisation
 
         Args:
-            input (Tensor): Layer input
-            pad_end (bool): Whether results for temporal padding at sequence end should be included
+            input (Tensor): Layer input.
+            pad_end (bool): Whether results for temporal padding at sequence end should be included.
+            update_state (bool): Whether internal state should be updated during this operation.
 
         Returns:
             Tensor: Layer output

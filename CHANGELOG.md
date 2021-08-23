@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Independent state_dict and load_state_dict functions.
 - Added nonempty check for aggregation functions in Parallel.
+- `update_state` argument to all `forward_step(s)` methods.
 
 ### Changed
 - Changed default pad_end value to False.

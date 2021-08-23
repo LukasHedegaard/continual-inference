@@ -41,12 +41,20 @@ def forward_stepping(module: nn.Module, dim: int = 2):
         dim (int, optional): The dimension to unsqueeze during `forward_step`. Defaults to 2.
     """
 
-    def decorator(func: Callable[[Tensor], Tensor]):
+    def unsqueezed(func: Callable[[Tensor], Tensor]):
         @wraps(func)
-        def call(x: Tensor) -> Tensor:
+        def call(x: Tensor, update_state=True) -> Tensor:
             x = x.unsqueeze(dim)
             x = func(x)
             x = x.squeeze(dim)
+            return x
+
+        return call
+
+    def with_dummy_args(func: Callable[[Tensor], Tensor]):
+        @wraps(func)
+        def call(x: Tensor, update_state=True) -> Tensor:
+            x = func(x)
             return x
 
         return call
@@ -55,8 +63,8 @@ def forward_stepping(module: nn.Module, dim: int = 2):
         ...  # pragma: no cover
 
     module.forward = module.forward
-    module.forward_steps = module.forward
-    module.forward_step = decorator(module.forward)
+    module.forward_steps = with_dummy_args(module.forward)
+    module.forward_step = unsqueezed(module.forward)
     module.delay = 0
     module.clean_state = dummy
 

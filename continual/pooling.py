@@ -210,22 +210,24 @@ class _PoolNd(Padded, CoModule, nn.Module):
 
         return output, (next_buffer, next_index, next_stride_index)
 
-    def forward_step(self, input: Tensor) -> Tensor:
-        output, (
-            self.state_buffer,
-            self.state_index,
-            self.stride_index,
-        ) = self._forward_step(input, self.get_state())
+    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
+        output, (state_buffer, state_index, stride_index) = self._forward_step(
+            input, self.get_state()
+        )
+        if update_state:
+            self.state_buffer = state_buffer
+            self.state_index = state_index
+            self.stride_index = stride_index
         return output
 
-    def forward_steps(self, input: Tensor, pad_end=False):
+    def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         assert (
             len(input.shape) == self.num_input_dims + 2
         ), f"A tensor of size {self.input_shape_desciption} should be passed as input."
 
         outs = []
         for t in range(input.shape[2]):
-            o = self.forward_step(input[:, :, t])
+            o = self.forward_step(input[:, :, t], update_state=update_state)
             if isinstance(o, Tensor):
                 outs.append(o)
 

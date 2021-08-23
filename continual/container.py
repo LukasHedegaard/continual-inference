@@ -63,21 +63,23 @@ class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
                 return TensorPlaceholder()  # We can't infer output shape
         return input
 
-    def forward_step(self, input):
+    def forward_step(self, input, update_state=True):
         for module in self:
-            input = module.forward_step(input)
+            input = module.forward_step(input, update_state=update_state)
             if not isinstance(input, Tensor):
                 return TensorPlaceholder()  # We can't infer output shape
         return input
 
-    def forward_steps(self, input: Tensor, pad_end=False):
+    def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         for module in self:
             if len(input) == 0:
                 return input
             if isinstance(module, Padded):
-                input = module.forward_steps(input, pad_end)
+                input = module.forward_steps(
+                    input, pad_end=pad_end, update_state=update_state
+                )
             else:
-                input = module.forward_steps(input)
+                input = module.forward_steps(input, update_state=update_state)
 
         return input
 
@@ -256,8 +258,8 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
         ), f"Parallel modules should have the same delay, but found delays {delays}."
         self._delay = delays.pop()
 
-    def forward_step(self, input: Tensor) -> Tensor:
-        outs = [m.forward_step(input) for m in self]
+    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
+        outs = [m.forward_step(input, update_state=update_state) for m in self]
         if all(isinstance(o, Tensor) for o in outs):
             return self.aggregation_fn(outs)
         else:
@@ -270,13 +272,15 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
             return TensorPlaceholder(shape)
 
     # FIXME: There seems to be a bug hidden here
-    def forward_steps(self, input: Tensor, pad_end=False) -> Tensor:
+    def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         outs = []
         for m in self:
             if isinstance(m, Padded):
-                outs.append(m.forward_steps(input, pad_end))
+                outs.append(
+                    m.forward_steps(input, pad_end=pad_end, update_state=update_state)
+                )
             else:
-                outs.append(m.forward_steps(input))
+                outs.append(m.forward_steps(input, update_state=update_state))
 
         return self.aggregation_fn(outs)
 
