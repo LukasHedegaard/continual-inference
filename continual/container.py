@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from enum import Enum
-from functools import reduce
+from functools import reduce, wraps
 from typing import Callable, Optional, Sequence, Tuple, Union, overload
 
 import torch
@@ -8,6 +8,7 @@ from torch import Tensor, nn
 
 from .delay import Delay
 from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
+from .utils import load_state_dict, state_dict
 
 __all__ = ["Sequential", "Parallel", "Residual"]
 
@@ -27,18 +28,7 @@ class FlattenableStateDict:
     def state_dict(
         self, destination=None, prefix="", keep_vars=False, flatten=False
     ) -> "OrderedDict[str, Tensor]":
-        d = nn.Module.state_dict(self, destination, prefix, keep_vars)
-        from continual.utils import flat_state_dict
-
-        if flatten or flat_state_dict.flatten:
-            flat_keys = [
-                ".".join(part for part in name.split(".") if not part.isdigit())
-                for name in list(d.keys())
-            ]
-            if len(set(flat_keys)) == len(d.keys()):
-                d = OrderedDict(list(zip(flat_keys, d.values())))
-
-        return d
+        return state_dict(self, destination, prefix, keep_vars, flatten)
 
     def load_state_dict(
         self,
@@ -46,19 +36,7 @@ class FlattenableStateDict:
         strict: bool = True,
         flatten=False,
     ):
-        from continual.utils import flat_state_dict
-
-        if flatten or flat_state_dict.flatten:
-            long_keys = nn.Module.state_dict(self, keep_vars=True).keys()
-            short2long = {
-                ".".join(part for part in key.split(".") if not part.isdigit()): key
-                for key in list(long_keys)
-            }
-            state_dict = OrderedDict(
-                [(short2long[key], val) for key, val in state_dict.items()]
-            )
-
-        nn.Module.load_state_dict(self, state_dict, strict)
+        return load_state_dict(self, state_dict, strict, flatten)
 
 
 class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
@@ -78,14 +56,21 @@ class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
 
         nn.Module.add_module(self, name, module)
 
-    def forward_step(self, input):
+    def forward(self, input):
         for module in self:
-            input = module.forward_step(input)
-            if isinstance(input, TensorPlaceholder):
+            input = module.forward(input)
+            if not isinstance(input, Tensor):
                 return TensorPlaceholder()  # We can't infer output shape
         return input
 
-    def forward_steps(self, input: Tensor, pad_end=True):
+    def forward_step(self, input):
+        for module in self:
+            input = module.forward_step(input)
+            if not isinstance(input, Tensor):
+                return TensorPlaceholder()  # We can't infer output shape
+        return input
+
+    def forward_steps(self, input: Tensor, pad_end=False):
         for module in self:
             if len(input) == 0:
                 return input
@@ -138,6 +123,10 @@ class Aggregation(Enum):
     MUL = "mul"
 
 
+AggregationFunc = Callable[[Sequence[Tensor]], Tensor]
+AggregationFuncOrEnum = Union[Aggregation, AggregationFunc]
+
+
 def parallel_sum(inputs: Sequence[Tensor]) -> Tensor:
     assert len(inputs) >= 2
     return reduce(torch.Tensor.add, inputs[1:], inputs[0])
@@ -168,7 +157,14 @@ def parallel_mul(inputs: Sequence[Tensor]) -> Tensor:
     return reduce(torch.Tensor.mul, inputs[1:], inputs[0])
 
 
-AggregationFunc = Union[Aggregation, Callable[[Sequence[Tensor]], Tensor]]
+def nonempty(fn: AggregationFunc) -> AggregationFunc:
+    @wraps(fn)
+    def wrapped(inputs: Sequence[Tensor]) -> Tensor:
+        if any(len(inp) == 0 for inp in inputs):
+            return TensorPlaceholder(inputs[0].shape)
+        return fn(inputs)
+
+    return wrapped
 
 
 class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
@@ -176,7 +172,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
 
     Args:
         *args: Either vargs of modules or an OrderedDict.
-        aggregation_fn (AggregationFunc, optional):
+        aggregation_fn (AggregationFuncOrEnum, optional):
             Function used to aggregate the parallel outputs.
             Sum or concatenation can be specified by passing Aggregation.SUM or Aggregation.CONCAT respectively.
             Custom aggregation functions can also be passed.
@@ -191,7 +187,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
     def __init__(
         self,
         *args: CoModule,
-        aggregation_fn: AggregationFunc = Aggregation.SUM,
+        aggregation_fn: AggregationFuncOrEnum = Aggregation.SUM,
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -200,7 +196,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
     def __init__(
         self,
         arg: "OrderedDict[str, CoModule]",
-        aggregation_fn: AggregationFunc = Aggregation.SUM,
+        aggregation_fn: AggregationFuncOrEnum = Aggregation.SUM,
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -208,7 +204,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
     def __init__(
         self,
         *args,
-        aggregation_fn: AggregationFunc = Aggregation.SUM,
+        aggregation_fn: AggregationFuncOrEnum = Aggregation.SUM,
         auto_delay=True,
     ):
         super(Parallel, self).__init__()
@@ -244,7 +240,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
         for key, module in modules:
             self.add_module(key, module)
 
-        self.aggregation_fn = (
+        self.aggregation_fn = nonempty(
             aggregation_fn
             if callable(aggregation_fn)
             else {
@@ -273,7 +269,8 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
                     break
             return TensorPlaceholder(shape)
 
-    def forward_steps(self, input: Tensor, pad_end=True) -> Tensor:
+    # FIXME: There seems to be a bug hidden here
+    def forward_steps(self, input: Tensor, pad_end=False) -> Tensor:
         outs = []
         for m in self:
             if isinstance(m, Padded):
@@ -281,18 +278,10 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
             else:
                 outs.append(m.forward_steps(input))
 
-        # assert (
-        #     len(set(o.shape[2] for o in outs)) == 1
-        # ), f"Parallel modules should produce an equal number of temporal steps, but found {[o.shape[2] for o in outs]}"
-
         return self.aggregation_fn(outs)
 
     def forward(self, input: Tensor) -> Tensor:
         outs = [m.forward(input) for m in self]
-
-        # assert (
-        #     len(set(o.shape[2] for o in outs)) == 1
-        # ), f"Parallel modules should produce an equal number of temporal steps, but found {[o.shape[2] for o in outs]}"
 
         return self.aggregation_fn(outs)
 
@@ -324,6 +313,9 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
         for m in self:
             if hasattr(m, "clean_state"):
                 m.clean_state()
+
+    def extra_repr(self):
+        return f"aggregation_fn={self.aggregation_fn.__name__}"
 
 
 def Residual(
