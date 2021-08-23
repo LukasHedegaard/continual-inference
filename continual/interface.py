@@ -57,21 +57,6 @@ class CoModule(ABC):
         This function is identical to the non-continual module found `torch.nn`"""
         ...  # pragma: no cover
 
-    # @property
-    # def delay(self) -> int:
-    #     """Temporal delay of the module
-
-    #     Returns:
-    #         int: Temporal delay of the module
-    #     """
-    #     ...  # pragma: no cover
-
-    # def clean_state(self):
-    #     """Clean module state
-    #     This serves as a dummy function for modules which do not require state-cleanup
-    #     """
-    #     ...  # pragma: no cover
-
 
 class TensorPlaceholder:
     shape: Tuple[int]

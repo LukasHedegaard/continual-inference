@@ -271,7 +271,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
                     break
             return TensorPlaceholder(shape)
 
-    # FIXME: There seems to be a bug hidden here
+    # NB: There seems to be a bug hidden here
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         outs = []
         for m in self:
