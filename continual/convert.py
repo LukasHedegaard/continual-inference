@@ -59,14 +59,14 @@ def forward_stepping(module: nn.Module, dim: int = 2):
 
         return call
 
-    def dummy(self):
+    def dummy_clean_state(*args, **kwargs):
         ...  # pragma: no cover
 
     module.forward = module.forward
     module.forward_steps = with_dummy_args(module.forward)
     module.forward_step = with_dummy_args(unsqueezed(module.forward))
     module.delay = 0
-    module.clean_state = dummy
+    module.clean_state = dummy_clean_state
 
     return module
 
