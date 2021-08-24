@@ -6,12 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+
+
+## [0.8.0]
 ### Fixed
 - Bugs in `forward_step(s, update_state=False)`
 
 ### Changed
-- `forward_steps` interface to always include `pad_end` argument
-- name of "interface.py" to "module.py"
+- `forward_steps` interface to always include `pad_end` argument.
+- name of "interface.py" to "module.py".
+- implementations of `forward_step(s)` to be consolidated in CoModule.
 
 ### Removed
 - `Padded` interface
