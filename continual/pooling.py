@@ -182,7 +182,7 @@ class _PoolNd(Padded, CoModule, nn.Module):
     ) -> Tuple[Tensor, State]:
         assert (
             len(input.shape) == self.num_input_dims + 1
-        ), f"A tensor of size {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input."
+        ), f"A tensor of size {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}."
 
         pooled_frame = self._spatial_pool_fn(input)
         buffer, index, stride_index = prev_state or self.init_state(pooled_frame)
@@ -211,35 +211,40 @@ class _PoolNd(Padded, CoModule, nn.Module):
         return output, (next_buffer, next_index, next_stride_index)
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        output, (state_buffer, state_index, stride_index) = self._forward_step(
-            input, self.get_state()
-        )
+        state = self.get_state()
+        if not update_state and state:
+            state = (state[0].clone(), *state[1:])
+        output, state = self._forward_step(input, state)
         if update_state:
-            self.state_buffer = state_buffer
-            self.state_index = state_index
-            self.stride_index = stride_index
+            self.state_buffer, self.state_index, self.stride_index = state
         return output
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         assert (
             len(input.shape) == self.num_input_dims + 2
-        ), f"A tensor of size {self.input_shape_desciption} should be passed as input."
+        ), f"A tensor of size {self.input_shape_desciption} should be passed as input but got {input.shape}."
 
         outs = []
+        tmp_state = self.get_state()
+        if not update_state and tmp_state:
+            tmp_state = (tmp_state[0].clone(), *tmp_state[1:])
+
         for t in range(input.shape[2]):
-            o = self.forward_step(input[:, :, t], update_state=update_state)
+            o, tmp_state = self._forward_step(input[:, :, t], tmp_state)
             if isinstance(o, Tensor):
                 outs.append(o)
 
+        if update_state:
+            self.state_buffer, self.state_index, self.stride_index = tmp_state
+
         if pad_end:
             # Don't save state for the end-padding
-            tmp_buffer, tmp_index, tmp_stride_index = self.get_state()
+            tmp_state = self.get_state()
+            tmp_state = (tmp_state[0].clone(), *tmp_state[1:])
             for t, i in enumerate(
                 [torch.zeros_like(input[:, :, -1]) for _ in range(self.padding[0])]
             ):
-                o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
-                    i, (tmp_buffer, tmp_index, tmp_stride_index)
-                )
+                o, tmp_state = self._forward_step(i, tmp_state)
                 if isinstance(o, Tensor):
                     outs.append(o)
 

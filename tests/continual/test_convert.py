@@ -1,6 +1,7 @@
-import continual as co
-from torch import nn
 import torch
+from torch import nn
+
+import continual as co
 
 
 def test_forward_stepping():

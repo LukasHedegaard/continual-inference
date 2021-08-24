@@ -40,22 +40,31 @@ def test_sequential():
 
     assert coseq.delay == (5 - 1) + (3 - 1)
 
-    # Forward results are identical
+    # forward
     output = seq.forward(long_example_clip)
     co_output = coseq.forward(long_example_clip)
     assert torch.allclose(output, co_output)
 
-    # Alternative forwards
+    # forward_steps
+    co_output_firsts_0 = coseq.forward_steps(
+        long_example_clip[:, :, :-1], update_state=False
+    )
     co_output_firsts = coseq.forward_steps(long_example_clip[:, :, :-1])
-    assert torch.allclose(output[:, :, :-1], co_output_firsts)
+    assert torch.allclose(co_output_firsts, co_output_firsts_0)
+    assert torch.allclose(co_output_firsts, output[:, :, :-1])
 
+    # forward_step
+    co_output_last_0 = coseq.forward_step(
+        long_example_clip[:, :, -1], update_state=False
+    )
     co_output_last = coseq.forward_step(long_example_clip[:, :, -1])
-    assert torch.allclose(output[:, :, -1], co_output_last)
+    assert torch.allclose(co_output_last, co_output_last_0)
+    assert torch.allclose(co_output_last, output[:, :, -1])
 
     # Clean state can be used to restart seq computation
     coseq.clean_state()
     co_output_firsts = coseq.forward_steps(long_example_clip[:, :, :-1])
-    assert torch.allclose(output[:, :, :-1], co_output_firsts)
+    assert torch.allclose(co_output_firsts, output[:, :, :-1])
 
 
 def test_sequential_with_TensorPlaceholder():
@@ -184,10 +193,14 @@ def test_parallel():
 
     # forward_steps
     par.clean_state()
+    out_steps_0 = par.forward_steps(input[:, :, :-1], pad_end=False, update_state=False)
     out_steps = par.forward_steps(input[:, :, :-1], pad_end=False)
+    assert torch.allclose(out_steps, out_steps_0)
     assert torch.allclose(out_steps, out_all[:, :, : -par.delay - 1])
 
+    out_step_0 = par.forward_step(input[:, :, -1], update_state=False)  # continuation
     out_step = par.forward_step(input[:, :, -1])  # continuation
+    assert torch.allclose(out_step, out_step_0)
     assert torch.allclose(out_step, out_all[:, :, -par.delay - 1])
 
     # with pad_end
