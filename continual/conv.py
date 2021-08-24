@@ -139,7 +139,7 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
     def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         assert (
             len(input.shape) == self._input_len - 1
-        ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input."
+        ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}"
 
         # e.g. B, C -> B, C, 1
         x = input.unsqueeze(2)
@@ -211,7 +211,7 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         assert (
             len(input.shape) == self._input_len
-        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
+        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."
 
         outs = []
 
@@ -250,7 +250,7 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         """
         assert (
             len(input.shape) == self._input_len
-        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
+        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."
         output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
 
         return output
