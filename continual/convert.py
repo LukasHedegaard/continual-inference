@@ -43,7 +43,7 @@ def forward_stepping(module: nn.Module, dim: int = 2):
 
     def unsqueezed(func: Callable[[Tensor], Tensor]):
         @wraps(func)
-        def call(x: Tensor, update_state=True) -> Tensor:
+        def call(x: Tensor) -> Tensor:
             x = x.unsqueeze(dim)
             x = func(x)
             x = x.squeeze(dim)
@@ -64,7 +64,7 @@ def forward_stepping(module: nn.Module, dim: int = 2):
 
     module.forward = module.forward
     module.forward_steps = with_dummy_args(module.forward)
-    module.forward_step = unsqueezed(module.forward)
+    module.forward_step = with_dummy_args(unsqueezed(module.forward))
     module.delay = 0
     module.clean_state = dummy
 
