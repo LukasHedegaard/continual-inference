@@ -72,8 +72,8 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         dilation = size_fn(dilation)
         assert dilation[0] == 1, "Temporal dilation > 1 is not supported currently."
 
-        temporal_fill = PaddingMode(temporal_fill)
-        padding_mode = PaddingMode(padding_mode)
+        self.padding_mode = PaddingMode(padding_mode).value
+        self.t_padding_mode = PaddingMode(temporal_fill).value
 
         _ConvNd.__init__(
             self,
@@ -87,15 +87,21 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
             output_padding=size_fn(0),
             groups=groups,
             bias=bias,
-            padding_mode=padding_mode.value,
+            padding_mode=padding_mode,
         )
         self.make_padding = {
-            PaddingMode.ZEROS: torch.zeros_like,
-            PaddingMode.REPLICATE: torch.clone,
-        }[temporal_fill]
+            PaddingMode.ZEROS.value: torch.zeros_like,
+            PaddingMode.REPLICATE.value: torch.clone,
+        }[self.t_padding_mode]
 
-        self._reversed_padding_repeated_twice = _reverse_repeat_tuple(
-            (self.kernel_size[0] - 1, *self.padding[1:]), 2
+        # Padding used in for `forward`
+        self._reversed_padding_repeated_twice = _reverse_repeat_tuple(self.padding, 2)
+
+        # Padding used in for `forward_step`
+        self._step_space_rprt = _reverse_repeat_tuple((0, *self.padding[1:]), 2)
+        self._step_time_pad = (
+            self.kernel_size[0] - 1,
+            *[0 for _ in self.padding[1:]],
         )
 
         # init_state is called in `_forward_step`
@@ -115,9 +121,9 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         return state_buffer, state_index, stride_index
 
     def clean_state(self):
-        self.state_buffer = None
-        self.state_index = None
-        self.stride_index = None
+        del self.state_buffer
+        del self.state_index
+        del self.stride_index
 
     def get_state(self):
         if (
@@ -150,13 +156,11 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
             )
         else:
             x = self._conv_func(
-                input=F.pad(
-                    x, self._reversed_padding_repeated_twice, mode=self.padding_mode
-                ),
+                input=F.pad(x, self._step_space_rprt, mode=self.padding_mode),
                 weight=self.weight,
                 bias=None,
                 stride=(1, *self.stride[1:]),
-                padding=(self.kernel_size[0] - 1, 0),
+                padding=self._step_time_pad,
                 dilation=self.dilation,
                 groups=self.groups,
             )
@@ -167,7 +171,6 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         buffer, index, stride_index = prev_state or self.init_state(x_rest)
 
         tot = len(buffer)
-        # if stride_index == 0:
         if stride_index == self.stride[0] - 1:
             x_out = x_out.clone()
             for i in range(tot):
@@ -211,6 +214,7 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
 
         outs = []
+
         for t in range(input.shape[2]):
             o = self.forward_step(input[:, :, t], update_state=update_state)
             if isinstance(o, Tensor):
@@ -231,7 +235,7 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         if len(outs) > 0:
             outs = torch.stack(outs, dim=2)
         else:
-            outs = torch.tensor([])
+            outs = torch.tensor([])  # pragma: no cover
         return outs
 
     def forward(self, input: Tensor) -> Tensor:
@@ -248,6 +252,7 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
         output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
+
         return output
 
     @property
@@ -328,7 +333,7 @@ class Conv1d(_ConvCoNd):
 
     @staticmethod
     def build_from(
-        module: nn.Conv1d, temporal_fill: PaddingMode = "zeros", **kwargs
+        module: nn.Conv1d, temporal_fill: PaddingMode = None, **kwargs
     ) -> "Conv1d":
         comodule = Conv1d(
             **{
@@ -342,7 +347,7 @@ class Conv1d(_ConvCoNd):
                     groups=module.groups,
                     bias=module.bias is not None,
                     padding_mode=module.padding_mode,
-                    temporal_fill=temporal_fill,
+                    temporal_fill=temporal_fill or module.padding_mode,
                 ),
                 **kwargs,
             }
@@ -427,7 +432,7 @@ class Conv2d(_ConvCoNd):
 
     @staticmethod
     def build_from(
-        module: nn.Conv2d, temporal_fill: PaddingMode = "zeros", **kwargs
+        module: nn.Conv2d, temporal_fill: PaddingMode = None, **kwargs
     ) -> "Conv2d":
         comodule = Conv2d(
             **{
@@ -441,7 +446,7 @@ class Conv2d(_ConvCoNd):
                     groups=module.groups,
                     bias=module.bias is not None,
                     padding_mode=module.padding_mode,
-                    temporal_fill=temporal_fill,
+                    temporal_fill=temporal_fill or module.padding_mode,
                 ),
                 **kwargs,
             }
@@ -528,7 +533,7 @@ class Conv3d(_ConvCoNd):
 
     @staticmethod
     def build_from(
-        module: nn.Conv3d, temporal_fill: PaddingMode = "zeros", **kwargs
+        module: nn.Conv3d, temporal_fill: PaddingMode = None, **kwargs
     ) -> "Conv3d":
         comodule = Conv3d(
             **{
@@ -542,7 +547,7 @@ class Conv3d(_ConvCoNd):
                     groups=module.groups,
                     bias=module.bias is not None,
                     padding_mode=module.padding_mode,
-                    temporal_fill=temporal_fill,
+                    temporal_fill=temporal_fill or module.padding_mode,
                 ),
                 **kwargs,
             }

@@ -257,6 +257,11 @@ def test_from_conv3d():
 
     co3 = co.Conv3d.build_from(regular)
 
+    # forward
+    output = co3.forward(example_clip)
+    assert torch.allclose(target, output)
+
+    # forward_step
     output = []
     for i in range(example_clip.shape[2]):
         output.append(co3.forward_step(example_clip[:, :, i]))
@@ -264,7 +269,7 @@ def test_from_conv3d():
     for t in range(example_clip.shape[2] - (T - 1)):
         assert torch.allclose(target[:, :, t], output[t + (T - 1)])
 
-    # Alternative: gives same output as regular version
+    # forward_steps
     co3.clean_state()
     output3 = co3.forward_steps(example_clip)
     assert torch.allclose(output3, target)
@@ -285,29 +290,31 @@ def test_from_conv3d_bad_shape():
         co.Conv3d.build_from(regular)
 
 
-example_clip_large = torch.normal(mean=torch.zeros(2 * 2 * 4 * 8 * 8)).reshape(
-    (2, 2, 4, 8, 8)
-)
-
-
 def test_complex():
+    sample = torch.randn((1, 5, 4, 8, 8))
+
     # Take an example input and pass it thorugh a co.Conv3D the traditional way
     regular = torch.nn.Conv3d(
-        in_channels=2,
-        out_channels=4,
+        in_channels=5,
+        out_channels=5,
         kernel_size=(T, S, S),
-        bias=True,
-        groups=2,
+        bias=False,
         dilation=(1, 2, 2),
         stride=(1, 2, 2),
-        padding=(2, 1, 1),
+        padding=(1, 1, 1),
+        groups=5,
+        padding_mode="replicate",
     )
-    regular_output = regular(example_clip_large).detach()
 
-    co3 = co.Conv3d.build_from(regular, temporal_fill="zeros")
-    co3_output = co3.forward_steps(example_clip_large, pad_end=True)
+    target = regular(sample)
 
-    assert torch.allclose(regular_output, co3_output, atol=5e-8)
+    co3 = co.Conv3d.build_from(regular)
+
+    output = co3.forward(sample)
+    assert torch.allclose(target, output)
+
+    output = co3.forward_steps(sample, pad_end=True)
+    assert torch.allclose(target, output, atol=5e-8)
 
 
 def test_forward_continuation():
@@ -384,11 +391,11 @@ def test_stacked_impulse_response():
     ]
 
     # Correct result is output
-    for i in range(len(same_as_last)):
+    for i, s in enumerate(same_as_last):
         if i >= (5 - 1) + (3 - 1) + (3 - 1):
-            assert same_as_last[i]
+            assert s[i]
         else:
-            assert not same_as_last[i]
+            assert not s[i]
 
 
 def test_stacked_no_pad():
