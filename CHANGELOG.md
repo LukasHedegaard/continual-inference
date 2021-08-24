@@ -11,12 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Independent state_dict and load_state_dict functions.
 - Added nonempty check for aggregation functions in Parallel.
 - `update_state` argument to all `forward_step(s)` methods.
+- Additional tests for edge-cases
 
 ### Changed
 - Changed default pad_end value to False.
 
 ### Fixed
 - Continual interface and conversion to support both class and module.
+- Replicate padding in `co._ConvNd`
 
 ## [0.6.1]
 ### Changed
