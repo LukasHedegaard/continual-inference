@@ -4,6 +4,7 @@ import torch
 from torch import Tensor
 
 from .module import CoModule, PaddingMode, TensorPlaceholder
+from .utils import temporary_parameter
 
 State = Tuple[Tensor, int]
 
@@ -55,17 +56,8 @@ class Delay(torch.nn.Module, CoModule):
         ):
             return (self.state_buffer, self.state_index)
 
-    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        if self._delay == 0:
-            return input
-
-        state = self.get_state()
-        if not update_state and state:
-            state = (state[0].clone(), *state[1:])
-        output, state = self._forward_step(input, state)
-        if update_state:
-            self.state_buffer, self.state_index = state
-        return output
+    def set_state(self, state: State):
+        self.state_buffer, self.state_index = state
 
     def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         if prev_state is None:
@@ -87,41 +79,20 @@ class Delay(torch.nn.Module, CoModule):
 
         return output, (buffer, new_index)
 
+    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
+        if self._delay == 0:
+            return input
+
+        return CoModule.forward_step(self, input, update_state)
+
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         if self._delay == 0:
             return input
 
-        outs = []
-        tmp_state = self.get_state()
-        if not update_state and tmp_state:
-            tmp_state = (tmp_state[0].clone(), *tmp_state[1:])
+        with temporary_parameter(self, "padding", (self.delay,)):
+            output = CoModule.forward_steps(self, input, pad_end, update_state)
 
-        for t in range(input.shape[2]):
-            o, tmp_state = self._forward_step(input[:, :, t], tmp_state)
-            # o = self.forward_step(input[:, :, t], update_state=update_state)
-            if isinstance(o, Tensor):
-                outs.append(o)
-
-        if update_state:
-            self.state_buffer, self.state_index = tmp_state
-
-        if pad_end:
-            # Empty out delay values, but don't save state for the end-padding
-            tmp_state = self.get_state()
-            tmp_state = (tmp_state[0].clone(), *tmp_state[1:])
-            for t, i in enumerate(
-                [self.make_padding(input[:, :, -1]) for _ in range(self.delay)]
-            ):
-                o, tmp_state = self._forward_step(i, tmp_state)
-                if isinstance(o, Tensor):
-                    outs.append(o)
-
-        if len(outs) > 0:
-            outs = torch.stack(outs, dim=2)
-        else:
-            outs = torch.tensor([])  # pragma: no cover
-
-        return outs
+        return output
 
     def forward(self, input: Tensor) -> Tensor:
         # No delay during regular forward

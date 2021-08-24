@@ -7,8 +7,8 @@ from torch import Tensor, nn
 
 from .container import Sequential
 from .conv import Conv1d, Conv2d, Conv3d
-from .module import CoModule
 from .logging import getLogger
+from .module import CoModule
 from .pooling import (
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,

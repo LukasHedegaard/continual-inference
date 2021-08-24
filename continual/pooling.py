@@ -10,11 +10,6 @@ from torch.nn.modules.utils import _ntuple, _pair, _single, _triple
 
 from .module import CoModule, PaddingMode, TensorPlaceholder
 
-State = Tuple[Tensor, int]
-
-T = TypeVar("T")
-U = TypeVar("U")
-
 __all__ = [
     "AvgPool1d",
     "MaxPool1d",
@@ -27,6 +22,9 @@ __all__ = [
     "AdaptiveAvgPool3d",
     "AdaptiveMaxPool3d",
 ]
+
+T = TypeVar("T")
+U = TypeVar("U")
 
 State = Tuple[Tensor, int]
 
@@ -175,6 +173,9 @@ class _PoolNd(CoModule, nn.Module):
         ):
             return (self.state_buffer, self.state_index, self.stride_index)
 
+    def set_state(self, state: State):
+        self.state_buffer, self.state_index, self.stride_index = state
+
     def _forward_step(
         self,
         input: Tensor,
@@ -210,48 +211,12 @@ class _PoolNd(CoModule, nn.Module):
 
         return output, (next_buffer, next_index, next_stride_index)
 
-    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        state = self.get_state()
-        if not update_state and state:
-            state = (state[0].clone(), *state[1:])
-        output, state = self._forward_step(input, state)
-        if update_state:
-            self.state_buffer, self.state_index, self.stride_index = state
-        return output
-
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         assert (
             len(input.shape) == self.num_input_dims + 2
         ), f"A tensor of size {self.input_shape_desciption} should be passed as input but got {input.shape}."
 
-        outs = []
-        tmp_state = self.get_state()
-        if not update_state and tmp_state:
-            tmp_state = (tmp_state[0].clone(), *tmp_state[1:])
-
-        for t in range(input.shape[2]):
-            o, tmp_state = self._forward_step(input[:, :, t], tmp_state)
-            if isinstance(o, Tensor):
-                outs.append(o)
-
-        if update_state:
-            self.state_buffer, self.state_index, self.stride_index = tmp_state
-
-        if pad_end:
-            # Don't save state for the end-padding
-            tmp_state = self.get_state()
-            tmp_state = (tmp_state[0].clone(), *tmp_state[1:])
-            for t, i in enumerate(
-                [torch.zeros_like(input[:, :, -1]) for _ in range(self.padding[0])]
-            ):
-                o, tmp_state = self._forward_step(i, tmp_state)
-                if isinstance(o, Tensor):
-                    outs.append(o)
-
-        if len(outs) == 0:
-            return torch.tensor([])  # pragma: no cover
-
-        return torch.stack(outs, dim=2)
+        return CoModule.forward_steps(self, input, pad_end, update_state)
 
     @property
     def delay(self):

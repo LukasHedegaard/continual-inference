@@ -1,7 +1,8 @@
 from abc import ABC
 from enum import Enum
-from typing import Any, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
+import torch
 from torch import Tensor
 
 
@@ -16,6 +17,17 @@ class TensorPlaceholder:
 
     def __len__(self):
         return 0
+
+
+# First element must be a Tensor
+State = Union[
+    Tuple[Tensor, int],
+    Tuple[Tensor, int, int],
+]
+
+
+def _clone_first(state: State) -> State:
+    return (state[0].clone(), *state[1:])
 
 
 class CoModule(ABC):
@@ -38,6 +50,8 @@ class CoModule(ABC):
                 "forward",
                 "a forward computation which is identical to a regular non-continual forward.",
             ),
+            ("get_state", "a retrieval of the internal state."),
+            ("set_state", "an update of the internal state."),
             ("clean_state", "an internal state clean-up."),
         ]:
             assert callable(
@@ -57,6 +71,28 @@ class CoModule(ABC):
             return False
         return True
 
+    def get_state(self) -> Optional[State]:
+        """Get model state
+
+        Returns:
+            Optional[State]: A State tuple if the model has been initialised and otherwise None.
+        """
+        ...  # pragma: no cover
+
+    def set_state(self, state: State):
+        """Set model state
+
+        Args:
+            state (State): State tuple to set as new internal internal state
+        """
+        ...  # pragma: no cover
+
+    def clean_state(self):
+        """Clean model state"""
+        ...  # pragma: no cover
+
+    make_padding = torch.zeros_like
+
     def forward_step(
         self, input: Tensor, update_state=True
     ) -> Union[Tensor, TensorPlaceholder]:
@@ -69,7 +105,13 @@ class CoModule(ABC):
         Returns:
             Union[Tensor, TensorPlaceholder]: Step output. This will be a placeholder while the module initialises and every (stride - 1) : stride.
         """
-        ...  # pragma: no cover
+        state = self.get_state()
+        if not update_state and state:
+            state = _clone_first(state)
+        output, state = self._forward_step(input, state)
+        if update_state:
+            self.set_state(state)
+        return output
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         """Forward computation for multiple steps with state initialisation
@@ -82,7 +124,34 @@ class CoModule(ABC):
         Returns:
             Tensor: Layer output
         """
-        ...  # pragma: no cover
+        outs = []
+        tmp_state = self.get_state()
+
+        if not update_state and tmp_state:
+            tmp_state = _clone_first(tmp_state)
+
+        for t in range(input.shape[2]):
+            o, tmp_state = self._forward_step(input[:, :, t], tmp_state)
+            if isinstance(o, Tensor):
+                outs.append(o)
+
+        if update_state:
+            self.set_state(tmp_state)
+
+        if pad_end:
+            # Don't save state for the end-padding
+            tmp_state = _clone_first(self.get_state())
+            for t, i in enumerate(
+                [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
+            ):
+                o, tmp_state = self._forward_step(i, tmp_state)
+                if isinstance(o, Tensor):
+                    outs.append(o)
+
+        if len(outs) == 0:
+            return torch.tensor([])  # pragma: no cover
+
+        return torch.stack(outs, dim=2)
 
     def forward(self, input: Tensor) -> Any:
         """Forward computation for multiple steps without state initialisation.

@@ -71,7 +71,7 @@ class Sequential(FlattenableStateDict, nn.Sequential, CoModule):
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         for module in self:
             if not isinstance(input, Tensor) or len(input) == 0:
-                return TensorPlaceholder()
+                return TensorPlaceholder()  # pragma: no cover
             input = module.forward_steps(input, pad_end, update_state)
 
         return input
@@ -156,7 +156,7 @@ def nonempty(fn: AggregationFunc) -> AggregationFunc:
     @wraps(fn)
     def wrapped(inputs: Sequence[Tensor]) -> Tensor:
         if any(len(inp) == 0 for inp in inputs):
-            return TensorPlaceholder(inputs[0].shape)
+            return TensorPlaceholder(inputs[0].shape)  # pragma: no cover
         return fn(inputs)
 
     return wrapped
@@ -259,7 +259,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
             # Try to infer shape
             shape = tuple()
             for o in outs:
-                if isinstance(o, Tensor):
+                if isinstance(o, Tensor):  # pragma: no cover
                     shape = o.shape
                     break
             return TensorPlaceholder(shape)
@@ -295,7 +295,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
 
     @property
     def stride(self) -> int:
-        return getattr(next(iter(self)), "stride", 1)
+        return int_from(getattr(next(iter(self)), "stride", 1))
 
     @property
     def padding(self) -> int:

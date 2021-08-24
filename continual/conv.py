@@ -14,8 +14,8 @@ from torch.nn.modules.conv import (
     _triple,
 )
 
-from .module import CoModule, PaddingMode, TensorPlaceholder
 from .logging import getLogger
+from .module import CoModule, PaddingMode, TensorPlaceholder
 
 logger = getLogger(__name__)
 
@@ -136,6 +136,9 @@ class _ConvCoNd(_ConvNd, CoModule):
         ):
             return (self.state_buffer, self.state_index, self.stride_index)
 
+    def set_state(self, state: State):
+        self.state_buffer, self.state_index, self.stride_index = state
+
     def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         assert (
             len(input.shape) == self._input_len - 1
@@ -198,50 +201,12 @@ class _ConvCoNd(_ConvNd, CoModule):
 
         return x_out, (next_buffer, next_index, next_stride_index)
 
-    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        state = self.get_state()
-        if not update_state and state:
-            state = (state[0].clone(), *state[1:])
-        output, state = self._forward_step(input, state)
-        if update_state:
-            self.state_buffer, self.state_index, self.stride_index = state
-        return output
-
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         assert (
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."
 
-        outs = []
-        tmp_state = self.get_state()
-
-        if not update_state and tmp_state:
-            tmp_state = (tmp_state[0].clone(), *tmp_state[1:])
-
-        for t in range(input.shape[2]):
-            o, tmp_state = self._forward_step(input[:, :, t], tmp_state)
-            if isinstance(o, Tensor):
-                outs.append(o)
-
-        if update_state:
-            self.state_buffer, self.state_index, self.stride_index = tmp_state
-
-        if pad_end:
-            # Don't save state for the end-padding
-            tmp_state = self.get_state()
-            tmp_state = (tmp_state[0].clone(), *tmp_state[1:])
-            for t, i in enumerate(
-                [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
-            ):
-                o, tmp_state = self._forward_step(i, tmp_state)
-                if isinstance(o, Tensor):
-                    outs.append(o)
-
-        if len(outs) > 0:
-            outs = torch.stack(outs, dim=2)
-        else:
-            outs = torch.tensor([])  # pragma: no cover
-        return outs
+        return CoModule.forward_steps(self, input, pad_end, update_state)
 
     def forward(self, input: Tensor) -> Tensor:
         """Performs a full forward computation exactly as the regular layer would.
