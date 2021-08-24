@@ -7,7 +7,7 @@ import torch
 from torch import Tensor, nn
 
 from .delay import Delay
-from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
+from .interface import CoModule, PaddingMode, TensorPlaceholder
 from .utils import load_state_dict, state_dict
 
 __all__ = ["Sequential", "Parallel", "Residual"]
@@ -39,7 +39,7 @@ class FlattenableStateDict:
         return load_state_dict(self, state_dict, strict, flatten)
 
 
-class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
+class Sequential(FlattenableStateDict, nn.Sequential, CoModule):
     """Continual Sequential module
 
     This module is a drop-in replacement for `torch.nn.Sequential`
@@ -72,12 +72,7 @@ class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
         for module in self:
             if not isinstance(input, Tensor) or len(input) == 0:
                 return TensorPlaceholder()
-            if isinstance(module, Padded):
-                input = module.forward_steps(
-                    input, pad_end=pad_end, update_state=update_state
-                )
-            else:
-                input = module.forward_steps(input, update_state=update_state)
+            input = module.forward_steps(input, pad_end, update_state)
 
         return input
 
@@ -167,7 +162,7 @@ def nonempty(fn: AggregationFunc) -> AggregationFunc:
     return wrapped
 
 
-class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
+class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
     """Continual parallel container.
 
     Args:
@@ -273,12 +268,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         outs = []
         for m in self:
-            if isinstance(m, Padded):
-                outs.append(
-                    m.forward_steps(input, pad_end=pad_end, update_state=update_state)
-                )
-            else:
-                outs.append(m.forward_steps(input, update_state=update_state))
+            outs.append(m.forward_steps(input, pad_end, update_state))
 
         return self.aggregation_fn(outs)
 

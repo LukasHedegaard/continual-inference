@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Bugs in `forward_step(s, update_state=False)`
 
+### Changed
+- `forward_steps` interface to always include `pad_end` argument
+
+### Removed
+- `Padded` interface
+
 
 ## [0.7.0]
 ### Added

@@ -1,8 +1,21 @@
 from abc import ABC
 from enum import Enum
-from typing import Tuple
+from typing import Any, Tuple, Union
 
 from torch import Tensor
+
+
+class TensorPlaceholder:
+    shape: Tuple[int]
+
+    def __init__(self, shape: Tuple[int] = tuple()):
+        self.shape = shape
+
+    def size(self):
+        return self.shape
+
+    def __len__(self):
+        return 0
 
 
 class CoModule(ABC):
@@ -44,40 +57,19 @@ class CoModule(ABC):
             return False
         return True
 
-    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        """Forward computation for a single step with state initialisation"""
+    def forward_step(
+        self, input: Tensor, update_state=True
+    ) -> Union[Tensor, TensorPlaceholder]:
+        """Forward computation for a single step with state initialisation
+
+        Args:
+            input (Tensor): Layer input.
+            update_state (bool): Whether internal state should be updated during this operation.
+
+        Returns:
+            Union[Tensor, TensorPlaceholder]: Step output. This will be a placeholder while the module initialises and every (stride - 1) : stride.
+        """
         ...  # pragma: no cover
-
-    def forward_steps(self, input: Tensor, update_state=True) -> Tensor:
-        """Forward computation for multiple steps with state initialisation"""
-        ...  # pragma: no cover
-
-    def forward(self, input: Tensor) -> Tensor:
-        """Forward computation for multiple steps without state initialisation.
-        This function is identical to the non-continual module found `torch.nn`"""
-        ...  # pragma: no cover
-
-
-class TensorPlaceholder:
-    shape: Tuple[int]
-
-    def __init__(self, shape: Tuple[int] = tuple()):
-        self.shape = shape
-
-    def size(self):
-        return self.shape
-
-    def __len__(self):
-        return 0
-
-
-class PaddingMode(Enum):
-    REPLICATE = "replicate"
-    ZEROS = "zeros"
-
-
-class Padded:
-    """Base class for continual modules with temporal padding"""
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         """Forward computation for multiple steps with state initialisation
@@ -91,3 +83,17 @@ class Padded:
             Tensor: Layer output
         """
         ...  # pragma: no cover
+
+    def forward(self, input: Tensor) -> Any:
+        """Forward computation for multiple steps without state initialisation.
+        This function is identical to the non-continual module found `torch.nn`
+
+        Args:
+            input (Tensor): Layer input.
+        """
+        ...  # pragma: no cover
+
+
+class PaddingMode(Enum):
+    REPLICATE = "replicate"
+    ZEROS = "zeros"

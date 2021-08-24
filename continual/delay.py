@@ -3,14 +3,14 @@ from typing import Tuple
 import torch
 from torch import Tensor
 
-from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
+from .interface import CoModule, PaddingMode, TensorPlaceholder
 
 State = Tuple[Tensor, int]
 
 __all__ = ["Delay"]
 
 
-class Delay(torch.nn.Module, Padded, CoModule):
+class Delay(torch.nn.Module, CoModule):
     """Continual delay modules
 
     This module only introduces a delay in the continual modes, i.e. on `forward_step` and `forward_steps`.

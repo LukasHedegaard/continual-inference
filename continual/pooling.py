@@ -8,7 +8,7 @@ from torch import Tensor, nn
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from torch.nn.modules.utils import _ntuple, _pair, _single, _triple
 
-from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
+from .interface import CoModule, PaddingMode, TensorPlaceholder
 
 State = Tuple[Tensor, int]
 
@@ -40,7 +40,7 @@ class PoolType(Enum):
     MAX = "max"
 
 
-class _PoolNd(Padded, CoModule, nn.Module):
+class _PoolNd(CoModule, nn.Module):
     """Base class for Continual Pooling modules
     This module implements a naive but flexible temporal pooling system.
 

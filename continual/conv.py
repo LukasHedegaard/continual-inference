@@ -14,7 +14,7 @@ from torch.nn.modules.conv import (
     _triple,
 )
 
-from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
+from .interface import CoModule, PaddingMode, TensorPlaceholder
 from .logging import getLogger
 
 logger = getLogger(__name__)
@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-class _ConvCoNd(_ConvNd, Padded, CoModule):
+class _ConvCoNd(_ConvNd, CoModule):
     def __init__(
         self,
         ConvClass: torch.nn.Module,
