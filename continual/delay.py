@@ -3,7 +3,7 @@ from typing import Tuple
 import torch
 from torch import Tensor
 
-from .interface import CoModule, PaddingMode, TensorPlaceholder
+from .module import CoModule, PaddingMode, TensorPlaceholder
 
 State = Tuple[Tensor, int]
 

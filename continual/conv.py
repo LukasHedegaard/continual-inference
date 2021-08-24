@@ -14,7 +14,7 @@ from torch.nn.modules.conv import (
     _triple,
 )
 
-from .interface import CoModule, PaddingMode, TensorPlaceholder
+from .module import CoModule, PaddingMode, TensorPlaceholder
 from .logging import getLogger
 
 logger = getLogger(__name__)

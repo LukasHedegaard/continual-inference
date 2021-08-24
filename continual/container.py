@@ -7,7 +7,7 @@ import torch
 from torch import Tensor, nn
 
 from .delay import Delay
-from .interface import CoModule, PaddingMode, TensorPlaceholder
+from .module import CoModule, PaddingMode, TensorPlaceholder
 from .utils import load_state_dict, state_dict
 
 __all__ = ["Sequential", "Parallel", "Residual"]

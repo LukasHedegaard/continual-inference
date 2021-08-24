@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `forward_steps` interface to always include `pad_end` argument
+- name of "interface.py" to "module.py"
 
 ### Removed
 - `Padded` interface
