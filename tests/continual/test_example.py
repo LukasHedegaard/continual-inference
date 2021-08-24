@@ -46,7 +46,7 @@ def test_mb_conv():
     output = mb_conv.forward(example)
     assert output.shape == (1, 32, 7, 5, 5)
 
-    output_steps = mb_conv.forward_steps(example)
+    output_steps = mb_conv.forward_steps(example, pad_end=True)
     assert output_steps.shape == output.shape
 
 
@@ -81,7 +81,7 @@ def test_inception_module():
     output = inception_module.forward(example)
     assert output.shape == (1, 64 + 128 + 32 + 32, 7, 5, 5)
 
-    output_steps = inception_module.forward_steps(example)
+    output_steps = inception_module.forward_steps(example, pad_end=True)
     assert output_steps.shape == output.shape
 
 
@@ -107,5 +107,5 @@ def test_se():
     output = se.forward(example)
     assert output.shape == example.shape
 
-    output_steps = se.forward_steps(example)
+    output_steps = se.forward_steps(example, pad_end=True)
     assert torch.allclose(output_steps, output)

@@ -44,7 +44,7 @@ def test_AvgPool1d_padded():
     co_pool = AvgPool1d.build_from(pool)
 
     # Step by step
-    output = co_pool.forward_steps(sample)
+    output = co_pool.forward_steps(sample, pad_end=True)
     assert torch.allclose(target, output)
 
     # Exact

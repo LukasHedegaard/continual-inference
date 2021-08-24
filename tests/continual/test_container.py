@@ -89,11 +89,12 @@ def test_sequential_with_TensorPlaceholder():
 
     coseq = co.Sequential.build_from(seq)
     assert coseq.stride == 4
+    assert coseq.padding == 1
 
     target = seq.forward(sample)
 
     # forward_steps with padding
-    output = coseq.forward_steps(sample)
+    output = coseq.forward_steps(sample, pad_end=True)
 
     assert torch.allclose(target, output)
 
@@ -166,7 +167,7 @@ def test_parallel():
     torch.nn.init.ones_(c5.weight)
     torch.nn.init.ones_(c3.weight)
     torch.nn.init.ones_(c1.weight)
-    par = co.Parallel(c5, c3, c1)
+    par = co.Parallel(OrderedDict([("c5", c5), ("c3", c3), ("c1", c1)]))
 
     # forward
     out_all = par.forward(input)

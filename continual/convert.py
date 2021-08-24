@@ -41,7 +41,7 @@ def forward_stepping(module: nn.Module, dim: int = 2):
         dim (int, optional): The dimension to unsqueeze during `forward_step`. Defaults to 2.
     """
 
-    def decorator(func: Callable[[Tensor], Tensor]):
+    def unsqueezed(func: Callable[[Tensor], Tensor]):
         @wraps(func)
         def call(x: Tensor) -> Tensor:
             x = x.unsqueeze(dim)
@@ -51,12 +51,20 @@ def forward_stepping(module: nn.Module, dim: int = 2):
 
         return call
 
+    def with_dummy_args(func: Callable[[Tensor], Tensor]):
+        @wraps(func)
+        def call(x: Tensor, update_state=True) -> Tensor:
+            x = func(x)
+            return x
+
+        return call
+
     def dummy(self):
         ...  # pragma: no cover
 
     module.forward = module.forward
-    module.forward_steps = module.forward
-    module.forward_step = decorator(module.forward)
+    module.forward_steps = with_dummy_args(module.forward)
+    module.forward_step = with_dummy_args(unsqueezed(module.forward))
     module.delay = 0
     module.clean_state = dummy
 
@@ -133,7 +141,7 @@ def continual(module: nn.Module) -> CoModule:
         return forward_stepping(module)
 
     assert type(module) in MODULE_MAPPING, (
-        f"A registered conversion for {module.__name__} was not found. "
+        f"A registered conversion for {module} was not found. "
         "You can register a custom conversion as follows:"
         """
         import continual as co

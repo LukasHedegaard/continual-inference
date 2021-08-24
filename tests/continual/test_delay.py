@@ -7,80 +7,72 @@ torch.manual_seed(42)
 
 
 def test_delay_3d():
-    example_input = torch.normal(mean=torch.zeros(4 * 3 * 3)).reshape((1, 1, 4, 3, 3))
+    sample = torch.normal(mean=torch.zeros(4 * 3 * 3)).reshape((1, 1, 4, 3, 3))
     delay = Delay(delay=2, temporal_fill="zeros")
 
-    ones = torch.ones_like(example_input[:, :, 0])
+    ones = torch.ones_like(sample[:, :, 0])
 
-    assert isinstance(delay.forward_step(example_input[:, :, 0]), TensorPlaceholder)
-    assert isinstance(delay.forward_step(example_input[:, :, 1]), TensorPlaceholder)
+    assert isinstance(delay.forward_step(sample[:, :, 0]), TensorPlaceholder)
+    assert isinstance(delay.forward_step(sample[:, :, 1]), TensorPlaceholder)
 
-    assert torch.equal(
-        delay.forward_step(example_input[:, :, 2]), example_input[:, :, 0]
-    )
+    assert torch.equal(delay.forward_step(sample[:, :, 2]), sample[:, :, 0])
 
-    assert torch.equal(
-        delay.forward_step(example_input[:, :, 3]), example_input[:, :, 1]
-    )
+    assert torch.equal(delay.forward_step(sample[:, :, 3]), sample[:, :, 1])
 
-    assert torch.equal(delay.forward_step(ones), example_input[:, :, 2])
+    assert torch.equal(delay.forward_step(ones), sample[:, :, 2])
 
-    assert torch.equal(delay.forward_step(ones), example_input[:, :, 3])
+    assert torch.equal(delay.forward_step(ones), sample[:, :, 3])
 
     assert torch.equal(delay.forward_step(ones), ones)
 
 
 def test_delay_2d():
-    example_input = torch.rand((2, 2, 4, 3))
+    sample = torch.rand((2, 2, 4, 3))
     delay = Delay(delay=2, temporal_fill="zeros")
 
-    ones = torch.ones_like(example_input[:, :, 0])
+    ones = torch.ones_like(sample[:, :, 0])
 
-    assert isinstance(delay.forward_step(example_input[:, :, 0]), TensorPlaceholder)
-    assert isinstance(delay.forward_step(example_input[:, :, 1]), TensorPlaceholder)
+    assert isinstance(delay.forward_step(sample[:, :, 0]), TensorPlaceholder)
+    assert isinstance(delay.forward_step(sample[:, :, 1]), TensorPlaceholder)
 
-    assert torch.equal(
-        delay.forward_step(example_input[:, :, 2]), example_input[:, :, 0]
-    )
+    assert torch.equal(delay.forward_step(sample[:, :, 2]), sample[:, :, 0])
 
-    assert torch.equal(
-        delay.forward_step(example_input[:, :, 3]), example_input[:, :, 1]
-    )
+    assert torch.equal(delay.forward_step(sample[:, :, 3]), sample[:, :, 1])
 
-    assert torch.equal(delay.forward_step(ones), example_input[:, :, 2])
+    assert torch.equal(delay.forward_step(ones), sample[:, :, 2])
 
-    assert torch.equal(delay.forward_step(ones), example_input[:, :, 3])
+    assert torch.equal(delay.forward_step(ones), sample[:, :, 3])
 
     assert torch.equal(delay.forward_step(ones), ones)
 
 
 def test_delay_forward():
-    example_input = torch.rand((2, 2, 4, 3))
+    sample = torch.rand((2, 2, 4, 3))
     delay = Delay(delay=2, temporal_fill="zeros")
 
-    assert torch.equal(example_input, delay.forward(example_input))
-    assert torch.equal(example_input, delay.forward_steps(example_input))
+    assert torch.equal(sample, delay.forward(sample))
+    assert torch.equal(sample, delay.forward_steps(sample, pad_end=True))
 
 
 def test_state():
-    example_input = torch.rand((2, 2, 4, 3))
+    sample = torch.rand((2, 2, 4, 3))
     delay = Delay(delay=2, temporal_fill="zeros")
 
-    zeros = torch.zeros_like(example_input[:, :, 0])
+    zeros = torch.zeros_like(sample[:, :, 0])
 
     # State stays clean
     assert getattr(delay, "state_buffer", None) is None
     assert getattr(delay, "state_index", None) is None
 
-    delay.forward(example_input)
+    delay.forward(sample)
 
     assert getattr(delay, "state_buffer", None) is None
     assert getattr(delay, "state_index", None) is None
 
     # State is populated
-    delay.forward_step(example_input[:, :, 0])
+    delay.forward_step(sample[:, :, 0])
 
-    assert torch.equal(delay.state_buffer[0], example_input[:, :, 0])
+    assert torch.equal(delay.state_buffer[0], sample[:, :, 0])
     assert torch.equal(delay.state_buffer[1], zeros)
     assert delay.state_index == -1  # still initialising
 
@@ -89,7 +81,21 @@ def test_state():
     assert getattr(delay, "state_buffer", None) is None
     assert getattr(delay, "state_index", None) is None
 
-    assert torch.equal(delay.forward_steps(example_input, pad_end=True), example_input)
+    assert torch.equal(delay.forward_steps(sample, pad_end=True), sample)
     # state has not been flushed
-    assert torch.equal(delay.state_buffer[0], example_input[:, :, 2])
-    assert torch.equal(delay.state_buffer[1], example_input[:, :, 3])
+    assert torch.equal(delay.state_buffer[0], sample[:, :, 2])
+    assert torch.equal(delay.state_buffer[1], sample[:, :, 3])
+
+
+def test_zero_delay():
+    sample = torch.rand((2, 2, 4, 3))
+
+    no_delay = Delay(delay=0)
+    assert torch.equal(no_delay.forward(sample), sample)
+    assert torch.equal(no_delay.forward_steps(sample), sample)
+    assert torch.equal(no_delay.forward_step(sample[:, :, -1]), sample[:, :, -1])
+
+
+def test_repr():
+    delay = Delay(delay=2)
+    assert delay.__repr__() == "Delay(2)"

@@ -29,26 +29,26 @@ class CoModule(ABC):
         ]:
             assert callable(
                 getattr(cls, fn, None)
-            ), f"{cls.__name__} should implement a `{fn}` function which performs {description} to satisfy the CoModule interface."
+            ), f"{cls} should implement a `{fn}` function which performs {description} to satisfy the CoModule interface."
 
         assert hasattr(cls, "delay") and type(cls.delay) in {
             int,
             property,
-        }, f"{cls.__name__} should implement a `delay` property to satisfy the CoModule interface."
+        }, f"{cls} should implement a `delay` property to satisfy the CoModule interface."
 
     @staticmethod
     def is_valid(module):
         try:
-            CoModule._validate_class(module.__class__)
+            CoModule._validate_class(module)
         except AssertionError:
             return False
         return True
 
-    def forward_step(self, input: Tensor) -> Tensor:
+    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
         """Forward computation for a single step with state initialisation"""
         ...  # pragma: no cover
 
-    def forward_steps(self, input: Tensor) -> Tensor:
+    def forward_steps(self, input: Tensor, update_state=True) -> Tensor:
         """Forward computation for multiple steps with state initialisation"""
         ...  # pragma: no cover
 
@@ -56,21 +56,6 @@ class CoModule(ABC):
         """Forward computation for multiple steps without state initialisation.
         This function is identical to the non-continual module found `torch.nn`"""
         ...  # pragma: no cover
-
-    # @property
-    # def delay(self) -> int:
-    #     """Temporal delay of the module
-
-    #     Returns:
-    #         int: Temporal delay of the module
-    #     """
-    #     ...  # pragma: no cover
-
-    # def clean_state(self):
-    #     """Clean module state
-    #     This serves as a dummy function for modules which do not require state-cleanup
-    #     """
-    #     ...  # pragma: no cover
 
 
 class TensorPlaceholder:
@@ -94,12 +79,13 @@ class PaddingMode(Enum):
 class Padded:
     """Base class for continual modules with temporal padding"""
 
-    def forward_steps(self, input: Tensor, pad_end=True) -> Tensor:
+    def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         """Forward computation for multiple steps with state initialisation
 
         Args:
-            input (Tensor): Layer input
-            pad_end (bool): Whether results for temporal padding at sequence end should be included
+            input (Tensor): Layer input.
+            pad_end (bool): Whether results for temporal padding at sequence end should be included.
+            update_state (bool): Whether internal state should be updated during this operation.
 
         Returns:
             Tensor: Layer output
