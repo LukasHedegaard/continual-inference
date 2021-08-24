@@ -6,11 +6,24 @@ from torch import Tensor, nn
 
 
 @contextmanager
-def temporary_parameter(obj, attr, val):
-    prev_val = rgetattr(obj, attr)
+def temporary_parameter(obj, attr: str, val):
+    do_del = False
+    try:
+        prev_val = rgetattr(obj, attr)
+    except AttributeError:
+        do_del = True
+        assert (
+            attr.count(".") == 0
+        ), "Nonexisting attributes can only be set one level deep."
+
     rsetattr(obj, attr, val)
+
     yield obj
-    rsetattr(obj, attr, prev_val)
+
+    if do_del:
+        delattr(obj, attr)
+    else:
+        rsetattr(obj, attr, prev_val)
 
 
 def rsetattr(obj, attr, val):

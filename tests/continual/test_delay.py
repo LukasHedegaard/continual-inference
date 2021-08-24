@@ -1,7 +1,7 @@
 import torch
 
 from continual.delay import Delay
-from continual.interface import TensorPlaceholder
+from continual.module import TensorPlaceholder
 
 torch.manual_seed(42)
 

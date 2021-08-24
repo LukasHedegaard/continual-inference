@@ -7,7 +7,7 @@ import torch
 from torch import Tensor, nn
 
 from .delay import Delay
-from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
+from .module import CoModule, PaddingMode, TensorPlaceholder
 from .utils import load_state_dict, state_dict
 
 __all__ = ["Sequential", "Parallel", "Residual"]
@@ -39,7 +39,7 @@ class FlattenableStateDict:
         return load_state_dict(self, state_dict, strict, flatten)
 
 
-class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
+class Sequential(FlattenableStateDict, nn.Sequential, CoModule):
     """Continual Sequential module
 
     This module is a drop-in replacement for `torch.nn.Sequential`
@@ -65,17 +65,14 @@ class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
         for module in self:
             input = module.forward_step(input, update_state=update_state)
             if not isinstance(input, Tensor):
-                return TensorPlaceholder()  # We can't infer output shape
+                return TensorPlaceholder()
         return input
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         for module in self:
-            if isinstance(module, Padded):
-                input = module.forward_steps(
-                    input, pad_end=pad_end, update_state=update_state
-                )
-            else:
-                input = module.forward_steps(input, update_state=update_state)
+            if not isinstance(input, Tensor) or len(input) == 0:
+                return TensorPlaceholder()  # pragma: no cover
+            input = module.forward_steps(input, pad_end, update_state)
 
         return input
 
@@ -159,13 +156,13 @@ def nonempty(fn: AggregationFunc) -> AggregationFunc:
     @wraps(fn)
     def wrapped(inputs: Sequence[Tensor]) -> Tensor:
         if any(len(inp) == 0 for inp in inputs):
-            return TensorPlaceholder(inputs[0].shape)
+            return TensorPlaceholder(inputs[0].shape)  # pragma: no cover
         return fn(inputs)
 
     return wrapped
 
 
-class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
+class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
     """Continual parallel container.
 
     Args:
@@ -262,7 +259,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
             # Try to infer shape
             shape = tuple()
             for o in outs:
-                if isinstance(o, Tensor):
+                if isinstance(o, Tensor):  # pragma: no cover
                     shape = o.shape
                     break
             return TensorPlaceholder(shape)
@@ -271,12 +268,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         outs = []
         for m in self:
-            if isinstance(m, Padded):
-                outs.append(
-                    m.forward_steps(input, pad_end=pad_end, update_state=update_state)
-                )
-            else:
-                outs.append(m.forward_steps(input, update_state=update_state))
+            outs.append(m.forward_steps(input, pad_end, update_state))
 
         return self.aggregation_fn(outs)
 
@@ -303,7 +295,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, Padded, CoModule):
 
     @property
     def stride(self) -> int:
-        return getattr(next(iter(self)), "stride", 1)
+        return int_from(getattr(next(iter(self)), "stride", 1))
 
     @property
     def padding(self) -> int:

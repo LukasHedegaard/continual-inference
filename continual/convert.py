@@ -7,8 +7,8 @@ from torch import Tensor, nn
 
 from .container import Sequential
 from .conv import Conv1d, Conv2d, Conv3d
-from .interface import CoModule
 from .logging import getLogger
+from .module import CoModule
 from .pooling import (
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
@@ -41,9 +41,9 @@ def forward_stepping(module: nn.Module, dim: int = 2):
         dim (int, optional): The dimension to unsqueeze during `forward_step`. Defaults to 2.
     """
 
-    def unsqueezed(func: Callable[[Tensor], Tensor]):
+    def forward_step(func: Callable[[Tensor], Tensor]):
         @wraps(func)
-        def call(x: Tensor) -> Tensor:
+        def call(x: Tensor, update_state=True) -> Tensor:
             x = x.unsqueeze(dim)
             x = func(x)
             x = x.squeeze(dim)
@@ -51,22 +51,22 @@ def forward_stepping(module: nn.Module, dim: int = 2):
 
         return call
 
-    def with_dummy_args(func: Callable[[Tensor], Tensor]):
+    def forward_steps(func: Callable[[Tensor], Tensor]):
         @wraps(func)
-        def call(x: Tensor, update_state=True) -> Tensor:
+        def call(x: Tensor, pad_end=False, update_state=True) -> Tensor:
             x = func(x)
             return x
 
         return call
 
-    def dummy(self):
+    def clean_state(*args, **kwargs):
         ...  # pragma: no cover
 
     module.forward = module.forward
-    module.forward_steps = with_dummy_args(module.forward)
-    module.forward_step = with_dummy_args(unsqueezed(module.forward))
+    module.forward_steps = forward_steps(module.forward)
+    module.forward_step = forward_step(module.forward)
     module.delay = 0
-    module.clean_state = dummy
+    module.clean_state = clean_state
 
     return module
 

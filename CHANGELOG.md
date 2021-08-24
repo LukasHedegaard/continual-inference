@@ -4,7 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [Unreleased]
+
+
+## [0.8.0]
+### Fixed
+- Bugs in `forward_step(s)` with `update_state=False`
+
+### Changed
+- `forward_steps` interface to always include `pad_end` argument.
+- name of "interface.py" to "module.py".
+- implementations of `forward_step(s)` to be consolidated in CoModule.
+
+### Removed
+- `Padded` interface
+
 
 ## [0.7.0]
 ### Added
@@ -19,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Continual interface and conversion to support both class and module.
 - Replicate padding in `co._ConvNd`
+
 
 ## [0.6.1]
 ### Changed

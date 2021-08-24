@@ -14,8 +14,8 @@ from torch.nn.modules.conv import (
     _triple,
 )
 
-from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
 from .logging import getLogger
+from .module import CoModule, PaddingMode, TensorPlaceholder
 
 logger = getLogger(__name__)
 
@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-class _ConvCoNd(_ConvNd, Padded, CoModule):
+class _ConvCoNd(_ConvNd, CoModule):
     def __init__(
         self,
         ConvClass: torch.nn.Module,
@@ -136,10 +136,13 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         ):
             return (self.state_buffer, self.state_index, self.stride_index)
 
+    def set_state(self, state: State):
+        self.state_buffer, self.state_index, self.stride_index = state
+
     def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
         assert (
             len(input.shape) == self._input_len - 1
-        ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input."
+        ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}"
 
         # e.g. B, C -> B, C, 1
         x = input.unsqueeze(2)
@@ -198,45 +201,12 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
 
         return x_out, (next_buffer, next_index, next_stride_index)
 
-    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        output, (state_buffer, state_index, stride_index) = self._forward_step(
-            input, self.get_state()
-        )
-        if update_state:
-            self.state_buffer = state_buffer
-            self.state_index = state_index
-            self.stride_index = stride_index
-        return output
-
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         assert (
             len(input.shape) == self._input_len
-        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
+        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."
 
-        outs = []
-
-        for t in range(input.shape[2]):
-            o = self.forward_step(input[:, :, t], update_state=update_state)
-            if isinstance(o, Tensor):
-                outs.append(o)
-
-        if pad_end:
-            # Don't save state for the end-padding
-            (tmp_buffer, tmp_index, tmp_stride_index) = self.get_state()
-            for t, i in enumerate(
-                [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
-            ):
-                o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
-                    i, (tmp_buffer, tmp_index, tmp_stride_index)
-                )
-                if isinstance(o, Tensor):
-                    outs.append(o)
-
-        if len(outs) > 0:
-            outs = torch.stack(outs, dim=2)
-        else:
-            outs = torch.tensor([])  # pragma: no cover
-        return outs
+        return CoModule.forward_steps(self, input, pad_end, update_state)
 
     def forward(self, input: Tensor) -> Tensor:
         """Performs a full forward computation exactly as the regular layer would.
@@ -250,7 +220,7 @@ class _ConvCoNd(_ConvNd, Padded, CoModule):
         """
         assert (
             len(input.shape) == self._input_len
-        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input."
+        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."
         output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
 
         return output

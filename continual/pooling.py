@@ -8,12 +8,7 @@ from torch import Tensor, nn
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from torch.nn.modules.utils import _ntuple, _pair, _single, _triple
 
-from .interface import CoModule, Padded, PaddingMode, TensorPlaceholder
-
-State = Tuple[Tensor, int]
-
-T = TypeVar("T")
-U = TypeVar("U")
+from .module import CoModule, PaddingMode, TensorPlaceholder
 
 __all__ = [
     "AvgPool1d",
@@ -28,6 +23,9 @@ __all__ = [
     "AdaptiveMaxPool3d",
 ]
 
+T = TypeVar("T")
+U = TypeVar("U")
+
 State = Tuple[Tensor, int]
 
 
@@ -40,7 +38,7 @@ class PoolType(Enum):
     MAX = "max"
 
 
-class _PoolNd(Padded, CoModule, nn.Module):
+class _PoolNd(CoModule, nn.Module):
     """Base class for Continual Pooling modules
     This module implements a naive but flexible temporal pooling system.
 
@@ -175,6 +173,9 @@ class _PoolNd(Padded, CoModule, nn.Module):
         ):
             return (self.state_buffer, self.state_index, self.stride_index)
 
+    def set_state(self, state: State):
+        self.state_buffer, self.state_index, self.stride_index = state
+
     def _forward_step(
         self,
         input: Tensor,
@@ -182,7 +183,7 @@ class _PoolNd(Padded, CoModule, nn.Module):
     ) -> Tuple[Tensor, State]:
         assert (
             len(input.shape) == self.num_input_dims + 1
-        ), f"A tensor of size {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input."
+        ), f"A tensor of size {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}."
 
         pooled_frame = self._spatial_pool_fn(input)
         buffer, index, stride_index = prev_state or self.init_state(pooled_frame)
@@ -210,43 +211,12 @@ class _PoolNd(Padded, CoModule, nn.Module):
 
         return output, (next_buffer, next_index, next_stride_index)
 
-    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        output, (state_buffer, state_index, stride_index) = self._forward_step(
-            input, self.get_state()
-        )
-        if update_state:
-            self.state_buffer = state_buffer
-            self.state_index = state_index
-            self.stride_index = stride_index
-        return output
-
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         assert (
             len(input.shape) == self.num_input_dims + 2
-        ), f"A tensor of size {self.input_shape_desciption} should be passed as input."
+        ), f"A tensor of size {self.input_shape_desciption} should be passed as input but got {input.shape}."
 
-        outs = []
-        for t in range(input.shape[2]):
-            o = self.forward_step(input[:, :, t], update_state=update_state)
-            if isinstance(o, Tensor):
-                outs.append(o)
-
-        if pad_end:
-            # Don't save state for the end-padding
-            tmp_buffer, tmp_index, tmp_stride_index = self.get_state()
-            for t, i in enumerate(
-                [torch.zeros_like(input[:, :, -1]) for _ in range(self.padding[0])]
-            ):
-                o, (tmp_buffer, tmp_index, tmp_stride_index) = self._forward_step(
-                    i, (tmp_buffer, tmp_index, tmp_stride_index)
-                )
-                if isinstance(o, Tensor):
-                    outs.append(o)
-
-        if len(outs) == 0:
-            return torch.tensor([])  # pragma: no cover
-
-        return torch.stack(outs, dim=2)
+        return CoModule.forward_steps(self, input, pad_end, update_state)
 
     @property
     def delay(self):

@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 import continual as co
-from continual.interface import TensorPlaceholder
+from continual.module import TensorPlaceholder
 
 torch.manual_seed(42)
 
@@ -441,3 +441,32 @@ def test_stacked_no_pad():
 
     # Correct result is output
     assert torch.allclose(target22[:, :, -1], output22, atol=5e-8)
+
+
+def test_update_state_false():
+    sample = torch.randn((1, 1, 5, 3, 3))
+    conv = torch.nn.Conv3d(
+        in_channels=1,
+        out_channels=1,
+        kernel_size=3,
+        bias=True,
+        padding=1,
+        padding_mode="zeros",
+    )
+    coconv = co.Conv3d.build_from(conv)
+
+    target = conv.forward(sample)
+
+    # forward_steps
+    firsts_0 = coconv.forward_steps(
+        sample[:, :, :-1], pad_end=False, update_state=False
+    )
+    firsts_1 = coconv.forward_steps(sample[:, :, :-1], pad_end=False, update_state=True)
+    assert torch.allclose(firsts_0, firsts_1)
+    assert torch.allclose(firsts_1, target[:, :, :-2])
+
+    # forward_step
+    last_0 = coconv.forward_step(sample[:, :, -1], update_state=False)
+    last_1 = coconv.forward_step(sample[:, :, -1], update_state=True)
+    assert torch.allclose(last_0, last_1)
+    assert torch.allclose(last_1, target[:, :, -2])

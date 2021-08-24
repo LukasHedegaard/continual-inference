@@ -36,20 +36,29 @@ def test_AvgPool1d_padded():
     L = 5
     sample = torch.arange(0, L * C, dtype=torch.float).reshape((1, C, L))
 
-    # Regular
     pool = nn.AvgPool1d(T, stride=1, padding=1)
     target = pool(sample)
 
-    # Continual
     co_pool = AvgPool1d.build_from(pool)
 
-    # Step by step
+    # forward
+    output2 = co_pool.forward(sample)
+    assert torch.equal(target, output2)
+
+    # forward_steps
     output = co_pool.forward_steps(sample, pad_end=True)
     assert torch.allclose(target, output)
 
-    # Exact
-    output2 = co_pool.forward(sample)
-    assert torch.equal(target, output2)
+    # broken-up
+    co_pool.clean_state()
+    firsts = co_pool.forward_steps(sample[:, :, :3], pad_end=False)
+    assert torch.allclose(firsts, target[:, :, :2])
+
+    mid = co_pool.forward_step(sample[:, :, 3])
+    assert torch.allclose(mid, target[:, :, 2])
+
+    lasts = co_pool.forward_steps(sample[:, :, 4:], pad_end=True)
+    assert torch.allclose(lasts, target[:, :, 3:])
 
 
 def test_AvgPool2d_stride():
@@ -152,17 +161,28 @@ def test_AdaptiveAvgPool2d():
 
 
 def test_AdaptiveAvgPool3d():
+    sample = example_long[:, :, :4]
+    next_sample = example_long[:, :, 1:5]
     pool = nn.AdaptiveAvgPool3d((1, 1, 1))
     copool = AdaptiveAvgPool3d.build_from(pool, kernel_size=4)
 
-    target = pool(example_clip)
-    output = copool.forward_steps(example_clip)
+    target = pool.forward(sample)
+
+    # forward
+    output = copool.forward_steps(sample)
+    assert torch.allclose(output, target)
+
+    # forward_steps
+    output = copool.forward_steps(sample)
     assert torch.allclose(output, target)
 
     # Now that memory is full (via `forward_steps`), pooling works as expected for subsequent frames
-    target_next = pool(next_example_clip).squeeze(2)
-    output_frame_next = copool.forward_step(next_example_frame)
+    target_next = pool(next_sample).squeeze(2)
+    output_frame_next = copool.forward_step(next_sample[:, :, -1])
     assert torch.allclose(target_next, output_frame_next)
+
+    # pad_end: Here, empty the delay memory
+    copool.clean_state()
 
 
 def test_AdaptiveMaxPool2d():
