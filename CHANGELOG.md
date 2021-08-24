@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.0]
 ### Fixed
-- Bugs in `forward_step(s, update_state=False)`
+- Bugs in `forward_step(s)` with `update_state=False`
 
 ### Changed
 - `forward_steps` interface to always include `pad_end` argument.
