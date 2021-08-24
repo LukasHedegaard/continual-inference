@@ -178,6 +178,11 @@ def test_parallel():
     torch.nn.init.ones_(c1.weight)
     par = co.Parallel(OrderedDict([("c5", c5), ("c3", c3), ("c1", c1)]))
 
+    assert par.stride == 1
+    assert par.delay == 2
+    assert par.padding == 2
+    assert "Parallel(" in par.__repr__() and "aggregation_fn=" in par.__repr__()
+
     # forward
     out_all = par.forward(input)
     assert torch.allclose(
