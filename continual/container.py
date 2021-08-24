@@ -59,8 +59,6 @@ class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
     def forward(self, input):
         for module in self:
             input = module.forward(input)
-            if not isinstance(input, Tensor):
-                return TensorPlaceholder()  # We can't infer output shape
         return input
 
     def forward_step(self, input, update_state=True):
@@ -72,8 +70,6 @@ class Sequential(FlattenableStateDict, nn.Sequential, Padded, CoModule):
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         for module in self:
-            if len(input) == 0:
-                return input
             if isinstance(module, Padded):
                 input = module.forward_steps(
                     input, pad_end=pad_end, update_state=update_state
