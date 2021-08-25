@@ -8,6 +8,8 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 
 ## [Unreleased]
+### Fixed
+- Bug in `forward_stepping`.
 
 
 ## [0.8.0]
