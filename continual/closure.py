@@ -30,6 +30,10 @@ class Lambda(CoModule, nn.Module):
     def delay(self) -> int:
         return 0
 
+    @staticmethod
+    def build_from(fn: Callable[[Tensor], Tensor]) -> "Lambda":
+        return Lambda(fn)
+
 
 def _multiply(x: Tensor, factor: Union[float, int, Tensor]):
     return x * factor
@@ -49,3 +53,12 @@ def Add(constant) -> Lambda:
     """Create Lambda with addition function"""
     fn = partial(_add, constant=constant)
     return Lambda(fn)
+
+
+def _unity(x: Tensor):
+    return x
+
+
+def Unity() -> Lambda:
+    """Create Lambda with addition function"""
+    return Lambda(_unity)

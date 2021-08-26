@@ -1,6 +1,6 @@
 import torch
 
-from continual.closure import Add, Lambda, Multiply
+from continual.closure import Add, Lambda, Multiply, Unity
 
 
 def test_add():
@@ -62,4 +62,9 @@ def test_lambda():
     assert torch.equal(target, Lambda(local_always42)(x))
 
     # Anonymous
-    assert torch.equal(target, Lambda(lambda x: torch.ones_like(x) * 42)(x))
+    assert torch.equal(target, Lambda.build_from(lambda x: torch.ones_like(x) * 42)(x))
+
+
+def test_unity():
+    x = torch.ones((1, 1, 2, 2))
+    assert torch.equal(x, Unity()(x))
