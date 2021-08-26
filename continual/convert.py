@@ -1,10 +1,12 @@
 """ Register modules with conversion system and 3rd-party libraries """
 
 from functools import wraps
+from types import FunctionType
 from typing import Callable, Type
 
 from torch import Tensor, nn
 
+from .closure import Lambda
 from .container import Sequential
 from .conv import Conv1d, Conv2d, Conv3d
 from .logging import getLogger
@@ -180,6 +182,9 @@ register(nn.AdaptiveMaxPool3d, AdaptiveMaxPool3d)
 
 # Container
 register(nn.Sequential, Sequential)
+
+# Closure
+register(FunctionType, Lambda)
 
 
 # Register modules in `ptflops`

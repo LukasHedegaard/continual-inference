@@ -326,3 +326,69 @@ def Residual(
         aggregation_fn=aggregation_fn,
         auto_delay=False,
     )
+
+
+class Conditional(FlattenableStateDict, CoModule, nn.Module):
+    """Module wrapper for conditional invocations at runtime"""
+
+    def __init__(
+        self,
+        predicate: Callable[[CoModule, Tensor], bool],
+        on_true: CoModule,
+        on_false: CoModule = None,
+    ):
+        assert callable(predicate), "The pased function should be callable."
+        assert isinstance(on_true, CoModule), "on_true should be a CoModule."
+        assert (
+            isinstance(on_false, CoModule) or on_false is None
+        ), "on_false should be a CoModule or None."
+
+        nn.Module.__init__(self)
+
+        self.predicate = predicate
+
+        # Ensure modules have the same delay
+        self._delay = max(on_true.delay, getattr(on_false, "delay", 0))
+
+        self.add_module(
+            "0",
+            on_true
+            if on_true.delay == self._delay
+            else Sequential(Delay(self._delay - on_true.delay), on_true),
+        )
+
+        if on_false is not None:
+            self.add_module(
+                "1",
+                on_false
+                if on_false.delay == self._delay
+                else Sequential(Delay(self._delay - on_false.delay), on_false),
+            )
+
+    def forward(self, input: Tensor) -> Tensor:
+        if self.predicate(self, input):
+            return self._modules["0"].forward(input)
+        elif "1" in self._modules:
+            return self._modules["1"].forward(input)
+        else:
+            return input
+
+    def forward_step(self, input: Tensor, update_state=True) -> Tensor:
+        if self.predicate(self, input):
+            return self._modules["0"].forward_step(input)
+        elif "1" in self._modules:
+            return self._modules["1"].forward_step(input)
+        else:
+            return input
+
+    def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
+        if self.predicate(self, input):
+            return self._modules["0"].forward_steps(input)
+        elif "1" in self._modules:
+            return self._modules["1"].forward_steps(input)
+        else:
+            return input
+
+    @property
+    def delay(self) -> int:
+        return self._delay
