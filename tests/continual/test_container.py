@@ -272,3 +272,55 @@ def test_flat_state_dict():
         assert torch.equal(nested[1].c1.bias, nested_new[1].c1.bias)
 
     assert True  # Need to step down here to trigger context manager __exit__
+
+
+def test_conditional_only_first():
+    x = torch.ones((1, 1, 3))
+
+    def is_training(module, *args):
+        return module.training
+
+    mod = co.Conditional(is_training, co.Multiply(2))
+
+    mod.train()
+    assert torch.equal(mod.forward(x), x * 2)
+    assert torch.equal(mod.forward_steps(x), x * 2)
+    assert torch.equal(mod.forward_step(x[:, :, 0]), x[:, :, 0] * 2)
+
+    mod.eval()
+    assert torch.equal(mod.forward(x), x)
+    assert torch.equal(mod.forward_steps(x), x)
+    assert torch.equal(mod.forward_step(x[:, :, 0]), x[:, :, 0])
+
+
+def test_conditional_both_cases():
+    x = torch.ones((1, 1, 3))
+
+    def is_training(module, *args):
+        return module.training
+
+    mod = co.Conditional(is_training, co.Multiply(2), co.Multiply(3))
+
+    mod.train()
+    assert torch.equal(mod.forward(x), x * 2)
+    assert torch.equal(mod.forward_steps(x), x * 2)
+    assert torch.equal(mod.forward_step(x[:, :, 0]), x[:, :, 0] * 2)
+
+    mod.eval()
+    assert torch.equal(mod.forward(x), x * 3)
+    assert torch.equal(mod.forward_steps(x), x * 3)
+    assert torch.equal(mod.forward_step(x[:, :, 0]), x[:, :, 0] * 3)
+
+
+def test_conditional_delay():
+    # if_true.delay < if_false.delay
+    mod = co.Conditional(lambda a, b: True, co.Delay(2), co.Delay(3))
+    assert mod.delay == 3
+    assert mod._modules["0"].delay == 3
+    assert mod._modules["1"].delay == 3
+
+    # if_true.delay > if_false.delay
+    mod = co.Conditional(lambda a, b: True, co.Delay(3), co.Delay(2))
+    assert mod.delay == 3
+    assert mod._modules["0"].delay == 3
+    assert mod._modules["1"].delay == 3
