@@ -59,14 +59,21 @@ def forward_stepping(module: nn.Module, dim: int = 2):
 
         return call
 
-    def clean_state(*args, **kwargs):
+    def dummy(*args, **kwargs):
         ...  # pragma: no cover
+
+    @staticmethod
+    def build_from(mod):  # pragma: no cover
+        return module.__class__()
 
     module.forward = module.forward
     module.forward_steps = forward_steps(module.forward)
     module.forward_step = forward_step(module.forward)
     module.delay = 0
-    module.clean_state = clean_state
+    module.get_state = dummy
+    module.set_state = dummy
+    module.clean_state = dummy
+    module.build_from = build_from
 
     return module
 

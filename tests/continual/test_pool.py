@@ -40,6 +40,7 @@ def test_AvgPool1d_padded():
     target = pool(sample)
 
     co_pool = AvgPool1d.build_from(pool)
+    co_pool.clean_state()  # Nothing should happen
 
     # forward
     output2 = co_pool.forward(sample)

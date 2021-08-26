@@ -1,24 +1,32 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html), with the exception that v0.X updates include backwards-incompatible API changes.
+From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 
 ## [Unreleased]
 
 
+## [0.8.1]
+### Fixed
+- Bug in `forward_stepping`.
+- Bug in `clean_state`.
+
+
 ## [0.8.0]
 ### Fixed
-- Bugs in `forward_step(s)` with `update_state=False`
+- Bugs in `forward_step(s)` with `update_state=False`.
 
 ### Changed
 - `forward_steps` interface to always include `pad_end` argument.
-- name of "interface.py" to "module.py".
-- implementations of `forward_step(s)` to be consolidated in CoModule.
+- Name of "interface.py" to "module.py".
+- Implementations of `forward_step(s)` to be consolidated in CoModule.
 
 ### Removed
-- `Padded` interface
+- `Padded` interface.
 
 
 ## [0.7.0]

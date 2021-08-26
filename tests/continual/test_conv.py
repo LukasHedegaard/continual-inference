@@ -454,6 +454,7 @@ def test_update_state_false():
         padding_mode="zeros",
     )
     coconv = co.Conv3d.build_from(conv)
+    coconv.clean_state()  # Nothing should happen
 
     target = conv.forward(sample)
 

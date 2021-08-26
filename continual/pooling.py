@@ -158,9 +158,12 @@ class _PoolNd(CoModule, nn.Module):
         return state_buffer, state_index, stride_index
 
     def clean_state(self):
-        del self.state_buffer
-        del self.state_index
-        del self.stride_index
+        if hasattr(self, "state_buffer"):
+            del self.state_buffer
+        if hasattr(self, "state_index"):
+            del self.state_index
+        if hasattr(self, "stride_index"):
+            del self.stride_index
 
     def get_state(self):
         if (
