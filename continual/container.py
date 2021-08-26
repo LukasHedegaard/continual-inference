@@ -16,8 +16,8 @@ __all__ = ["Sequential", "Parallel", "Residual"]
 def int_from(tuple_or_int: Union[int, Tuple[int, ...]], dim=0) -> int:
     if isinstance(tuple_or_int, int):
         return tuple_or_int
-    else:
-        return tuple_or_int[dim]
+
+    return tuple_or_int[dim]
 
 
 class FlattenableStateDict:
@@ -255,14 +255,14 @@ class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
         outs = [m.forward_step(input, update_state=update_state) for m in self]
         if all(isinstance(o, Tensor) for o in outs):
             return self.aggregation_fn(outs)
-        else:
-            # Try to infer shape
-            shape = tuple()
-            for o in outs:
-                if isinstance(o, Tensor):  # pragma: no cover
-                    shape = o.shape
-                    break
-            return TensorPlaceholder(shape)
+
+        # Try to infer shape
+        shape = tuple()
+        for o in outs:
+            if isinstance(o, Tensor):  # pragma: no cover
+                shape = o.shape
+                break
+        return TensorPlaceholder(shape)
 
     # NB: There seems to be a bug hidden here
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
@@ -370,24 +370,21 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
             return self._modules["0"].forward(input)
         elif "1" in self._modules:
             return self._modules["1"].forward(input)
-        else:
-            return input
+        return input
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
         if self.predicate(self, input):
             return self._modules["0"].forward_step(input)
         elif "1" in self._modules:
             return self._modules["1"].forward_step(input)
-        else:
-            return input
+        return input
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         if self.predicate(self, input):
             return self._modules["0"].forward_steps(input)
         elif "1" in self._modules:
             return self._modules["1"].forward_steps(input)
-        else:
-            return input
+        return input
 
     @property
     def delay(self) -> int:
