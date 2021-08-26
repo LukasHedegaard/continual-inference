@@ -201,12 +201,14 @@ Below is a list of the included modules and utilities included in the library:
     - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
     - `co.Parallel` - Parallel wrapper for modules.
     - `co.Residual` - Residual wrapper for modules.
+    - `co.Conditional` - Conditionally checks whether to invoke a module at runtime.
     - `co.Delay` - Pure delay module (e.g. needed in residuals).
 
 - Functions
     - `co.Lambda` - Lambda module which wraps any function.
     - `co.Add` - Adds a constant value.
     - `co.Multiply` - Multiplies with a constant factor.
+    - `co.Unity` - Maps input to output without modification.
 
 - Converters
     <!-- - `co.Residual` - residual connection, which automatically adds delay if needed -->

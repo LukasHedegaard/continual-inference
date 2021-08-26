@@ -12,6 +12,8 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - `co.Lambda` module.
 - `co.Add` module.
 - `co.Multiply` module.
+- `co.Unity` module.
+- `co.Conditional` module.
 
 
 ## [0.8.1]
