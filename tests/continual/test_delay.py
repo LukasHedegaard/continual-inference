@@ -9,6 +9,7 @@ torch.manual_seed(42)
 def test_delay_3d():
     sample = torch.normal(mean=torch.zeros(4 * 3 * 3)).reshape((1, 1, 4, 3, 3))
     delay = Delay(delay=2, temporal_fill="zeros")
+    delay.clean_state()  # Nothing should happen
 
     ones = torch.ones_like(sample[:, :, 0])
 

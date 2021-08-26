@@ -44,8 +44,10 @@ class Delay(torch.nn.Module, CoModule):
         return state_buffer, state_index
 
     def clean_state(self):
-        del self.state_buffer
-        del self.state_index
+        if hasattr(self, "state_buffer"):
+            del self.state_buffer
+        if hasattr(self, "state_index"):
+            del self.state_index
 
     def get_state(self):
         if (
