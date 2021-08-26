@@ -1,3 +1,4 @@
+from .closure import Add, Lambda, Multiply  # noqa: F401
 from .container import Parallel, Residual, Sequential  # noqa: F401
 from .conv import Conv1d, Conv2d, Conv3d  # noqa: F401
 from .convert import continual, forward_stepping  # noqa: F401

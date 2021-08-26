@@ -203,6 +203,11 @@ Below is a list of the included modules and utilities included in the library:
     - `co.Residual` - Residual wrapper for modules.
     - `co.Delay` - Pure delay module (e.g. needed in residuals).
 
+- Functions
+    - `co.Lambda` - Lambda module which wraps any function.
+    - `co.Add` - Adds a constant value.
+    - `co.Multiply` - Multiplies with a constant factor.
+
 - Converters
     <!-- - `co.Residual` - residual connection, which automatically adds delay if needed -->
     - `co.continual` - conversion function from `torch.nn` modules to `co` modules.
