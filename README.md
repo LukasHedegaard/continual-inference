@@ -1,7 +1,8 @@
+<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" width=400>
+
+__PyTorch building blocks for Continual Inference Networks__
+
 <div align="left">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" width=400>
-  <br>
-  <br>
   <a href="https://pypi.org/project/continual-inference/">
     <img src="https://img.shields.io/pypi/pyversions/continual-inference" height="20" >
   </a>
@@ -11,20 +12,19 @@
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG"/>
   </a>
-  <a href="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/overview/main">
-    <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="CodeFactor" />
-  </a>
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" height="20">
   </a>
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" height="20">
   </a>
-  <br>
-  <br>
+  <a href="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/overview/main">
+    <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="CodeFactor" />
+  </a>
+  <sup>*</sup>
 </div>
 
-Building blocks for Continual Inference Networks in PyTorch
+###### \*Since we match PyTorch interfaces exacly, we have an "A-" codefactor due to method arguments named "input".
 
 ## Install 
 ```bash
