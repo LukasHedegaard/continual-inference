@@ -105,8 +105,8 @@ class Sequential(FlattenableStateDict, nn.Sequential, CoModule):
                 m.clean_state()
 
 
-class Aggregation(Enum):
-    """Types of parallel tensor aggregation.
+class Reduction(Enum):
+    """Types of parallel tensor reduce operation.
     Supported tupes are:
     - SUM:    Element-wise summation
     - CONCAT: Channel-wise concatenation
@@ -118,8 +118,8 @@ class Aggregation(Enum):
     MUL = "mul"
 
 
-AggregationFunc = Callable[[Sequence[Tensor]], Tensor]
-AggregationFuncOrEnum = Union[Aggregation, AggregationFunc]
+ReductionFunc = Callable[[Sequence[Tensor]], Tensor]
+ReductionFuncOrEnum = Union[Reduction, ReductionFunc]
 
 
 def reduce_sum(inputs: Sequence[Tensor]) -> Tensor:
@@ -152,7 +152,7 @@ def reduce_mul(inputs: Sequence[Tensor]) -> Tensor:
     return reduce(torch.Tensor.mul, inputs[1:], inputs[0])
 
 
-def nonempty(fn: AggregationFunc) -> AggregationFunc:
+def nonempty(fn: ReductionFunc) -> ReductionFunc:
     @wraps(fn)
     def wrapped(inputs: Sequence[Tensor]) -> Tensor:
         if any(len(inp) == 0 for inp in inputs):
@@ -167,11 +167,11 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
 
     Args:
         *args: Either vargs of modules or an OrderedDict.
-        reduce (AggregationFuncOrEnum, optional):
-            Function used to aggregate the parallel outputs.
-            Sum or concatenation can be specified by passing Aggregation.SUM or Aggregation.CONCAT respectively.
-            Custom aggregation functions can also be passed.
-            Defaults to Aggregation.SUM.
+        reduce (ReductionFuncOrEnum, optional):
+            Function used to reduce the parallel outputs.
+            Sum or concatenation can be specified by passing Reduction.SUM or Reduction.CONCAT respectively.
+            Custom reduce functions can also be passed.
+            Defaults to Reduction.SUM.
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
@@ -182,7 +182,7 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
     def __init__(
         self,
         *args: CoModule,
-        reduce: AggregationFuncOrEnum = Aggregation.SUM,
+        reduce: ReductionFuncOrEnum = Reduction.SUM,
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -191,7 +191,7 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
     def __init__(
         self,
         arg: "OrderedDict[str, CoModule]",
-        reduce: AggregationFuncOrEnum = Aggregation.SUM,
+        reduce: ReductionFuncOrEnum = Reduction.SUM,
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -199,7 +199,7 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
     def __init__(
         self,
         *args,
-        reduce: AggregationFuncOrEnum = Aggregation.SUM,
+        reduce: ReductionFuncOrEnum = Reduction.SUM,
         auto_delay=True,
     ):
         super(BroadcastReduce, self).__init__()
@@ -239,10 +239,10 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
             reduce
             if callable(reduce)
             else {
-                Aggregation.SUM: reduce_sum,
-                Aggregation.CONCAT: reduce_concat,
-                Aggregation.MUL: reduce_mul,
-            }[Aggregation(reduce)]
+                Reduction.SUM: reduce_sum,
+                Reduction.CONCAT: reduce_concat,
+                Reduction.MUL: reduce_mul,
+            }[Reduction(reduce)]
         )
 
         delays = set(m.delay for m in self)
@@ -312,10 +312,10 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
 def Residual(
     module: CoModule,
     temporal_fill: PaddingMode = None,
-    reduce: Aggregation = "sum",
+    reduce: Reduction = "sum",
 ):
     return BroadcastReduce(
-        # Residual first yields easier broadcasting in aggregation functions
+        # Residual first yields easier broadcasting in reduce functions
         Delay(
             delay=module.delay,
             temporal_fill=temporal_fill

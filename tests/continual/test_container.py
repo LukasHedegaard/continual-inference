@@ -121,14 +121,14 @@ def test_sequential_with_TensorPlaceholder():
     assert torch.allclose(target[:, :, :-1], out_cleaned)
 
 
-def test_sum_aggregation():
+def test_sum_reduce():
     ones = torch.ones((1, 2, 4, 3, 3))
     twos = torch.ones((1, 2, 4, 3, 3)) * 2
     res = co.container.reduce_sum([ones, ones])
     assert torch.allclose(res, twos)
 
 
-def test_concat_aggregation():
+def test_concat_reduce():
     ones = torch.ones((1, 2, 4, 3, 3))
     twos = torch.ones((1, 2, 4, 3, 3)) * 2
     res = co.container.reduce_concat([ones, twos])
