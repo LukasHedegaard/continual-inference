@@ -95,12 +95,12 @@ def test_Conv2d():
 
     # Match after delay of T - 1
     for t in range(sample.shape[2] - (T - 1)):
-        assert torch.allclose(target[:, :, t], output[t + (T - 1)])
+        assert torch.allclose(target[:, :, t], output[t + (T - 1)], atol=1e-7)
 
     # Whole time-series
     co_conv.clean_state()
     output = co_conv.forward_steps(sample)
-    assert torch.allclose(target, output)
+    assert torch.allclose(target, output, atol=1e-7)
 
     # Exact computation
     output2 = co_conv.forward(sample)
@@ -314,7 +314,7 @@ def test_complex():
     assert torch.allclose(target, output)
 
     output = co3.forward_steps(sample, pad_end=True)
-    assert torch.allclose(target, output, atol=5e-8)
+    assert torch.allclose(target, output, atol=5e-6)
 
 
 def test_forward_continuation():
@@ -440,7 +440,7 @@ def test_stacked_no_pad():
     output22 = coconv2.forward_step(output21)
 
     # Correct result is output
-    assert torch.allclose(target22[:, :, -1], output22, atol=5e-8)
+    assert torch.allclose(target22[:, :, -1], output22, atol=1e-7)
 
 
 def test_update_state_false():
@@ -463,11 +463,11 @@ def test_update_state_false():
         sample[:, :, :-1], pad_end=False, update_state=False
     )
     firsts_1 = coconv.forward_steps(sample[:, :, :-1], pad_end=False, update_state=True)
-    assert torch.allclose(firsts_0, firsts_1)
-    assert torch.allclose(firsts_1, target[:, :, :-2])
+    assert torch.allclose(firsts_0, firsts_1, atol=1e-7)
+    assert torch.allclose(firsts_1, target[:, :, :-2], atol=1e-7)
 
     # forward_step
     last_0 = coconv.forward_step(sample[:, :, -1], update_state=False)
     last_1 = coconv.forward_step(sample[:, :, -1], update_state=True)
-    assert torch.allclose(last_0, last_1)
-    assert torch.allclose(last_1, target[:, :, -2])
+    assert torch.allclose(last_0, last_1, atol=1e-7)
+    assert torch.allclose(last_1, target[:, :, -2], atol=1e-7)

@@ -167,7 +167,7 @@ def test_residual():
     assert torch.allclose(out_last, target[:, :, -2])
 
 
-def test_parallel():
+def test_broadcast_reduce():
     input = torch.arange(7, dtype=torch.float).reshape((1, 1, 7))
 
     c5 = co.Conv1d(1, 1, kernel_size=5, padding=2, bias=False)
@@ -324,3 +324,88 @@ def test_conditional_delay():
     assert mod.delay == 3
     assert mod._modules["0"].delay == 3
     assert mod._modules["1"].delay == 3
+
+
+def test_broadcast():
+    x = 42
+
+    mod = co.Broadcast(2)
+    assert mod.delay == 0
+    assert mod.forward(x) == [x, x]
+    assert mod.forward_step(x) == [x, x]
+    assert mod.forward_steps(x) == [x, x]
+
+
+def test_parallel():
+    x = torch.randn((1, 1, 3))
+    xx = [x, x]
+
+    c3 = co.Conv1d(1, 1, kernel_size=3, padding=1, bias=False)
+    c1 = co.Conv1d(1, 1, kernel_size=1, padding=0, bias=False)
+
+    par = co.Parallel(OrderedDict([("c3", c3), ("c1", c1)]))
+    assert par.delay == 1
+    assert par.padding == 1
+    assert par.stride == 1
+
+    o1 = par.forward(xx)
+    assert torch.equal(c3.forward(x), o1[0])
+    assert torch.equal(c1.forward(x), o1[1])
+
+    o2 = par.forward_steps(xx, pad_end=True, update_state=False)
+    assert torch.equal(c3.forward_steps(x, pad_end=True), o2[0])
+    assert torch.equal(c1.forward_steps(x, pad_end=True), o2[1])
+
+    par.clean_state()
+    par.forward_step([x[:, :, 0], x[:, :, 0]], update_state=True)
+    o3 = par.forward_step([x[:, :, 1], x[:, :, 1]], update_state=False)
+    assert torch.equal(c3.forward_step(x[:, :, 1]), o3[0])
+    assert torch.equal(c1.forward_step(x[:, :, 0]), o3[1])  # x[:,:,0] due to auto delay
+
+
+def test_reduce():
+    x = torch.tensor([[[1.0, 2.0]]])
+    xx = [x, x]
+
+    mod = co.Reduce("sum")
+    assert mod.delay == 0
+    assert torch.equal(mod.forward(xx), torch.tensor([[[2.0, 4.0]]]))
+    assert torch.equal(mod.forward_steps(xx), torch.tensor([[[2.0, 4.0]]]))
+    assert torch.equal(
+        mod.forward_step([x[:, :, 0], x[:, :, 0]]), torch.tensor([[2.0]])
+    )
+
+
+def test_parallel_sequential():
+    x = torch.arange(7, dtype=torch.float).reshape((1, 1, 7))
+
+    # Test two equivalent implementations
+    # First
+    c5 = co.Conv1d(1, 1, kernel_size=5, padding=2, bias=False)
+    c3 = co.Conv1d(1, 1, kernel_size=3, padding=1, bias=False)
+    c1 = co.Conv1d(1, 1, kernel_size=1, padding=0, bias=False)
+    torch.nn.init.ones_(c5.weight)
+    torch.nn.init.ones_(c3.weight)
+    torch.nn.init.ones_(c1.weight)
+
+    mod1 = co.BroadcastReduce(c5, c3, c1, reduce="sum")
+
+    # Second
+    c5 = co.Conv1d(1, 1, kernel_size=5, padding=2, bias=False)
+    c3 = co.Conv1d(1, 1, kernel_size=3, padding=1, bias=False)
+    c1 = co.Conv1d(1, 1, kernel_size=1, padding=0, bias=False)
+    torch.nn.init.ones_(c5.weight)
+    torch.nn.init.ones_(c3.weight)
+    torch.nn.init.ones_(c1.weight)
+
+    mod2 = co.Sequential(
+        co.Broadcast(),  # Sequential can infer broadcast dimensions
+        co.Parallel(c5, c3, c1),
+        co.Reduce("sum"),
+    )
+
+    # Compare
+    o1 = mod1.forward(x)
+    o2 = mod2.forward(x)
+
+    assert torch.equal(o1, o2)

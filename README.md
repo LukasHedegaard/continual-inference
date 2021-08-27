@@ -199,12 +199,15 @@ Below is a list of the included modules and utilities included in the library:
 
 - Containers
     - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
-    - `co.BroadcastReduce` - BroadcastReduce wrapper for modules.
+    - `co.Broadcast` - Broadcast one stream to multiple.
+    - `co.Parallel` - Parallel wrapper for modules. Like `co.Sequential`, this module performs automatic conersion of torch.nn modules.
+    - `co.Reduce` - Reduce multiple input streams to one.
     - `co.Residual` - Residual wrapper for modules.
+    - `co.BroadcastReduce` - BroadcastReduce wrapper for modules.
     - `co.Conditional` - Conditionally checks whether to invoke a module at runtime.
-    - `co.Delay` - Pure delay module (e.g. needed in residuals).
 
-- Functions
+- Other
+    - `co.Delay` - Pure delay module (e.g. needed in residuals).
     - `co.Lambda` - Lambda module which wraps any function.
     - `co.Add` - Adds a constant value.
     - `co.Multiply` - Multiplies with a constant factor.
@@ -261,6 +264,24 @@ In addition, we support interoperability with a wide range of modules from `torc
 
 ## Advanced examples
 
+### Residual module
+Explicit:
+```python3
+residual = co.Sequential(
+    co.Broadcast(2),
+    co.Parallel(
+        co.Conv3d(32, 32, kernel_size=3, padding=1),
+        co.Delay(2),
+    ),
+    co.Reduce("sum"),
+)
+```
+
+Short-hand:
+```python3
+residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
+```
+
 ### Continual 3D [MBConv](https://arxiv.org/pdf/1801.04381.pdf)
 
 <div align="center">
@@ -282,6 +303,33 @@ mb_conv = co.Residual(
     )
 )
 ```
+
+
+### Continual 3D [Squeeze-and-Excitation module](https://arxiv.org/pdf/1709.01507.pdf)
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/se_block.png" width="230">
+  <br>
+  Squeeze-and-Excitation block. 
+  Scale refers to a broadcasted element-wise multiplication.
+  Adapted from: https://arxiv.org/pdf/1709.01507.pdf
+</div>
+
+```python3
+se = co.Residual(
+    co.Sequential(
+        OrderedDict([
+            ("pool", co.AdaptiveAvgPool3d((1, 1, 1), kernel_size=7)),
+            ("down", co.Conv3d(256, 16, kernel_size=1)),
+            ("act1", nn.ReLU()),
+            ("up", co.Conv3d(16, 256, kernel_size=1)),
+            ("act2", nn.Sigmoid()),
+        ])
+    ),
+    reduce="mul",
+)
+```
+
 
 ### Continual 3D [Inception module](https://arxiv.org/pdf/1409.4842v1.pdf)
 
@@ -314,32 +362,6 @@ inception_module = co.BroadcastReduce(
         norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
     ),
     reduce="concat",
-)
-```
-
-
-### Continual 3D [Squeeze-and-Excitation module](https://arxiv.org/pdf/1709.01507.pdf)
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/se_block.png" width="230">
-  <br>
-  Squeeze-and-Excitation block. 
-  Scale refers to a broadcasted element-wise multiplication.
-  Adapted from: https://arxiv.org/pdf/1709.01507.pdf
-</div>
-
-```python3
-se = co.Residual(
-    co.Sequential(
-        OrderedDict([
-            ("pool", co.AdaptiveAvgPool3d((1, 1, 1), kernel_size=7)),
-            ("down", co.Conv3d(256, 16, kernel_size=1)),
-            ("act1", nn.ReLU()),
-            ("up", co.Conv3d(16, 256, kernel_size=1)),
-            ("act2", nn.Sigmoid()),
-        ])
-    ),
-    reduce="mul",
 )
 ```
 

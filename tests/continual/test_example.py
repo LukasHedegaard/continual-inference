@@ -27,6 +27,22 @@ def test_readme_example():
     assert torch.allclose(nn_output[:, :, co_conv.delay], last)
 
 
+def test_residual():
+    x = torch.randn((1, 2, 5, 3, 3))
+    conv = co.Conv3d(2, 2, kernel_size=3, padding=1)
+    residual1 = co.Sequential(
+        co.Broadcast(2),
+        co.Parallel(conv, co.Delay(2)),
+        co.Reduce("sum"),
+    )
+
+    residual2 = co.Residual(conv, reduce="sum")
+
+    o1 = residual1.forward(x)
+    o2 = residual2.forward(x)
+    assert torch.equal(o1, o2)
+
+
 def test_mb_conv():
     #                      B,  C, T, H, W
     example = torch.randn((1, 32, 7, 5, 5))
@@ -85,42 +101,42 @@ def test_inception_module():
     assert output_steps.shape == output.shape
 
 
-# def test_inception_module_alt():
-#     #                      B,  C, T, H, W
-#     example = torch.randn((1, 192, 7, 5, 5))
+def test_inception_module_alt():
+    #                      B,  C, T, H, W
+    example = torch.randn((1, 192, 7, 5, 5))
 
-#     def norm_relu(module, channels):
-#         return co.Sequential(
-#             module,
-#             nn.BatchNorm3d(channels),
-#             nn.ReLU(),
-#         )
+    def norm_relu(module, channels):
+        return co.Sequential(
+            module,
+            nn.BatchNorm3d(channels),
+            nn.ReLU(),
+        )
 
-#     inception_module = co.Sequential(
-#         co.Split(4),
-#         co.Parallel(
-#             co.Conv3d(192, 64, kernel_size=1),
-#             co.Sequential(
-#                 norm_relu(co.Conv3d(192, 96, kernel_size=1), 96),
-#                 norm_relu(co.Conv3d(96, 128, kernel_size=3, padding=1), 128),
-#             ),
-#             co.Sequential(
-#                 norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
-#                 norm_relu(co.Conv3d(16, 32, kernel_size=3, padding=1), 32),
-#             ),
-#             co.Sequential(
-#                 co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
-#                 norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
-#             ),
-#         )
-#         co.Concat(),
-#     )
+    inception_module = co.Sequential(
+        co.Broadcast(4),
+        co.Parallel(
+            co.Conv3d(192, 64, kernel_size=1),
+            co.Sequential(
+                norm_relu(co.Conv3d(192, 96, kernel_size=1), 96),
+                norm_relu(co.Conv3d(96, 128, kernel_size=3, padding=1), 128),
+            ),
+            co.Sequential(
+                norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
+                norm_relu(co.Conv3d(16, 32, kernel_size=3, padding=1), 32),
+            ),
+            co.Sequential(
+                co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
+                norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
+            ),
+        ),
+        co.Reduce("concat"),
+    )
 
-#     output = inception_module.forward(example)
-#     assert output.shape == (1, 64 + 128 + 32 + 32, 7, 5, 5)
+    output = inception_module.forward(example)
+    assert output.shape == (1, 64 + 128 + 32 + 32, 7, 5, 5)
 
-#     output_steps = inception_module.forward_steps(example, pad_end=True)
-#     assert output_steps.shape == output.shape
+    output_steps = inception_module.forward_steps(example, pad_end=True)
+    assert output_steps.shape == output.shape
 
 
 def test_se():
