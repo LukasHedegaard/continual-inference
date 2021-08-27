@@ -124,14 +124,14 @@ def test_sequential_with_TensorPlaceholder():
 def test_sum_aggregation():
     ones = torch.ones((1, 2, 4, 3, 3))
     twos = torch.ones((1, 2, 4, 3, 3)) * 2
-    res = co.container.parallel_sum([ones, ones])
+    res = co.container.reduce_sum([ones, ones])
     assert torch.allclose(res, twos)
 
 
 def test_concat_aggregation():
     ones = torch.ones((1, 2, 4, 3, 3))
     twos = torch.ones((1, 2, 4, 3, 3)) * 2
-    res = co.container.parallel_concat([ones, twos])
+    res = co.container.reduce_concat([ones, twos])
     assert res.shape == (1, 4, 4, 3, 3)
     assert torch.allclose(res[:, :2], ones)
     assert torch.allclose(res[:, 2:], twos)
@@ -176,12 +176,12 @@ def test_parallel():
     torch.nn.init.ones_(c5.weight)
     torch.nn.init.ones_(c3.weight)
     torch.nn.init.ones_(c1.weight)
-    par = co.Parallel(OrderedDict([("c5", c5), ("c3", c3), ("c1", c1)]))
+    par = co.MapReduce(OrderedDict([("c5", c5), ("c3", c3), ("c1", c1)]))
 
     assert par.stride == 1
     assert par.delay == 2
     assert par.padding == 2
-    assert "Parallel(" in par.__repr__() and "aggregation_fn=" in par.__repr__()
+    assert "MapReduce(" in par.__repr__() and "aggregation_fn=" in par.__repr__()
 
     # forward
     out_all = par.forward(input)
@@ -231,7 +231,7 @@ def test_flat_state_dict():
     assert set(sd_no_flat) == {"c1.weight", "c1.bias"}
 
     # A nested example:
-    nested = co.Parallel(seq_to_flatten, seq_not_to_flatten)
+    nested = co.MapReduce(seq_to_flatten, seq_not_to_flatten)
     sd = nested.state_dict()
     assert set(sd) == {"0.0.weight", "0.0.bias", "1.c1.weight", "1.c1.bias"}
 
@@ -239,7 +239,7 @@ def test_flat_state_dict():
     assert set(sd_flat) == {"weight", "bias", "c1.weight", "c1.bias"}
 
     # >> Part 2: Load flat state dict
-    nested_new = co.Parallel(
+    nested_new = co.MapReduce(
         co.Sequential(nn.Conv1d(1, 1, 3)),
         co.Sequential(OrderedDict([("c1", nn.Conv1d(1, 1, 3))])),
     )

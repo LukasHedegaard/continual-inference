@@ -10,7 +10,7 @@ from .delay import Delay
 from .module import CoModule, PaddingMode, TensorPlaceholder
 from .utils import load_state_dict, state_dict
 
-__all__ = ["Sequential", "Parallel", "Residual"]
+__all__ = ["Sequential", "MapReduce", "Residual"]
 
 
 def int_from(tuple_or_int: Union[int, Tuple[int, ...]], dim=0) -> int:
@@ -122,12 +122,12 @@ AggregationFunc = Callable[[Sequence[Tensor]], Tensor]
 AggregationFuncOrEnum = Union[Aggregation, AggregationFunc]
 
 
-def parallel_sum(inputs: Sequence[Tensor]) -> Tensor:
+def reduce_sum(inputs: Sequence[Tensor]) -> Tensor:
     assert len(inputs) >= 2
     return reduce(torch.Tensor.add, inputs[1:], inputs[0])
 
 
-def parallel_concat(inputs: Sequence[Tensor]) -> Tensor:
+def reduce_concat(inputs: Sequence[Tensor]) -> Tensor:
     """Channel-wise concatenation of input
 
     Args:
@@ -139,7 +139,7 @@ def parallel_concat(inputs: Sequence[Tensor]) -> Tensor:
     return torch.cat(inputs, dim=1)  # channel dim for inputs of shape (B, C, T, H, W)
 
 
-def parallel_mul(inputs: Sequence[Tensor]) -> Tensor:
+def reduce_mul(inputs: Sequence[Tensor]) -> Tensor:
     """Hadamard product between inputs
 
     Args:
@@ -162,8 +162,8 @@ def nonempty(fn: AggregationFunc) -> AggregationFunc:
     return wrapped
 
 
-class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
-    """Continual parallel container.
+class MapReduce(FlattenableStateDict, nn.Sequential, CoModule):
+    """Continual map-reduce container.
 
     Args:
         *args: Either vargs of modules or an OrderedDict.
@@ -202,7 +202,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
         aggregation_fn: AggregationFuncOrEnum = Aggregation.SUM,
         auto_delay=True,
     ):
-        super(Parallel, self).__init__()
+        super(MapReduce, self).__init__()
 
         if len(args) == 1 and isinstance(args[0], OrderedDict):
             modules = [(key, module) for key, module in args[0].items()]
@@ -211,7 +211,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
 
         assert (
             len(modules) > 1
-        ), "You should pass at least two modules for the parallel operation to make sense."
+        ), "You should pass at least two modules for the map-reduce operation to make sense."
 
         if auto_delay:
             # If there is a delay mismatch, automatically add delay to match the longest
@@ -230,7 +230,7 @@ class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
 
         assert (
             len(set(int_from(getattr(m, "stride", 1)) for _, m in modules)) == 1
-        ), f"Expected all parallel modules to have the same stride, but got strides {[(int_from(getattr(m, 'stride', 1))) for _, m in modules]}"
+        ), f"Expected all modules to have the same stride, but got strides {[(int_from(getattr(m, 'stride', 1))) for _, m in modules]}"
 
         for key, module in modules:
             self.add_module(key, module)
@@ -239,16 +239,16 @@ class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
             aggregation_fn
             if callable(aggregation_fn)
             else {
-                Aggregation.SUM: parallel_sum,
-                Aggregation.CONCAT: parallel_concat,
-                Aggregation.MUL: parallel_mul,
+                Aggregation.SUM: reduce_sum,
+                Aggregation.CONCAT: reduce_concat,
+                Aggregation.MUL: reduce_mul,
             }[Aggregation(aggregation_fn)]
         )
 
         delays = set(m.delay for m in self)
         assert (
             len(delays) == 1
-        ), f"Parallel modules should have the same delay, but found delays {delays}."
+        ), f"MapReduce modules should have the same delay, but found delays {delays}."
         self._delay = delays.pop()
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
@@ -315,7 +315,7 @@ def Residual(
     temporal_fill: PaddingMode = None,
     aggregation_fn: Aggregation = "sum",
 ):
-    return Parallel(
+    return MapReduce(
         # Residual first yields easier broadcasting in aggregation functions
         Delay(
             delay=module.delay,

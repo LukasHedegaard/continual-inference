@@ -8,6 +8,8 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 
 ## [Unreleased]
+### Changed
+- Renamed `co.Parallel` to `co.MapReduce`
 
 
 ## [0.9.0]
