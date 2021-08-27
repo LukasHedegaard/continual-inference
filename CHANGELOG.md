@@ -8,6 +8,9 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 
 ## [Unreleased]
+
+
+## [0.10.0]
 ### Changed
 - Renamed `co.Parallel` to `co.BroadcastReduce`.
 
