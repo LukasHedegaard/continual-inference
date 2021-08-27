@@ -1,7 +1,8 @@
+<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" width=400>
+
+__PyTorch building blocks for Continual Inference Networks__
+
 <div align="left">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" width=400>
-  <br>
-  <br>
   <a href="https://pypi.org/project/continual-inference/">
     <img src="https://img.shields.io/pypi/pyversions/continual-inference" height="20" >
   </a>
@@ -11,20 +12,19 @@
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG"/>
   </a>
-  <a href="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/overview/main">
-    <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="CodeFactor" />
-  </a>
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" height="20">
   </a>
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" height="20">
   </a>
-  <br>
-  <br>
+  <a href="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/overview/main">
+    <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="CodeFactor" />
+  </a>
+  <sup>*</sup>
 </div>
 
-Building blocks for Continual Inference Networks in PyTorch
+###### \*We match PyTorch interfaces exacly. This reduces the codefactor to "A-" due to method arguments named "input".
 
 ## Install 
 ```bash
@@ -199,12 +199,15 @@ Below is a list of the included modules and utilities included in the library:
 
 - Containers
     - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
-    - `co.Parallel` - Parallel wrapper for modules.
+    - `co.Broadcast` - Broadcast one stream to multiple.
+    - `co.Parallel` - Parallel wrapper for modules. Like `co.Sequential`, this module performs automatic conersion of torch.nn modules.
+    - `co.Reduce` - Reduce multiple input streams to one.
     - `co.Residual` - Residual wrapper for modules.
+    - `co.BroadcastReduce` - BroadcastReduce wrapper for modules.
     - `co.Conditional` - Conditionally checks whether to invoke a module at runtime.
-    - `co.Delay` - Pure delay module (e.g. needed in residuals).
 
-- Functions
+- Other
+    - `co.Delay` - Pure delay module (e.g. needed in residuals).
     - `co.Lambda` - Lambda module which wraps any function.
     - `co.Add` - Adds a constant value.
     - `co.Multiply` - Multiplies with a constant factor.
@@ -261,6 +264,24 @@ In addition, we support interoperability with a wide range of modules from `torc
 
 ## Advanced examples
 
+### Residual module
+Explicit:
+```python3
+residual = co.Sequential(
+    co.Broadcast(2),
+    co.Parallel(
+        co.Conv3d(32, 32, kernel_size=3, padding=1),
+        co.Delay(2),
+    ),
+    co.Reduce("sum"),
+)
+```
+
+Short-hand:
+```python3
+residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
+```
+
 ### Continual 3D [MBConv](https://arxiv.org/pdf/1801.04381.pdf)
 
 <div align="center">
@@ -280,40 +301,6 @@ mb_conv = co.Residual(
       co.Conv3d(64, 32, kernel_size=(1, 1, 1)),
       nn.BatchNorm3d(32),
     )
-)
-```
-
-### Continual 3D [Inception module](https://arxiv.org/pdf/1409.4842v1.pdf)
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/inception_block.png" width="450">
-  <br>
-  Inception module with dimension reductions. Source: https://arxiv.org/pdf/1409.4842v1.pdf
-</div>
-
-```python3
-def norm_relu(module, channels):
-    return co.Sequential(
-        module,
-        nn.BatchNorm3d(channels),
-        nn.ReLU(),
-    )
-
-inception_module = co.Parallel(
-    co.Conv3d(192, 64, kernel_size=1),
-    co.Sequential(
-        norm_relu(co.Conv3d(192, 96, kernel_size=1), 96),
-        norm_relu(co.Conv3d(96, 128, kernel_size=3, padding=1), 128),
-    ),
-    co.Sequential(
-        norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
-        norm_relu(co.Conv3d(16, 32, kernel_size=3, padding=1), 32),
-    ),
-    co.Sequential(
-        co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
-        norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
-    ),
-    aggregation_fn="concat",
 )
 ```
 
@@ -339,7 +326,42 @@ se = co.Residual(
             ("act2", nn.Sigmoid()),
         ])
     ),
-    aggregation_fn="mul",
+    reduce="mul",
+)
+```
+
+
+### Continual 3D [Inception module](https://arxiv.org/pdf/1409.4842v1.pdf)
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/inception_block.png" width="450">
+  <br>
+  Inception module with dimension reductions. Source: https://arxiv.org/pdf/1409.4842v1.pdf
+</div>
+
+```python3
+def norm_relu(module, channels):
+    return co.Sequential(
+        module,
+        nn.BatchNorm3d(channels),
+        nn.ReLU(),
+    )
+
+inception_module = co.BroadcastReduce(
+    co.Conv3d(192, 64, kernel_size=1),
+    co.Sequential(
+        norm_relu(co.Conv3d(192, 96, kernel_size=1), 96),
+        norm_relu(co.Conv3d(96, 128, kernel_size=3, padding=1), 128),
+    ),
+    co.Sequential(
+        norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
+        norm_relu(co.Conv3d(16, 32, kernel_size=3, padding=1), 32),
+    ),
+    co.Sequential(
+        co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
+        norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
+    ),
+    reduce="concat",
 )
 ```
 

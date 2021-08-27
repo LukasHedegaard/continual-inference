@@ -1,5 +1,13 @@
 from .closure import Add, Lambda, Multiply, Unity  # noqa: F401
-from .container import Conditional, Parallel, Residual, Sequential  # noqa: F401
+from .container import (  # noqa: F401
+    Broadcast,
+    BroadcastReduce,
+    Conditional,
+    Parallel,
+    Reduce,
+    Residual,
+    Sequential,
+)
 from .conv import Conv1d, Conv2d, Conv3d  # noqa: F401
 from .convert import continual, forward_stepping  # noqa: F401
 from .delay import Delay  # noqa: F401

@@ -10,6 +10,17 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 
 
+## [0.10.0]
+### Changed
+- Renamed `co.Parallel` to `co.BroadcastReduce`.
+
+### Added
+- `co.Broadcast` module.
+- new `co.Parallel` module.
+- `co.Reduce` module.
+- Automatic inference of `co.Broadcast.num_streams` in `co.Sequential`.
+
+
 ## [0.9.0]
 ### Added
 - `co.Lambda` module.

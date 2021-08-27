@@ -27,6 +27,8 @@ State = Union[
 
 
 def _clone_first(state: State) -> State:
+    if state is None:
+        return None
     return (state[0].clone(), *state[1:])
 
 
@@ -140,7 +142,7 @@ class CoModule(ABC):
 
         if pad_end:
             # Don't save state for the end-padding
-            tmp_state = _clone_first(self.get_state())
+            tmp_state = _clone_first(self.get_state()) or tmp_state
             for t, i in enumerate(
                 [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
             ):
