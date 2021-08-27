@@ -176,12 +176,12 @@ def test_parallel():
     torch.nn.init.ones_(c5.weight)
     torch.nn.init.ones_(c3.weight)
     torch.nn.init.ones_(c1.weight)
-    par = co.MapReduce(OrderedDict([("c5", c5), ("c3", c3), ("c1", c1)]))
+    par = co.BroadcastReduce(OrderedDict([("c5", c5), ("c3", c3), ("c1", c1)]))
 
     assert par.stride == 1
     assert par.delay == 2
     assert par.padding == 2
-    assert "MapReduce(" in par.__repr__() and "aggregation_fn=" in par.__repr__()
+    assert "BroadcastReduce(" in par.__repr__() and "aggregation_fn=" in par.__repr__()
 
     # forward
     out_all = par.forward(input)
@@ -231,7 +231,7 @@ def test_flat_state_dict():
     assert set(sd_no_flat) == {"c1.weight", "c1.bias"}
 
     # A nested example:
-    nested = co.MapReduce(seq_to_flatten, seq_not_to_flatten)
+    nested = co.BroadcastReduce(seq_to_flatten, seq_not_to_flatten)
     sd = nested.state_dict()
     assert set(sd) == {"0.0.weight", "0.0.bias", "1.c1.weight", "1.c1.bias"}
 
@@ -239,7 +239,7 @@ def test_flat_state_dict():
     assert set(sd_flat) == {"weight", "bias", "c1.weight", "c1.bias"}
 
     # >> Part 2: Load flat state dict
-    nested_new = co.MapReduce(
+    nested_new = co.BroadcastReduce(
         co.Sequential(nn.Conv1d(1, 1, 3)),
         co.Sequential(OrderedDict([("c1", nn.Conv1d(1, 1, 3))])),
     )

@@ -61,7 +61,7 @@ def test_inception_module():
             nn.ReLU(),
         )
 
-    inception_module = co.MapReduce(
+    inception_module = co.BroadcastReduce(
         co.Conv3d(192, 64, kernel_size=1),
         co.Sequential(
             norm_relu(co.Conv3d(192, 96, kernel_size=1), 96),

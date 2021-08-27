@@ -10,7 +10,7 @@ from .delay import Delay
 from .module import CoModule, PaddingMode, TensorPlaceholder
 from .utils import load_state_dict, state_dict
 
-__all__ = ["Sequential", "MapReduce", "Residual"]
+__all__ = ["Sequential", "BroadcastReduce", "Residual"]
 
 
 def int_from(tuple_or_int: Union[int, Tuple[int, ...]], dim=0) -> int:
@@ -162,8 +162,8 @@ def nonempty(fn: AggregationFunc) -> AggregationFunc:
     return wrapped
 
 
-class MapReduce(FlattenableStateDict, nn.Sequential, CoModule):
-    """Continual map-reduce container.
+class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
+    """Broadcast an input to parallel modules and reduce.
 
     Args:
         *args: Either vargs of modules or an OrderedDict.
@@ -202,7 +202,7 @@ class MapReduce(FlattenableStateDict, nn.Sequential, CoModule):
         aggregation_fn: AggregationFuncOrEnum = Aggregation.SUM,
         auto_delay=True,
     ):
-        super(MapReduce, self).__init__()
+        super(BroadcastReduce, self).__init__()
 
         if len(args) == 1 and isinstance(args[0], OrderedDict):
             modules = [(key, module) for key, module in args[0].items()]
@@ -248,7 +248,7 @@ class MapReduce(FlattenableStateDict, nn.Sequential, CoModule):
         delays = set(m.delay for m in self)
         assert (
             len(delays) == 1
-        ), f"MapReduce modules should have the same delay, but found delays {delays}."
+        ), f"BroadcastReduce modules should have the same delay, but found delays {delays}."
         self._delay = delays.pop()
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
@@ -264,7 +264,6 @@ class MapReduce(FlattenableStateDict, nn.Sequential, CoModule):
                 break
         return TensorPlaceholder(shape)
 
-    # NB: There seems to be a bug hidden here
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         outs = []
         for m in self:
@@ -315,7 +314,7 @@ def Residual(
     temporal_fill: PaddingMode = None,
     aggregation_fn: Aggregation = "sum",
 ):
-    return MapReduce(
+    return BroadcastReduce(
         # Residual first yields easier broadcasting in aggregation functions
         Delay(
             delay=module.delay,

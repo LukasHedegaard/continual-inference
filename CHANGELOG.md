@@ -9,7 +9,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 ### Changed
-- Renamed `co.Parallel` to `co.MapReduce`
+- Renamed `co.Parallel` to `co.BroadcastReduce`
 
 
 ## [0.9.0]
