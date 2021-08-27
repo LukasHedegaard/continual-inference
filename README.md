@@ -313,7 +313,7 @@ inception_module = co.BroadcastReduce(
         co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
         norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
     ),
-    aggregation_fn="concat",
+    reduce="concat",
 )
 ```
 
@@ -339,7 +339,7 @@ se = co.Residual(
             ("act2", nn.Sigmoid()),
         ])
     ),
-    aggregation_fn="mul",
+    reduce="mul",
 )
 ```
 

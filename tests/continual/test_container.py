@@ -181,7 +181,7 @@ def test_parallel():
     assert par.stride == 1
     assert par.delay == 2
     assert par.padding == 2
-    assert "BroadcastReduce(" in par.__repr__() and "aggregation_fn=" in par.__repr__()
+    assert "BroadcastReduce(" in par.__repr__() and "reduce=" in par.__repr__()
 
     # forward
     out_all = par.forward(input)

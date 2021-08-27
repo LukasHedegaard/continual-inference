@@ -167,7 +167,7 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
 
     Args:
         *args: Either vargs of modules or an OrderedDict.
-        aggregation_fn (AggregationFuncOrEnum, optional):
+        reduce (AggregationFuncOrEnum, optional):
             Function used to aggregate the parallel outputs.
             Sum or concatenation can be specified by passing Aggregation.SUM or Aggregation.CONCAT respectively.
             Custom aggregation functions can also be passed.
@@ -182,7 +182,7 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
     def __init__(
         self,
         *args: CoModule,
-        aggregation_fn: AggregationFuncOrEnum = Aggregation.SUM,
+        reduce: AggregationFuncOrEnum = Aggregation.SUM,
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -191,7 +191,7 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
     def __init__(
         self,
         arg: "OrderedDict[str, CoModule]",
-        aggregation_fn: AggregationFuncOrEnum = Aggregation.SUM,
+        reduce: AggregationFuncOrEnum = Aggregation.SUM,
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -199,7 +199,7 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
     def __init__(
         self,
         *args,
-        aggregation_fn: AggregationFuncOrEnum = Aggregation.SUM,
+        reduce: AggregationFuncOrEnum = Aggregation.SUM,
         auto_delay=True,
     ):
         super(BroadcastReduce, self).__init__()
@@ -235,14 +235,14 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
         for key, module in modules:
             self.add_module(key, module)
 
-        self.aggregation_fn = nonempty(
-            aggregation_fn
-            if callable(aggregation_fn)
+        self.reduce = nonempty(
+            reduce
+            if callable(reduce)
             else {
                 Aggregation.SUM: reduce_sum,
                 Aggregation.CONCAT: reduce_concat,
                 Aggregation.MUL: reduce_mul,
-            }[Aggregation(aggregation_fn)]
+            }[Aggregation(reduce)]
         )
 
         delays = set(m.delay for m in self)
@@ -254,7 +254,7 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
         outs = [m.forward_step(input, update_state=update_state) for m in self]
         if all(isinstance(o, Tensor) for o in outs):
-            return self.aggregation_fn(outs)
+            return self.reduce(outs)
 
         # Try to infer shape
         shape = tuple()
@@ -269,12 +269,12 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
         for m in self:
             outs.append(m.forward_steps(input, pad_end, update_state))
 
-        return self.aggregation_fn(outs)
+        return self.reduce(outs)
 
     def forward(self, input: Tensor) -> Tensor:
         outs = [m.forward(input) for m in self]
 
-        return self.aggregation_fn(outs)
+        return self.reduce(outs)
 
         # Modules may shrink the output map differently.
         # If an "even" shrink is detected, attempt to automatically
@@ -284,7 +284,7 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
         # ), f"Found incompatible temporal output-shapes {ts}"
         # shrink = [(t - min_t) // 2 for t in ts]
 
-        # return self.aggregation_fn(
+        # return self.reduce(
         #     [o[:, :, slice(s, -s or None)] for (s, o) in zip(shrink, outs)]
         # )
 
@@ -306,13 +306,13 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
                 m.clean_state()
 
     def extra_repr(self):
-        return f"aggregation_fn={self.aggregation_fn.__name__}"
+        return f"reduce={self.reduce.__name__}"
 
 
 def Residual(
     module: CoModule,
     temporal_fill: PaddingMode = None,
-    aggregation_fn: Aggregation = "sum",
+    reduce: Aggregation = "sum",
 ):
     return BroadcastReduce(
         # Residual first yields easier broadcasting in aggregation functions
@@ -322,7 +322,7 @@ def Residual(
             or getattr(module, "temporal_fill", PaddingMode.REPLICATE.value),
         ),
         module,
-        aggregation_fn=aggregation_fn,
+        reduce=reduce,
         auto_delay=False,
     )
 
