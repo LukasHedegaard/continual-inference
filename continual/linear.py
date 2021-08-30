@@ -58,12 +58,12 @@ class Linear(nn.Linear, CoModule):
 
     def forward(self, input: Tensor) -> Tensor:
         if self.channel_dim != -1:
-            input.swapaxes(self.channel_dim, -1)
+            input = input.swapaxes(self.channel_dim, -1)
 
         output = linear(input, self.weight, self.bias)  # Assumes channel-last
 
         if self.channel_dim != -1:
-            output.swapaxes(self.channel_dim, -1)
+            output = output.swapaxes(self.channel_dim, -1)
 
         return output
 
