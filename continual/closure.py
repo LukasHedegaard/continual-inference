@@ -1,4 +1,5 @@
 from functools import partial
+from inspect import getsource
 from typing import Callable, Union
 
 from torch import Tensor, nn
@@ -13,6 +14,22 @@ class Lambda(CoModule, nn.Module):
         nn.Module.__init__(self)
         assert callable(fn), "The pased function should be callable."
         self.fn = fn
+
+    def __repr__(self) -> str:
+        s = self.fn.__name__
+        if s == "<lambda>":
+            s = getsource(self.fn)
+            s = s[s.find("lambda") :]
+
+            trim_right_parens = s.count(")") - s.count("(")
+            if trim_right_parens > 0:
+                i = -1
+                for _ in range(trim_right_parens + 1):
+                    i = s.find(")", i + 1)
+                s = s[:i]
+
+            s = s.rstrip()
+        return f"Lambda({s})"
 
     def forward(self, input: Tensor) -> Tensor:
         return self.fn(input)

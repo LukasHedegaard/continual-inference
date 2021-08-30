@@ -62,7 +62,10 @@ def test_lambda():
     assert torch.equal(target, Lambda(local_always42)(x))
 
     # Anonymous
-    assert torch.equal(target, Lambda.build_from(lambda x: torch.ones_like(x) * 42)(x))
+    mod = Lambda.build_from(lambda x: torch.ones_like(x) * 42)
+    assert torch.equal(target, mod(x))
+
+    assert mod.__repr__() == "Lambda(lambda x: torch.ones_like(x) * 42)"
 
 
 def test_unity():
