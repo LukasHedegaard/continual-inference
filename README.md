@@ -197,6 +197,9 @@ Below is a list of the included modules and utilities included in the library:
     - `co.AdaptiveMaxPool2d`
     - `co.AdaptiveMaxPool3d`
 
+- Linear:
+    - `co.Linear`
+
 - Containers
     - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
     - `co.Broadcast` - Broadcast one stream to multiple.

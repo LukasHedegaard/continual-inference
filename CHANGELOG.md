@@ -8,6 +8,8 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 
 ## [Unreleased]
+### Added
+- `co.Linear` module.
 
 
 ## [0.10.0]
