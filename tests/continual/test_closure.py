@@ -65,7 +65,12 @@ def test_lambda():
     mod = Lambda.build_from(lambda x: torch.ones_like(x) * 42)
     assert torch.equal(target, mod(x))
 
+    # __repr__
     assert mod.__repr__() == "Lambda(lambda x: torch.ones_like(x) * 42)"
+
+    modules = []
+    modules.append(("view", Lambda(lambda x: x.view(x.shape[0], -1))))
+    assert modules[0][1].__repr__() == "Lambda(lambda x: x.view(x.shape[0], -1))"
 
 
 def test_unity():

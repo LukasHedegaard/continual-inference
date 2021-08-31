@@ -21,10 +21,20 @@ class Lambda(CoModule, nn.Module):
             s = getsource(self.fn)
             s = s[s.find("lambda") :]
 
-            trim_right_parens = s.count(")") - s.count("(")
-            if trim_right_parens > 0:
+            take_right_parens = 0
+            stack = 0
+            for c in s:
+                if c == "(":
+                    stack += 1
+                    take_right_parens += 1
+                elif c == ")":
+                    stack -= 1
+                if stack == -1:
+                    break
+
+            if take_right_parens > 0:
                 i = -1
-                for _ in range(trim_right_parens + 1):
+                for _ in range(take_right_parens + 1):
                     i = s.find(")", i + 1)
                 s = s[:i]
 
