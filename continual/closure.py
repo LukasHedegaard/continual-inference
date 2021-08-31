@@ -10,10 +10,11 @@ from .module import CoModule
 class Lambda(CoModule, nn.Module):
     """Module wrapper for stateless functions"""
 
-    def __init__(self, fn: Callable[[Tensor], Tensor]):
+    def __init__(self, fn: Callable[[Tensor], Tensor], unsqueeze_step=True):
         nn.Module.__init__(self)
         assert callable(fn), "The pased function should be callable."
         self.fn = fn
+        self.unsqueeze_step = unsqueeze_step
 
     def __repr__(self) -> str:
         s = self.fn.__name__
@@ -45,10 +46,12 @@ class Lambda(CoModule, nn.Module):
         return self.fn(input)
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        x = input.unsqueeze(dim=2)
-        x = self.fn(x)
-        x = x.squeeze(dim=2)
-        return x
+        if self.unsqueeze_step:
+            input = input.unsqueeze(dim=2)
+        output = self.fn(input)
+        if self.unsqueeze_step:
+            output = output.squeeze(dim=2)
+        return output
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         return self.fn(input)

@@ -10,7 +10,8 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 ### Added
 - `co.Linear` module.
-- Improved repr in `co.Lambda`
+- Improved repr in `co.Lambda`.
+- Option to skip unsqueeze in `co.Lambda.forward_step`.
 
 
 ## [0.10.0]
