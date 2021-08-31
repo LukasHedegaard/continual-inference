@@ -9,6 +9,7 @@ from torch import Tensor, nn
 from .closure import Lambda
 from .container import Sequential
 from .conv import Conv1d, Conv2d, Conv3d
+from .linear import Linear
 from .logging import getLogger
 from .module import CoModule
 from .pooling import (
@@ -179,6 +180,9 @@ register(nn.AvgPool3d, AvgPool3d)
 register(nn.MaxPool3d, MaxPool3d)
 register(nn.AdaptiveAvgPool3d, AdaptiveAvgPool3d)
 register(nn.AdaptiveMaxPool3d, AdaptiveMaxPool3d)
+
+# Linear
+register(nn.Linear, Linear)
 
 # Container
 register(nn.Sequential, Sequential)

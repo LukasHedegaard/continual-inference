@@ -175,7 +175,7 @@ This mode is handy for initialising the network on a whole clip (multipleframes)
 ```
 
 ## Modules
-Below is a list of the included modules and utilities included in the library:
+Below is a list of the modules and utilities included in the library:
 
 <!-- TODO: Replace with link to docs once they are set up -->
 - Convolutions:
@@ -196,6 +196,9 @@ Below is a list of the included modules and utilities included in the library:
     - `co.AdaptiveMaxPool1d`
     - `co.AdaptiveMaxPool2d`
     - `co.AdaptiveMaxPool3d`
+
+- Linear:
+    - `co.Linear`
 
 - Containers
     - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
