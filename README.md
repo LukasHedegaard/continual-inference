@@ -175,7 +175,7 @@ This mode is handy for initialising the network on a whole clip (multipleframes)
 ```
 
 ## Modules
-Below is a list of the included modules and utilities included in the library:
+Below is a list of the modules and utilities included in the library:
 
 <!-- TODO: Replace with link to docs once they are set up -->
 - Convolutions:
