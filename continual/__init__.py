@@ -12,7 +12,7 @@ from .conv import Conv1d, Conv2d, Conv3d  # noqa: F401
 from .convert import continual, forward_stepping  # noqa: F401
 from .delay import Delay  # noqa: F401
 from .linear import Linear  # noqa: F401
-from .module import CoModule, PaddingMode, TensorPlaceholder  # noqa: F401
+from .module import CoModule, PaddingMode, TensorPlaceholder, call_mode  # noqa: F401
 from .pooling import (  # noqa: F401
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,

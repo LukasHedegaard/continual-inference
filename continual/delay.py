@@ -11,7 +11,7 @@ State = Tuple[Tensor, int]
 __all__ = ["Delay"]
 
 
-class Delay(torch.nn.Module, CoModule):
+class Delay(CoModule, torch.nn.Module):
     """Continual delay modules
 
     This module only introduces a delay in the continual modes, i.e. on `forward_step` and `forward_steps`.

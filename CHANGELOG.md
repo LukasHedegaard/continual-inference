@@ -10,6 +10,18 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 
 
+## [0.11.1]
+### Added
+- Add `call_mode`.
+- Add `warm_up`.
+
+### Changed
+- Container implementations to use `__call__` with alternating call_modes. This change was necessary to propperly trigger the torch hooks needed in `ptflops`.
+
+### Fixed
+- `ptflops` compatibility.
+
+
 ## [0.11.0]
 ### Added
 - `co.Linear` module.

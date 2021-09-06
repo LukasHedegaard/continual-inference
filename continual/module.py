@@ -1,9 +1,17 @@
+import functools
+import itertools
 from abc import ABC
 from enum import Enum
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import torch
+import torch.utils.hooks as hooks
 from torch import Tensor
+from torch.nn.modules.module import (
+    _global_backward_hooks,
+    _global_forward_hooks,
+    _global_forward_pre_hooks,
+)
 
 
 class TensorPlaceholder:
@@ -17,6 +25,50 @@ class TensorPlaceholder:
 
     def __len__(self):
         return 0
+
+
+class PaddingMode(Enum):
+    REPLICATE = "replicate"
+    ZEROS = "zeros"
+
+
+class CallMode(Enum):
+    FORWARD = "forward"
+    FORWARD_STEPS = "forward_steps"
+    FORWARD_STEP = "forward_step"
+
+
+class _CallModeContext(object):
+    """Context-manager state holder."""
+
+    def __init__(self):
+        self.cur = CallMode.FORWARD
+        self.prev = None
+
+    def __call__(self, value: CallMode) -> "_CallModeContext":
+        self.prev = self.cur
+        self.cur = CallMode(value)
+        return self
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *args, **kwargs):
+        self.cur = self.prev
+        self.prev = None
+
+
+call_mode = _CallModeContext()
+"""Context-manager that holds a call_mode
+
+When the call_mode context is used, the __call__ function of continual modules with be set accordingly
+
+Example:
+    >>> forward_output = module(forward_input)
+    >>>
+    >>> with co.call_mode("forward_step"):
+    >>>     forward_step_output = module(forward_step_input)
+"""
 
 
 # First element must be a Tensor
@@ -164,7 +216,104 @@ class CoModule(ABC):
         """
         ...  # pragma: no cover
 
+    def warm_up(self, step_shape: Sequence[int]):
+        """Warms up the model state with a dummy input.
+        While this avoid the initial `self.delay` steps of `TensorPlaceholder` values,
+        the initial `self.delay` steps will still produce inexact results.
 
-class PaddingMode(Enum):
-    REPLICATE = "replicate"
-    ZEROS = "zeros"
+        Args:
+            step_shape (Sequence[int]): input shape with which to warm the model up, including batch size.
+        """
+        step_shape = (*step_shape[:2], self.delay, *step_shape[2:])
+        dummy = self.make_padding(torch.zeros(step_shape, dtype=torch.float))
+        self.forward_steps(dummy)
+
+    _call_mode = CallMode.FORWARD
+
+    @property
+    def call_mode(self) -> CallMode:
+        return self._call_mode
+
+    @call_mode.setter
+    def call_mode(self, value):
+        self._call_mode = CallMode(value)
+        if hasattr(self, "__len__"):
+            for m in self:
+                if hasattr(m, "call_mode"):
+                    m.call_mode = self._call_mode
+
+    def _call_impl(self, *input, **kwargs):  # noqa: C901  # pragma: no cover
+        """Modified version torch.nn.Module._call_impl
+
+        Returns:
+            [type]: [description]
+        """
+        _call_mode = call_mode.cur if call_mode.prev else self.call_mode
+        forward_call = {
+            (True, CallMode.FORWARD): self._slow_forward,
+            (False, CallMode.FORWARD): self.forward,
+            (False, CallMode.FORWARD_STEPS): self.forward_steps,
+            (False, CallMode.FORWARD_STEP): self.forward_step,
+        }[(bool(torch._C._get_tracing_state()), _call_mode)]
+
+        # If we don't have any hooks, we want to skip the rest of the logic in
+        # this function, and just call forward.
+        if not (
+            self._backward_hooks
+            or self._forward_hooks
+            or self._forward_pre_hooks
+            or _global_backward_hooks
+            or _global_forward_hooks
+            or _global_forward_pre_hooks
+        ):
+            return forward_call(*input, **kwargs)
+        # Do not call functions when jit is used
+        full_backward_hooks, non_full_backward_hooks = [], []
+        if self._backward_hooks or _global_backward_hooks:
+            full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
+        if _global_forward_pre_hooks or self._forward_pre_hooks:
+            for hook in itertools.chain(
+                _global_forward_pre_hooks.values(), self._forward_pre_hooks.values()
+            ):
+                result = hook(self, input)
+                if result is not None:
+                    if not isinstance(result, tuple):
+                        result = (result,)
+                    input = result
+
+        bw_hook = None
+        if full_backward_hooks:
+            bw_hook = hooks.BackwardHook(self, full_backward_hooks)
+            input = bw_hook.setup_input_hook(input)
+
+        result = forward_call(*input, **kwargs)
+        if _global_forward_hooks or self._forward_hooks:
+            for hook in itertools.chain(
+                _global_forward_hooks.values(), self._forward_hooks.values()
+            ):
+                hook_result = hook(self, input, result)
+                if hook_result is not None:
+                    result = hook_result
+
+        if bw_hook:
+            result = bw_hook.setup_output_hook(result)
+
+        # Handle the non-full backward hooks
+        if non_full_backward_hooks:
+            var = result
+            while not isinstance(var, torch.Tensor):
+                if isinstance(var, dict):
+                    var = next((v for v in var.values() if isinstance(v, torch.Tensor)))
+                else:
+                    var = var[0]
+            grad_fn = var.grad_fn
+            if grad_fn is not None:
+                for hook in non_full_backward_hooks:
+                    wrapper = functools.partial(hook, self)
+                    functools.update_wrapper(wrapper, hook)
+                    grad_fn.register_hook(wrapper)
+                self._maybe_warn_non_full_backward_hook(input, result, grad_fn)
+
+        return result
+
+    __call__ = _call_impl

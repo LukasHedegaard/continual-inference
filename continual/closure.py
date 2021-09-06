@@ -8,7 +8,10 @@ from .module import CoModule
 
 
 class Lambda(CoModule, nn.Module):
-    """Module wrapper for stateless functions"""
+    """Module wrapper for stateless functions
+
+    NB: Operations performed in a Lambda are not counted in `ptflops`
+    """
 
     def __init__(self, fn: Callable[[Tensor], Tensor], unsqueeze_step=True):
         nn.Module.__init__(self)
