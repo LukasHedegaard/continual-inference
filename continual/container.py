@@ -8,8 +8,8 @@ from torch import Tensor, nn
 
 from .delay import Delay
 from .logging import getLogger
-from .module import CoModule, PaddingMode, TensorPlaceholder
-from .utils import load_state_dict, state_dict
+from .module import CallMode, CoModule, PaddingMode, TensorPlaceholder
+from .utils import load_state_dict, state_dict, temporary_parameter
 
 logger = getLogger(__name__)
 
@@ -145,7 +145,7 @@ class Broadcast(CoModule, nn.Module):
         return 0
 
 
-class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
+class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
     """Container for parallel modules.
 
     Args:
@@ -218,21 +218,27 @@ class Parallel(FlattenableStateDict, nn.Sequential, CoModule):
         co_add_module(self, name, module)
 
     def forward_step(self, inputs: List[T], update_state=True) -> List[T]:
-        return [
-            m.forward_step(inputs[i], update_state=update_state)
-            for i, m in enumerate(self)
-        ]
+        outs = []
+        for i, m in enumerate(self):
+            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEP):
+                outs.append(m(inputs[i], update_state=update_state))
+        return outs
 
     def forward_steps(
         self, inputs: List[T], pad_end=False, update_state=True
     ) -> List[T]:
-        return [
-            m.forward_steps(inputs[i], pad_end, update_state)
-            for i, m in enumerate(self)
-        ]
+        outs = []
+        for i, m in enumerate(self):
+            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEPS):
+                outs.append(m(inputs[i], pad_end=pad_end, update_state=update_state))
+        return outs
 
     def forward(self, inputs: List[T]) -> List[T]:
-        return [m.forward(inputs[i]) for i, m in enumerate(self)]
+        outs = []
+        for i, m in enumerate(self):
+            with temporary_parameter(m, "call_mode", CallMode.FORWARD):
+                outs.append(m(inputs[i]))
+        return outs
 
     @property
     def delay(self) -> int:
@@ -286,7 +292,7 @@ class Reduce(CoModule, nn.Module):
         return 0
 
 
-class Sequential(FlattenableStateDict, nn.Sequential, CoModule):
+class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
     """Continual Sequential module
 
     This module is a drop-in replacement for `torch.nn.Sequential`
@@ -327,22 +333,30 @@ class Sequential(FlattenableStateDict, nn.Sequential, CoModule):
         co_add_module(self, name, module)
 
     def forward(self, input):
-        for module in self:
-            input = module.forward(input)
+        for m in self:
+            with temporary_parameter(m, "call_mode", CallMode.FORWARD):
+                input = m(input)  # == module.forward
         return input
 
     def forward_step(self, input, update_state=True):
         for module in self:
-            input = module.forward_step(input, update_state=update_state)
+            # ptflops only works when __call__ is triggered
+            with temporary_parameter(module, "call_mode", CallMode.FORWARD_STEP):
+                input = module(  # == module.forward_step
+                    input, update_state=update_state
+                )
             if not type(input) in {Tensor, list}:
                 return TensorPlaceholder()
         return input
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
-        for module in self:
+        for m in self:
             if not type(input) in {Tensor, list} or len(input) == 0:
                 return TensorPlaceholder()  # pragma: no cover
-            input = module.forward_steps(input, pad_end, update_state)
+            # ptflops only works when __call__ is triggered
+            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEPS):
+                # == m.forward_steps
+                input = m(input, pad_end=pad_end, update_state=update_state)
 
         return input
 
@@ -375,7 +389,7 @@ class Sequential(FlattenableStateDict, nn.Sequential, CoModule):
                 m.clean_state()
 
 
-class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
+class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     """Broadcast an input to parallel modules and reduce.
     This module is a shorthand for
 
@@ -471,7 +485,10 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
         co_add_module(self, name, module)
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        outs = [m.forward_step(input, update_state=update_state) for m in self]
+        outs = []
+        for m in self:
+            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEP):
+                outs.append(m(input, update_state=update_state))  # == m.forward_step
         if all(isinstance(o, Tensor) for o in outs):
             return self.reduce(outs)
 
@@ -486,12 +503,17 @@ class BroadcastReduce(FlattenableStateDict, nn.Sequential, CoModule):
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         outs = []
         for m in self:
-            outs.append(m.forward_steps(input, pad_end, update_state))
+            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEPS):
+                # m.forward_steps
+                outs.append(m(input, pad_end=pad_end, update_state=update_state))
 
         return self.reduce(outs)
 
     def forward(self, input: Tensor) -> Tensor:
-        outs = [m.forward(input) for m in self]
+        outs = []
+        for m in self:
+            with temporary_parameter(m, "call_mode", CallMode.FORWARD):
+                outs.append(m(input))  # == m.forward
 
         return self.reduce(outs)
 
@@ -585,9 +607,9 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
 
     def forward(self, input: Tensor) -> Tensor:
         if self.predicate(self, input):
-            return self._modules["0"].forward(input)
+            return self._modules["0"](input)
         elif "1" in self._modules:
-            return self._modules["1"].forward(input)
+            return self._modules["1"](input)
         return input
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:

@@ -5,6 +5,18 @@ from functools import reduce
 from torch import Tensor, nn
 
 
+def rsetattr(obj, attr, val):
+    pre, _, post = attr.rpartition(".")
+    return setattr(rgetattr(obj, pre) if pre else obj, post, val)
+
+
+def rgetattr(obj, attr, *args):
+    def _getattr(obj, attr):
+        return getattr(obj, attr, *args)
+
+    return reduce(_getattr, [obj] + attr.split("."))
+
+
 @contextmanager
 def temporary_parameter(obj, attr: str, val):
     do_del = False
@@ -24,18 +36,6 @@ def temporary_parameter(obj, attr: str, val):
         delattr(obj, attr)
     else:
         rsetattr(obj, attr, prev_val)
-
-
-def rsetattr(obj, attr, val):
-    pre, _, post = attr.rpartition(".")
-    return setattr(rgetattr(obj, pre) if pre else obj, post, val)
-
-
-def rgetattr(obj, attr, *args):
-    def _getattr(obj, attr):
-        return getattr(obj, attr, *args)
-
-    return reduce(_getattr, [obj] + attr.split("."))
 
 
 class _FlatStateDict(object):

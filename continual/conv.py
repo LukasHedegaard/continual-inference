@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-class _ConvCoNd(_ConvNd, CoModule):
+class _ConvCoNd(CoModule, _ConvNd):
     def __init__(
         self,
         ConvClass: torch.nn.Module,

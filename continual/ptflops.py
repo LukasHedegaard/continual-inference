@@ -1,8 +1,19 @@
 """ Register modules with `ptflops` """
 
-from .conv import Conv1d, Conv2d, Conv3d
+from .closure import Add, Multiply  # noqa: F401
+from .container import (  # noqa: F401
+    Broadcast,
+    BroadcastReduce,
+    Conditional,
+    Parallel,
+    Reduce,
+    Residual,
+    Sequential,
+)
+from .conv import Conv1d, Conv2d, Conv3d  # noqa: F401
+from .linear import Linear  # noqa: F401
 from .logging import getLogger
-from .pooling import (
+from .pooling import (  # noqa: F401
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
     AdaptiveMaxPool2d,
@@ -39,6 +50,9 @@ def _register_ptflops():
         fc.MODULES_MAPPING[MaxPool3d] = fc.pool_flops_counter_hook
         fc.MODULES_MAPPING[AdaptiveAvgPool3d] = fc.pool_flops_counter_hook
         fc.MODULES_MAPPING[AdaptiveMaxPool3d] = fc.pool_flops_counter_hook
+
+        # Linear
+        fc.MODULES_MAPPING[Linear] = fc.linear_flops_counter_hook
 
     except ModuleNotFoundError:  # pragma: no cover
         pass

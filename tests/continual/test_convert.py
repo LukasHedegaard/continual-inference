@@ -17,8 +17,13 @@ def test_forward_stepping():
     assert torch.allclose(output, target)
 
     # forward_steps
-    output = co3.forward_steps(sample)
+    output = co3.forward_steps(sample, pad_end=True)  # pad_end doesn't do anything
     assert torch.allclose(output, target)
+
+    # Changing call_mode
+    with co.call_mode("forward_steps"):
+        output2 = co3(sample, pad_end=True)
+    assert torch.allclose(output, output2)
 
     # forward_step
     output = co3.forward_step(sample[:, :, 0])
