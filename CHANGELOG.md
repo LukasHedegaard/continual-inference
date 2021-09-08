@@ -9,6 +9,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.11.3]
+### Added
+- Add `flatten_state_dict` state variable.
+
+### Removed
+- Debug message for Convolutions with padding.
 
 ## [0.11.2]
 ### Fixed
