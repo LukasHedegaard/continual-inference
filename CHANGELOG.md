@@ -10,6 +10,11 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 
 
+## [0.11.2]
+### Fixed
+- `call_mode` for `Linear`.
+
+
 ## [0.11.1]
 ### Added
 - Add `call_mode`.

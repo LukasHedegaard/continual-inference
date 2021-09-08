@@ -29,15 +29,39 @@ def test_conv():
     assert params == co_step_params
 
 
+def test_linear():
+    input_res = (3, 3)
+
+    mod = nn.Linear(3, 3)
+    macs, params = get_model_complexity_info(mod, input_res, as_strings=False)
+
+    co_mod = co.Linear(3, 3)
+    co_macs, co_params = get_model_complexity_info(co_mod, input_res, as_strings=False)
+
+    assert macs == co_macs
+    assert params == co_params
+
+    with co.call_mode("forward_step"):
+        co_step_macs, co_step_params = get_model_complexity_info(
+            co_mod, (3, 3), as_strings=False
+        )
+
+    assert macs == co_step_macs
+    assert params == co_step_params
+
+
 def test_sequential():
     #            C  T  H  W
     T = 4
     input_res = (3, T)
-    convs = [co.Conv1d(3, 3, 3, padding=(1,))]  # , co.Conv1d(3, 3, 3, padding=(1,))]
-    mod = nn.Sequential(*convs)
+    seq = [
+        co.Conv1d(3, 3, 3, padding=(1,)),
+        co.Conv1d(3, 3, 3, padding=(1,)),
+    ]
+    mod = nn.Sequential(*seq)
     macs, params = get_model_complexity_info(mod, input_res, as_strings=False)
 
-    co_mod = co.Sequential(*convs)
+    co_mod = co.Sequential(*seq)
     co_macs, co_params = get_model_complexity_info(co_mod, input_res, as_strings=False)
 
     assert macs == co_macs
