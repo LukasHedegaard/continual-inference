@@ -94,9 +94,15 @@ class FlattenableStateDict:
     It is assumed that classes that inherit this modlue also inherit from nn.Module
     """
 
+    flatten_state_dict = False
+
+    def __init__(self, *args, **kwargs):
+        ...
+
     def state_dict(
         self, destination=None, prefix="", keep_vars=False, flatten=False
     ) -> "OrderedDict[str, Tensor]":
+        flatten = flatten or self.flatten_state_dict
         return state_dict(self, destination, prefix, keep_vars, flatten)
 
     def load_state_dict(
@@ -105,6 +111,7 @@ class FlattenableStateDict:
         strict: bool = True,
         flatten=False,
     ):
+        flatten = flatten or self.flatten_state_dict
         return load_state_dict(self, state_dict, strict, flatten)
 
 
