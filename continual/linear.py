@@ -5,7 +5,7 @@ from torch.nn.functional import linear
 from .module import CoModule
 
 
-class Linear(nn.Linear, CoModule):
+class Linear(CoModule, nn.Linear):
     def __init__(
         self,
         in_features: int,
