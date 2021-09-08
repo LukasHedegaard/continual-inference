@@ -56,13 +56,7 @@ class _ConvCoNd(CoModule, _ConvNd):
         self._input_len = len(self.input_shape_desciption)
 
         kernel_size = size_fn(kernel_size)
-
         padding = size_fn(padding)
-        if padding[0] != 0:
-            logger.debug(
-                "Padding along the temporal dimension only affects the computation in `forward_steps`. In `forward` it is omitted."
-            )
-
         stride = size_fn(stride)
         if stride[0] > 1:
             logger.warning(
