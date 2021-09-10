@@ -9,6 +9,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+
+## [0.11.4]
+### Fixed
+- `co.ConvXd` cuda compatibility.
+
+
 ## [0.11.3]
 ### Added
 - Add `flatten_state_dict` state variable.
