@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from enum import Enum
 from functools import reduce, wraps
+from numbers import Number
 from typing import Callable, List, Optional, Sequence, Tuple, TypeVar, Union, overload
 
 import torch
@@ -82,11 +83,11 @@ def nonempty(fn: ReductionFunc) -> ReductionFunc:
     return wrapped
 
 
-def int_from(tuple_or_int: Union[int, Tuple[int, ...]], dim=0) -> int:
-    if isinstance(tuple_or_int, int):
-        return tuple_or_int
+def num_from(tuple_or_num: Union[Number, Tuple[Number, ...]], dim=0) -> Number:
+    if isinstance(tuple_or_num, Number):
+        return tuple_or_num
 
-    return tuple_or_int[dim]
+    return tuple_or_num[dim]
 
 
 class FlattenableStateDict:
@@ -206,8 +207,8 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
             ]
 
         assert (
-            len(set(int_from(getattr(m, "stride", 1)) for _, m in modules)) == 1
-        ), f"Expected all modules to have the same stride, but got strides {[(int_from(getattr(m, 'stride', 1))) for _, m in modules]}"
+            len(set(num_from(getattr(m, "stride", 1)) for _, m in modules)) == 1
+        ), f"Expected all modules to have the same stride, but got strides {[(num_from(getattr(m, 'stride', 1))) for _, m in modules]}"
 
         for key, module in modules:
             self.add_module(key, module)
@@ -253,11 +254,11 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
 
     @property
     def stride(self) -> int:
-        return int_from(getattr(next(iter(self)), "stride", 1))
+        return num_from(getattr(next(iter(self)), "stride", 1))
 
     @property
     def padding(self) -> int:
-        return max(int_from(getattr(m, "padding", 0)) for m in self)
+        return max(num_from(getattr(m, "padding", 0)) for m in self)
 
     def clean_state(self):
         for m in self:
@@ -375,12 +376,12 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
     def stride(self) -> int:
         tot = 1
         for m in self:
-            tot *= int_from(getattr(m, "stride", 1))
+            tot *= num_from(getattr(m, "stride", 1))
         return tot
 
     @property
     def padding(self) -> int:
-        return max(int_from(getattr(m, "padding", 0)) for m in self)
+        return max(num_from(getattr(m, "padding", 0)) for m in self)
 
     @staticmethod
     def build_from(module: nn.Sequential) -> "Sequential":
@@ -466,8 +467,8 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
             ]
 
         assert (
-            len(set(int_from(getattr(m, "stride", 1)) for _, m in modules)) == 1
-        ), f"Expected all modules to have the same stride, but got strides {[(int_from(getattr(m, 'stride', 1))) for _, m in modules]}"
+            len(set(num_from(getattr(m, "stride", 1)) for _, m in modules)) == 1
+        ), f"Expected all modules to have the same stride, but got strides {[(num_from(getattr(m, 'stride', 1))) for _, m in modules]}"
 
         for key, module in modules:
             self.add_module(key, module)
@@ -542,11 +543,11 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
 
     @property
     def stride(self) -> int:
-        return int_from(getattr(next(iter(self)), "stride", 1))
+        return num_from(getattr(next(iter(self)), "stride", 1))
 
     @property
     def padding(self) -> int:
-        return max(int_from(getattr(m, "padding", 0)) for m in self)
+        return max(num_from(getattr(m, "padding", 0)) for m in self)
 
     def clean_state(self):
         for m in self:
@@ -561,14 +562,18 @@ def Residual(
     module: CoModule,
     temporal_fill: PaddingMode = None,
     reduce: Reduction = "sum",
+    forward_shrink: bool = False,
 ):
+    assert num_from(getattr(module, "stride", 1)) == 1, (
+        "The simple `Residual` only works for modules with temporal stride=1. "
+        "Complex residuals can be achieved using `BroadcastReduce` or the `Broadcast`, `Parallel`, and `Reduce` modules."
+    )
+    temporal_fill = temporal_fill or getattr(
+        module, "temporal_fill", PaddingMode.REPLICATE.value
+    )
     return BroadcastReduce(
         # Residual first yields easier broadcasting in reduce functions
-        Delay(
-            delay=module.delay,
-            temporal_fill=temporal_fill
-            or getattr(module, "temporal_fill", PaddingMode.REPLICATE.value),
-        ),
+        Delay(module.delay, temporal_fill, forward_shrink),
         module,
         reduce=reduce,
         auto_delay=False,

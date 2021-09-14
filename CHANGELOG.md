@@ -9,6 +9,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+
+## [0.13.0]
+### Added
+- Add `forward_shrink` option to `Delay` and `Residual`.
+
+
 ## [0.12.0]
 ### Added
 - Add `Constant`.

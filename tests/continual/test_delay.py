@@ -100,3 +100,14 @@ def test_zero_delay():
 def test_repr():
     delay = Delay(delay=2)
     assert delay.__repr__() == "Delay(2)"
+
+    delay = Delay(delay=2, forward_shrink=True)
+    assert delay.__repr__() == "Delay(2, forward_shrink=True)"
+
+
+def test_forward_shrink():
+    sample = torch.rand((2, 2, 5, 3))
+    delay = Delay(delay=2, forward_shrink=True)
+
+    output = delay.forward(sample)
+    assert torch.equal(sample[:, :, 2:-2], output)
