@@ -215,6 +215,9 @@ Below is a list of the modules and utilities included in the library:
     - `co.Add` - Adds a constant value.
     - `co.Multiply` - Multiplies with a constant factor.
     - `co.Unity` - Maps input to output without modification.
+    - `co.Constant` - Maps input to and output with constant value.
+    - `co.Zero` - Maps input to output of zeros.
+    - `co.One` - Maps input to output of ones.
 
 - Converters
     <!-- - `co.Residual` - residual connection, which automatically adds delay if needed -->
