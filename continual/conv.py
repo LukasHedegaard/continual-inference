@@ -45,6 +45,8 @@ class _ConvCoNd(CoModule, _ConvNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: PaddingMode = "zeros",
+        device=None,
+        dtype=None,
         temporal_fill: PaddingMode = "zeros",
     ):
         assert issubclass(
@@ -82,6 +84,8 @@ class _ConvCoNd(CoModule, _ConvNd):
             groups=groups,
             bias=bias,
             padding_mode=padding_mode,
+            device=device,
+            dtype=dtype,
         )
         self.make_padding = {
             PaddingMode.ZEROS.value: torch.zeros_like,
@@ -142,7 +146,7 @@ class _ConvCoNd(CoModule, _ConvNd):
         ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}"
 
         # e.g. B, C -> B, C, 1
-        x = input.unsqueeze(2)
+        x = input.unsqueeze(2).to(device=self.weight.device)
 
         if self.padding_mode == "zeros":
             x = self._conv_func(
@@ -239,6 +243,8 @@ class Conv1d(_ConvCoNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: PaddingMode = "zeros",
+        device=None,
+        dtype=None,
         temporal_fill: PaddingMode = "zeros",
     ):
         r"""Applies a continual 1D convolution over an input signal composed of several input
@@ -295,6 +301,8 @@ class Conv1d(_ConvCoNd):
             groups,
             bias,
             padding_mode,
+            device,
+            dtype,
             temporal_fill,
         )
 
@@ -338,6 +346,8 @@ class Conv2d(_ConvCoNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: PaddingMode = "zeros",
+        device=None,
+        dtype=None,
         temporal_fill: PaddingMode = "zeros",
     ):
         r"""Applies a continual 2D convolution over an input signal composed of several input
@@ -394,6 +404,8 @@ class Conv2d(_ConvCoNd):
             groups,
             bias,
             padding_mode,
+            device,
+            dtype,
             temporal_fill,
         )
 
@@ -437,6 +449,8 @@ class Conv3d(_ConvCoNd):
         groups: int = 1,
         bias: bool = True,
         padding_mode: PaddingMode = "zeros",
+        device=None,
+        dtype=None,
         temporal_fill: PaddingMode = "zeros",
     ):
         r"""Applies a continual 3D convolution over an input signal composed of several input
@@ -495,6 +509,8 @@ class Conv3d(_ConvCoNd):
             groups,
             bias,
             padding_mode,
+            device,
+            dtype,
             temporal_fill,
         )
 
