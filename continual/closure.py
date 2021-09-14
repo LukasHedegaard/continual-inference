@@ -2,6 +2,7 @@ from functools import partial
 from inspect import getsource
 from typing import Callable, Union
 
+import torch
 from torch import Tensor, nn
 
 from .module import CoModule
@@ -95,3 +96,17 @@ def _unity(x: Tensor):
 def Unity() -> Lambda:
     """Create Lambda with addition function"""
     return Lambda(_unity)
+
+
+def Constant(constant: float):
+    return Lambda(lambda x: constant * torch.ones_like(x))
+
+
+def Zero() -> Lambda:
+    """Create Lambda with zero output"""
+    return Lambda(torch.zeros_like)
+
+
+def One() -> Lambda:
+    """Create Lambda with zero output"""
+    return Lambda(torch.ones_like)

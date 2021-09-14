@@ -1,6 +1,6 @@
 import torch
 
-from continual.closure import Add, Lambda, Multiply, Unity
+from continual.closure import Add, Constant, Lambda, Multiply, One, Unity, Zero
 
 
 def test_add():
@@ -76,3 +76,19 @@ def test_lambda():
 def test_unity():
     x = torch.ones((1, 1, 2, 2))
     assert torch.equal(x, Unity()(x))
+
+
+def test_constant():
+    x = torch.randn((1, 1, 2, 2))
+    const = 42
+    assert torch.equal(const * torch.ones_like(x), Constant(const)(x))
+
+
+def test_zero():
+    x = torch.randn((1, 1, 2, 2))
+    assert torch.equal(torch.zeros_like(x), Zero()(x))
+
+
+def test_one():
+    x = torch.randn((1, 1, 2, 2))
+    assert torch.equal(torch.ones_like(x), One()(x))

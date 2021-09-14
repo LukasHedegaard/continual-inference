@@ -1,4 +1,4 @@
-from .closure import Add, Lambda, Multiply, Unity  # noqa: F401
+from .closure import Add, Constant, Lambda, Multiply, One, Unity, Zero  # noqa: F401
 from .container import (  # noqa: F401
     Broadcast,
     BroadcastReduce,
