@@ -157,6 +157,9 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
+        auto_shrink (bool, optional):
+            Automatically shrink output in time to match the smallest branch output.
+            This can only be applied if auto_delay is also set. Defaults to False.
     """
 
     @overload
@@ -164,6 +167,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         self,
         *args: CoModule,
         auto_delay=True,
+        auto_shrink=False,
     ) -> None:
         ...  # pragma: no cover
 
@@ -172,6 +176,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         self,
         arg: "OrderedDict[str, CoModule]",
         auto_delay=True,
+        auto_shrink=False,
     ) -> None:
         ...  # pragma: no cover
 
@@ -179,6 +184,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         self,
         *args,
         auto_delay=True,
+        auto_shrink=False,
     ):
         nn.Module.__init__(self)
 
@@ -194,7 +200,10 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
                 (
                     key,
                     (
-                        Sequential(Delay(max_delay - module.delay), module)
+                        Sequential(
+                            Delay(max_delay - module.delay, auto_shrink=auto_shrink),
+                            module,
+                        )
                         if module.delay < max_delay
                         else module
                     ),

@@ -10,7 +10,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 
 ### Added
-- Added `auto_shrink` to `BroadcastReduce`.
+- Added `auto_shrink` to `BroadcastReduce` and `Parallel`.
 - Added `receptive_field` property.
 
 
