@@ -9,6 +9,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+- Added `auto_shrink` to `BroadcastReduce`.
+
+### Changed
+- Rename `forward_shrink` argument to `auto_shrink` in `Residual` and `Delay`.
+
 
 ## [0.13.0]
 ### Added

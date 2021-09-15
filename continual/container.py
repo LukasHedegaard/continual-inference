@@ -413,6 +413,9 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
+        auto_shrink (bool, optional):
+            Automatically shrink output in time to match the smallest branch output.
+            This can only be applied if auto_delay is also set. Defaults to False.
 
     """
 
@@ -422,6 +425,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         *args: CoModule,
         reduce: ReductionFuncOrEnum = Reduction.SUM,
         auto_delay=True,
+        auto_shrink=False,
     ) -> None:
         ...  # pragma: no cover
 
@@ -431,6 +435,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         arg: "OrderedDict[str, CoModule]",
         reduce: ReductionFuncOrEnum = Reduction.SUM,
         auto_delay=True,
+        auto_shrink=False,
     ) -> None:
         ...  # pragma: no cover
 
@@ -439,6 +444,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         *args,
         reduce: ReductionFuncOrEnum = Reduction.SUM,
         auto_delay=True,
+        auto_shrink=False,
     ):
         nn.Module.__init__(self)
 
@@ -458,7 +464,10 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
                 (
                     key,
                     (
-                        Sequential(Delay(max_delay - module.delay), module)
+                        Sequential(
+                            module,
+                            Delay(max_delay - module.delay, auto_shrink=auto_shrink),
+                        )
                         if module.delay < max_delay
                         else module
                     ),
@@ -562,7 +571,7 @@ def Residual(
     module: CoModule,
     temporal_fill: PaddingMode = None,
     reduce: Reduction = "sum",
-    forward_shrink: bool = False,
+    auto_shrink: bool = False,
 ):
     assert num_from(getattr(module, "stride", 1)) == 1, (
         "The simple `Residual` only works for modules with temporal stride=1. "
@@ -573,7 +582,7 @@ def Residual(
     )
     return BroadcastReduce(
         # Residual first yields easier broadcasting in reduce functions
-        Delay(module.delay, temporal_fill, forward_shrink),
+        Delay(module.delay, temporal_fill, auto_shrink),
         module,
         reduce=reduce,
         auto_delay=False,
