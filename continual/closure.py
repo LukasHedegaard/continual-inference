@@ -60,10 +60,6 @@ class Lambda(CoModule, nn.Module):
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         return self.fn(input)
 
-    @property
-    def delay(self) -> int:
-        return 0
-
     @staticmethod
     def build_from(fn: Callable[[Tensor], Tensor]) -> "Lambda":
         return Lambda(fn)

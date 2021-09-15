@@ -11,9 +11,15 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ### Added
 - Added `auto_shrink` to `BroadcastReduce`.
+- Added `receptive_field` property.
+
 
 ### Changed
 - Rename `forward_shrink` argument to `auto_shrink` in `Residual` and `Delay`.
+
+## Fixed
+- `padding` property in sequence.
+- `delay` property in sequence.
 
 
 ## [0.13.0]

@@ -98,7 +98,7 @@ class FlattenableStateDict:
     flatten_state_dict = False
 
     def __init__(self, *args, **kwargs):
-        ...
+        ...  # pragma: no cover
 
     def state_dict(
         self, destination=None, prefix="", keep_vars=False, flatten=False
@@ -147,10 +147,6 @@ class Broadcast(CoModule, nn.Module):
 
     def forward_steps(self, input: T, pad_end=False, update_state=True) -> List[T]:
         return self.forward(input)
-
-    @property
-    def delay(self) -> int:
-        return 0
 
 
 class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
@@ -217,10 +213,12 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         if len(delays) != 1:  # pragma: no cover
             logger.warning(
                 f"It recommended that parallel modules have the same delay, but found delays {delays}. "
-                "Other temporal consistency cannot be guaranteed."
+                "Temporal consistency cannot be guaranteed."
             )
-
         self._delay = max(delays)
+
+        receptive_fields = set(m.receptive_field for m in self)
+        self._receptive_field = max(receptive_fields)
 
     def add_module(self, name: str, module: Optional["nn.Module"]) -> None:
         co_add_module(self, name, module)
@@ -247,6 +245,10 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
             with temporary_parameter(m, "call_mode", CallMode.FORWARD):
                 outs.append(m(inputs[i]))
         return outs
+
+    @property
+    def receptive_field(self) -> int:
+        return self._receptive_field
 
     @property
     def delay(self) -> int:
@@ -294,10 +296,6 @@ class Reduce(CoModule, nn.Module):
 
     def forward_steps(self, inputs: List[T], pad_end=False, update_state=True) -> T:
         return self.reduce(inputs)
-
-    @property
-    def delay(self) -> int:
-        return 0
 
 
 class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
@@ -369,19 +367,34 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         return input
 
     @property
-    def delay(self):
-        return sum(getattr(m, "delay", 0) for m in self)
+    def receptive_field(self) -> int:
+        reverse_modules = [m for m in self][::-1]
+        rf = reverse_modules[0].receptive_field
+        for m in reverse_modules[1:]:
+            s = num_from(getattr(m, "stride", 1))
+            rf = s * rf + m.receptive_field - s
+        return rf
+
+    @property
+    def delay(self) -> int:
+        # return sum(m.delay for m in self)
+        return self.receptive_field - 1 - self.padding
 
     @property
     def stride(self) -> int:
         tot = 1
         for m in self:
-            tot *= num_from(getattr(m, "stride", 1))
+            tot *= num_from(m.stride)
         return tot
 
     @property
     def padding(self) -> int:
-        return max(num_from(getattr(m, "padding", 0)) for m in self)
+        # return sum(num_from(m.padding) for m in self)
+        m = [m for m in self]
+        p = num_from(m[0].padding)
+        for i in range(1, len(m)):
+            p += num_from(m[i].padding) * num_from(m[i - 1].stride)
+        return p
 
     @staticmethod
     def build_from(module: nn.Sequential) -> "Sequential":
@@ -498,6 +511,9 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         ), f"BroadcastReduce modules should have the same delay, but found delays {delays}."
         self._delay = delays.pop()
 
+        receptive_fields = set(m.receptive_field for m in self)
+        self._receptive_field = max(receptive_fields)
+
     def add_module(self, name: str, module: Optional["nn.Module"]) -> None:
         co_add_module(self, name, module)
 
@@ -545,6 +561,10 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         # return self.reduce(
         #     [o[:, :, slice(s, -s or None)] for (s, o) in zip(shrink, outs)]
         # )
+
+    @property
+    def receptive_field(self) -> int:
+        return self._receptive_field
 
     @property
     def delay(self) -> int:

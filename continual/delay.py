@@ -114,8 +114,16 @@ class Delay(CoModule, torch.nn.Module):
         return input[:, :, self.delay : -self.delay]
 
     @property
+    def receptive_field(self) -> int:
+        return self.delay + 1
+
+    @property
     def delay(self) -> int:
         return self._delay
+
+    @property
+    def stride(self) -> int:
+        return 1
 
     def extra_repr(self):
         shrink_str = ", auto_shrink=True" if self.auto_shrink else ""

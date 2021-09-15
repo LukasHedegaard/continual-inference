@@ -82,6 +82,7 @@ def test_sequential_with_TensorPlaceholder():
         nn.MaxPool1d(
             kernel_size=2,
             stride=2,  # Has temporal skips
+            padding=0,
         ),
         nn.Conv1d(
             in_channels=1,
@@ -98,7 +99,9 @@ def test_sequential_with_TensorPlaceholder():
 
     coseq = co.Sequential.build_from(seq)
     assert coseq.stride == 4
-    assert coseq.padding == 1
+    assert coseq.padding == 3
+    assert coseq.receptive_field == 8
+    assert coseq.delay == 4
 
     target = seq.forward(sample)
 
