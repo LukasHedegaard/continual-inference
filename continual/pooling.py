@@ -225,10 +225,6 @@ class _PoolNd(CoModule, nn.Module):
     def receptive_field(self) -> int:
         return self.dilation[0] * self.kernel_size[0]
 
-    @property
-    def delay(self) -> int:
-        return self.receptive_field - 1 - self.padding[0]
-
 
 class AvgPool1d(nn.AvgPool1d, _PoolNd):
     """

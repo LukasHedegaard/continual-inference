@@ -184,6 +184,7 @@ def test_broadcast_reduce():
     assert par.stride == 1
     assert par.delay == 2
     assert par.padding == 2
+    assert par.receptive_field == 5
     assert "BroadcastReduce(" in par.__repr__() and "reduce=" in par.__repr__()
 
     # forward

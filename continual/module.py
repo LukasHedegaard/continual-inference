@@ -13,6 +13,8 @@ from torch.nn.modules.module import (
     _global_forward_pre_hooks,
 )
 
+from continual.utils import num_from
+
 
 class TensorPlaceholder:
     shape: Tuple[int]
@@ -89,12 +91,6 @@ class CoModule(ABC):
     Deriving from this class enforces that neccessary class methods are implemented
     """
 
-    receptive_field: int = 1
-    delay: int = 0
-    stride: int = 1
-    padding: int = 0
-    make_padding = torch.zeros_like
-
     def __init_subclass__(cls) -> None:
         CoModule._validate_class(cls)
 
@@ -158,6 +154,15 @@ class CoModule(ABC):
     def clean_state(self):
         """Clean model state"""
         ...  # pragma: no cover
+
+    receptive_field: int = 1
+    stride: int = 1
+    padding: int = 0
+    make_padding = torch.zeros_like
+
+    @property
+    def delay(self) -> int:
+        return self.receptive_field - 1 - num_from(self.padding)
 
     def forward_step(
         self, input: Tensor, update_state=True

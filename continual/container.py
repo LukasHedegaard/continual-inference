@@ -1,8 +1,7 @@
 from collections import OrderedDict
 from enum import Enum
 from functools import reduce, wraps
-from numbers import Number
-from typing import Callable, List, Optional, Sequence, Tuple, TypeVar, Union, overload
+from typing import Callable, List, Optional, Sequence, TypeVar, Union, overload
 
 import torch
 from torch import Tensor, nn
@@ -10,7 +9,7 @@ from torch import Tensor, nn
 from .delay import Delay
 from .logging import getLogger
 from .module import CallMode, CoModule, PaddingMode, TensorPlaceholder
-from .utils import load_state_dict, state_dict, temporary_parameter
+from .utils import load_state_dict, num_from, state_dict, temporary_parameter
 
 logger = getLogger(__name__)
 
@@ -81,13 +80,6 @@ def nonempty(fn: ReductionFunc) -> ReductionFunc:
         return fn(inputs)
 
     return wrapped
-
-
-def num_from(tuple_or_num: Union[Number, Tuple[Number, ...]], dim=0) -> Number:
-    if isinstance(tuple_or_num, Number):
-        return tuple_or_num
-
-    return tuple_or_num[dim]
 
 
 class FlattenableStateDict:
@@ -385,11 +377,6 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         return rf
 
     @property
-    def delay(self) -> int:
-        # return sum(m.delay for m in self)
-        return self.receptive_field - 1 - self.padding
-
-    @property
     def stride(self) -> int:
         tot = 1
         for m in self:
@@ -559,18 +546,6 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
 
         return self.reduce(outs)
 
-        # Modules may shrink the output map differently.
-        # If an "even" shrink is detected, attempt to automatically
-        # shrink the longest values to fit as if padding was used.
-        # assert all(
-        #     [(t - min_t) % 2 == 0 for t in ts]
-        # ), f"Found incompatible temporal output-shapes {ts}"
-        # shrink = [(t - min_t) // 2 for t in ts]
-
-        # return self.reduce(
-        #     [o[:, :, slice(s, -s or None)] for (s, o) in zip(shrink, outs)]
-        # )
-
     @property
     def receptive_field(self) -> int:
         return self._receptive_field
@@ -639,6 +614,9 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
 
         # Ensure modules have the same delay
         self._delay = max(on_true.delay, getattr(on_false, "delay", 0))
+        self._receptive_field = max(
+            on_true.receptive_field, getattr(on_false, "receptive_field", 1)
+        )
 
         self.add_module(
             "0",
@@ -679,3 +657,7 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
     @property
     def delay(self) -> int:
         return self._delay
+
+    @property
+    def receptive_field(self) -> int:
+        return self._receptive_field

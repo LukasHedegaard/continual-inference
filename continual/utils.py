@@ -1,6 +1,8 @@
 from collections import OrderedDict
 from contextlib import contextmanager
 from functools import reduce
+from numbers import Number
+from typing import Tuple, Union
 
 from torch import Tensor, nn
 
@@ -138,3 +140,10 @@ def load_state_dict(
         )
 
     return nn.Module.load_state_dict(module, state_dict, strict)
+
+
+def num_from(tuple_or_num: Union[Number, Tuple[Number, ...]], dim=0) -> Number:
+    if isinstance(tuple_or_num, Number):
+        return tuple_or_num
+
+    return tuple_or_num[dim]

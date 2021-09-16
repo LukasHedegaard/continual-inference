@@ -230,10 +230,6 @@ class _ConvCoNd(CoModule, _ConvNd):
     def receptive_field(self) -> int:
         return self.kernel_size[0] + (self.kernel_size[0] - 1) * (self.dilation[0] - 1)
 
-    @property
-    def delay(self) -> int:
-        return self.kernel_size[0] - 1 - self.padding[0]
-
 
 class Conv1d(_ConvCoNd):
     def __init__(
