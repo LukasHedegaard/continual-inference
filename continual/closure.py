@@ -15,10 +15,10 @@ class Lambda(CoModule, nn.Module):
 
     Args:
         fn (Callable[[Tensor], Tensor]): Function to be called during forward.
-        takes_time (bool, optional): If True, `fn` recieves all steps, if False, it received one step and no time dimension. Defaults to True.
+        takes_time (bool, optional): If True, `fn` recieves all steps, if False, it received one step and no time dimension. Defaults to False.
     """
 
-    def __init__(self, fn: Callable[[Tensor], Tensor], takes_time=True):
+    def __init__(self, fn: Callable[[Tensor], Tensor], takes_time=False):
         nn.Module.__init__(self)
         assert callable(fn), "The pased function should be callable."
         self.fn = fn
@@ -70,7 +70,7 @@ class Lambda(CoModule, nn.Module):
         return output
 
     @staticmethod
-    def build_from(fn: Callable[[Tensor], Tensor], takes_time=True) -> "Lambda":
+    def build_from(fn: Callable[[Tensor], Tensor], takes_time=False) -> "Lambda":
         return Lambda(fn, takes_time)
 
 
