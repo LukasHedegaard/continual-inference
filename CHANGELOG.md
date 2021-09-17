@@ -17,6 +17,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ### Changed
 - Rename `forward_shrink` argument to `auto_shrink` in `Residual` and `Delay`.
 - Torch requirement to v1.9.
+- Replace `Lambda` unsqueeze_step with takes_time.
 
 ## Fixed
 - `padding` property in sequence.
