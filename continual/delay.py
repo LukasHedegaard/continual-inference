@@ -111,7 +111,7 @@ class Delay(CoModule, torch.nn.Module):
         # No delay during regular forward
         if not self.auto_shrink or self.delay == 0:
             return input
-        return input[:, :, self.delay : -self.delay]
+        return input[:, :, self.delay // 2 : -self.delay // 2]
 
     @property
     def receptive_field(self) -> int:

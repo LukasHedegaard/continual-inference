@@ -110,4 +110,4 @@ def test_auto_shrink():
     delay = Delay(delay=2, auto_shrink=True)
 
     output = delay.forward(sample)
-    assert torch.equal(sample[:, :, 2:-2], output)
+    assert torch.equal(sample[:, :, 1:-1], output)
