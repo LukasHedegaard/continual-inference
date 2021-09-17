@@ -215,6 +215,7 @@ Below is a list of the modules and utilities included in the library:
 
 - Other
     - `co.Delay` - Pure delay module (e.g. needed in residuals).
+    - `co.Reshape` - Reshape non-temporal dimensions.
     - `co.Lambda` - Lambda module which wraps any function.
     - `co.Add` - Adds a constant value.
     - `co.Multiply` - Multiplies with a constant factor.
