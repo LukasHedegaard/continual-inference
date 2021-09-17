@@ -9,15 +9,17 @@ class Reshape(CoModule, nn.Module):
     """Reshape of non-temporal dimensions"""
 
     @overload
-    def __init__(self, shape: Sequence[int]):
+    def __init__(self, shape: Sequence[int], contiguous=False):
         ...  # pragma: no cover
 
     @overload
-    def __init__(self, *shape: int):
+    def __init__(self, *shape: int, contiguous=False):
         ...  # pragma: no cover
 
-    def __init__(self, *shape):
+    def __init__(self, *shape, contiguous=False):
         nn.Module.__init__(self)
+
+        self.contiguous = contiguous
 
         assert len(shape) > 0
         if isinstance(shape[0], int):
@@ -28,15 +30,23 @@ class Reshape(CoModule, nn.Module):
             self.shape = shape[0]
 
     def extra_repr(self):
-        return ", ".join(str(s) for s in self.shape)
+        s = f"{self.shape}"
+        if self.contiguous:
+            s += ", contiguous=True"
+        return s
 
     def forward(self, input: Tensor) -> Tensor:
         T = input.shape[2]
         x = input.moveaxis(2, 0).reshape(T, *self.shape).moveaxis(0, 2)
+        if self.contiguous:
+            x = x.contiguous()
         return x
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         return self.forward(input)
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        return input.reshape(self.shape)
+        x = input.reshape(self.shape)
+        if self.contiguous:
+            x = x.contiguous()
+        return x
