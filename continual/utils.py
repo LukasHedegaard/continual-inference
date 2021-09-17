@@ -6,6 +6,10 @@ from typing import Tuple, Union
 
 from torch import Tensor, nn
 
+from .logging import getLogger
+
+logger = getLogger(__name__)
+
 
 def rsetattr(obj, attr, val):
     pre, _, post = attr.rpartition(".")
@@ -99,6 +103,8 @@ def state_dict(
         ]
         if len(set(flat_keys)) == len(d.keys()):
             d = OrderedDict(list(zip(flat_keys, d.values())))
+        else:  # pragma: no cover
+            logger.warning("Unable to flatten state dict consistently.")
 
     return d
 
@@ -131,14 +137,20 @@ def load_state_dict(
 
     if flatten or flat_state_dict.flatten:
         long_keys = nn.Module.state_dict(module, keep_vars=True).keys()
+
         short2long = {
             ".".join(part for part in key.split(".") if not part.isdigit()): key
             for key in list(long_keys)
         }
-        state_dict = OrderedDict(
-            [(short2long[key], val) for key, val in state_dict.items()]
-        )
-
+        if len(short2long) == len(state_dict):
+            state_dict = OrderedDict(
+                [(short2long[key], val) for key, val in state_dict.items()]
+            )
+        else:  # pragma: no cover
+            logger.warning(
+                "Unable to deduce a consistent flattened state_dict. Loading as regular state_dict."
+            )
+    #
     return nn.Module.load_state_dict(module, state_dict, strict)
 
 
