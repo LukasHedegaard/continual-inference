@@ -10,11 +10,11 @@ class Reshape(CoModule, nn.Module):
 
     @overload
     def __init__(self, shape: Sequence[int]):
-        ...
+        ...  # pragma: no cover
 
     @overload
     def __init__(self, *shape: int):
-        ...
+        ...  # pragma: no cover
 
     def __init__(self, *shape):
         nn.Module.__init__(self)
@@ -28,7 +28,7 @@ class Reshape(CoModule, nn.Module):
             self.shape = shape[0]
 
     def extra_repr(self):
-        return f"{self.shape}"
+        return ", ".join(str(s) for s in self.shape)
 
     def forward(self, input: Tensor) -> Tensor:
         T = input.shape[2]

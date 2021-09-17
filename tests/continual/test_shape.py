@@ -10,6 +10,7 @@ def test_reshape():
     r2 = co.Reshape(2, 20)
 
     assert r1.shape == r2.shape
+    r1.__repr__() == "Reshape(2, 20)"
 
     # Temporal axis is always in position 2
     r1.forward(x).shape == (2, 20, 3)
