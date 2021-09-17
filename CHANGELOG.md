@@ -12,10 +12,11 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ### Added
 - Added `auto_shrink` to `BroadcastReduce` and `Parallel`.
 - Added `receptive_field` property.
-
+- Added `Reshape` property.
 
 ### Changed
 - Rename `forward_shrink` argument to `auto_shrink` in `Residual` and `Delay`.
+- Torch requirement to v1.9.
 
 ## Fixed
 - `padding` property in sequence.
