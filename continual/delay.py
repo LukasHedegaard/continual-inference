@@ -99,19 +99,22 @@ class Delay(CoModule, torch.nn.Module):
         return CoModule.forward_step(self, input, update_state)
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
+        first_run = self.get_state() is None
         if self._delay == 0:
             return input
 
         with temporary_parameter(self, "padding", (self.delay,)):
             output = CoModule.forward_steps(self, input, pad_end, update_state)
 
+        if self.auto_shrink and first_run:
+            output = output[:, :, self.delay :]
         return output
 
     def forward(self, input: Tensor) -> Tensor:
         # No delay during regular forward
         if not self.auto_shrink or self.delay == 0:
             return input
-        return input[:, :, self.delay // 2 : -self.delay // 2]
+        return input[:, :, self.delay : -self.delay]
 
     @property
     def receptive_field(self) -> int:

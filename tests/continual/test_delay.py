@@ -107,7 +107,12 @@ def test_repr():
 
 def test_auto_shrink():
     sample = torch.rand((2, 2, 5, 3))
-    delay = Delay(delay=2, auto_shrink=True)
+    delay = Delay(delay=1, auto_shrink=True)
 
+    # forward
     output = delay.forward(sample)
+    assert torch.equal(sample[:, :, 1:-1], output)
+
+    # forward_steps
+    output = delay.forward_steps(sample)
     assert torch.equal(sample[:, :, 1:-1], output)
