@@ -149,9 +149,6 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
-        auto_shrink (bool, optional):
-            Automatically shrink output in time to match the smallest branch output.
-            This can only be applied if auto_delay is also set. Defaults to False.
     """
 
     @overload
@@ -159,7 +156,6 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         self,
         *args: CoModule,
         auto_delay=True,
-        auto_shrink=False,
     ) -> None:
         ...  # pragma: no cover
 
@@ -168,7 +164,6 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         self,
         arg: "OrderedDict[str, CoModule]",
         auto_delay=True,
-        auto_shrink=False,
     ) -> None:
         ...  # pragma: no cover
 
@@ -176,7 +171,6 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         self,
         *args,
         auto_delay=True,
-        auto_shrink=False,
     ):
         nn.Module.__init__(self)
 
@@ -192,10 +186,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
                 (
                     key,
                     (
-                        Sequential(
-                            Delay(max_delay - module.delay, auto_shrink=auto_shrink),
-                            module,
-                        )
+                        Sequential(module, Delay(max_delay - module.delay))
                         if module.delay < max_delay
                         else module
                     ),
@@ -422,10 +413,6 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
-        auto_shrink (bool, optional):
-            Automatically shrink output in time to match the smallest branch output.
-            This can only be applied if auto_delay is also set. Defaults to False.
-
     """
 
     @overload
@@ -434,7 +421,6 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         *args: CoModule,
         reduce: ReductionFuncOrEnum = Reduction.SUM,
         auto_delay=True,
-        auto_shrink=False,
     ) -> None:
         ...  # pragma: no cover
 
@@ -444,7 +430,6 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         arg: "OrderedDict[str, CoModule]",
         reduce: ReductionFuncOrEnum = Reduction.SUM,
         auto_delay=True,
-        auto_shrink=False,
     ) -> None:
         ...  # pragma: no cover
 
@@ -453,7 +438,6 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         *args,
         reduce: ReductionFuncOrEnum = Reduction.SUM,
         auto_delay=True,
-        auto_shrink=False,
     ):
         nn.Module.__init__(self)
 
@@ -473,10 +457,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
                 (
                     key,
                     (
-                        Sequential(
-                            module,
-                            Delay(max_delay - module.delay, auto_shrink=auto_shrink),
-                        )
+                        Sequential(module, Delay(max_delay - module.delay))
                         if module.delay < max_delay
                         else module
                     ),
@@ -502,10 +483,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         )
 
         delays = set(m.delay for m in self)
-        assert (
-            len(delays) == 1
-        ), f"BroadcastReduce modules should have the same delay, but found delays {delays}."
-        self._delay = delays.pop()
+        self._delay = max(delays)
 
         receptive_fields = set(m.receptive_field for m in self)
         self._receptive_field = max(receptive_fields)
@@ -575,8 +553,20 @@ def Residual(
     module: CoModule,
     temporal_fill: PaddingMode = None,
     reduce: Reduction = "sum",
-    auto_shrink: bool = False,
-):
+    phantom_padding: bool = False,
+) -> BroadcastReduce:
+    """[summary]
+
+    Args:
+        module (CoModule): module to which a residual should be added.
+        temporal_fill (PaddingMode, optional): temporal fill type in delay. Defaults to None.
+        reduce (Reduction, optional): Reduction function. Defaults to "sum".
+        phantom_padding (bool, optional):
+            Set residual delay to operate as if equal padding was used for the . Defaults to False.
+
+    Returns:
+        BroadcastReduce: BroadcastReduce module with residual.
+    """
     assert num_from(getattr(module, "stride", 1)) == 1, (
         "The simple `Residual` only works for modules with temporal stride=1. "
         "Complex residuals can be achieved using `BroadcastReduce` or the `Broadcast`, `Parallel`, and `Reduce` modules."
@@ -584,9 +574,16 @@ def Residual(
     temporal_fill = temporal_fill or getattr(
         module, "temporal_fill", PaddingMode.REPLICATE.value
     )
+    equal_padding = module.receptive_field - num_from(module.padding) * 2 == 1
+    do_phantom_padding = phantom_padding and not equal_padding
+
+    delay = module.delay
+    if do_phantom_padding:
+        assert delay % 2 == 0, "Auto-shrink only works for even-number delays."
+        delay = delay // 2
     return BroadcastReduce(
         # Residual first yields easier broadcasting in reduce functions
-        Delay(module.delay, temporal_fill, auto_shrink),
+        Delay(delay, temporal_fill, auto_shrink=do_phantom_padding),
         module,
         reduce=reduce,
         auto_delay=False,

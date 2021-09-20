@@ -143,8 +143,7 @@ def test_concat_reduce():
 def test_residual():
     input = torch.arange(6, dtype=torch.float).reshape((1, 1, 6))
 
-    t_pad = 1
-    conv = nn.Conv1d(1, 1, kernel_size=3, padding=t_pad, bias=False)
+    conv = nn.Conv1d(1, 1, kernel_size=3, padding=1, bias=False)
     torch.nn.init.ones_(conv.weight)
 
     co_conv = co.Conv1d.build_from(conv)
@@ -168,6 +167,45 @@ def test_residual():
     # forward_step
     out_last = co_res.forward_step(input[:, :, -1])
     assert torch.allclose(out_last, target[:, :, -2])
+
+
+def test_residual_shrink():
+    input = torch.arange(6, dtype=torch.float).reshape((1, 1, 6))
+
+    conv = nn.Conv1d(1, 1, kernel_size=3, padding=0, bias=False)
+    torch.nn.init.ones_(conv.weight)
+
+    co_conv = co.Conv1d.build_from(conv)
+
+    co_res = co.Residual(co_conv, phantom_padding=True)
+
+    # Target behavior: Discard outputs from temporal padding
+    target = conv(input) + input[:, :, 1:-1]
+
+    # forward
+    out_manual_res = co_conv.forward(input) + input[:, :, 1:-1]
+    assert torch.allclose(out_manual_res, target)
+
+    out_res = co_res.forward(input)
+    assert torch.allclose(out_res, target)
+
+    # forward_step
+    output_step = []
+    for t in range(input.shape[2]):
+        y = co_res.forward_step(input[:, :, t])
+        if isinstance(y, torch.Tensor):
+            output_step.append(y)
+    output_step = torch.stack(output_step, dim=2)
+    assert torch.allclose(output_step, target)
+
+    # forward_steps
+    co_res.clean_state()
+    out_firsts = co_res.forward_steps(input[:, :, :-1], pad_end=False)
+    assert torch.allclose(out_firsts, target[:, :, :3])
+
+    # forward_step
+    out_last = co_res.forward_step(input[:, :, -1])
+    assert torch.allclose(out_last, target[:, :, -1])
 
 
 def test_broadcast_reduce():
@@ -304,6 +342,7 @@ def test_conditional_both_cases():
         return module.training
 
     mod = co.Conditional(is_training, co.Multiply(2), co.Multiply(3))
+    assert mod.receptive_field == 1
 
     mod.train()
     assert torch.equal(mod.forward(x), x * 2)
