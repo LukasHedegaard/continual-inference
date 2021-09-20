@@ -144,7 +144,11 @@ def load_state_dict(
         }
         if len(short2long) == len(state_dict):
             state_dict = OrderedDict(
-                [(short2long[key], val) for key, val in state_dict.items()]
+                [
+                    (short2long[key], val)
+                    for key, val in state_dict.items()
+                    if strict or key in short2long
+                ]
             )
         else:  # pragma: no cover
             logger.warning(
