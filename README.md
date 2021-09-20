@@ -52,6 +52,10 @@ last = conv.forward_step(example[:, :, 4])
 
 assert torch.allclose(output[:, :, : conv.delay], firsts)
 assert torch.allclose(output[:, :, conv.delay], last)
+
+# Temporal properties
+assert conv.receptive_field == 3
+assert conv.delay == 2
 ```
 
 See the "Advanced Examples" section for additional examples..
@@ -211,6 +215,7 @@ Below is a list of the modules and utilities included in the library:
 
 - Other
     - `co.Delay` - Pure delay module (e.g. needed in residuals).
+    - `co.Reshape` - Reshape non-temporal dimensions.
     - `co.Lambda` - Lambda module which wraps any function.
     - `co.Add` - Adds a constant value.
     - `co.Multiply` - Multiplies with a constant factor.
@@ -361,7 +366,7 @@ inception_module = co.BroadcastReduce(
     ),
     co.Sequential(
         norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
-        norm_relu(co.Conv3d(16, 32, kernel_size=3, padding=1), 32),
+        norm_relu(co.Conv3d(16, 32, kernel_size=5, padding=2), 32),
     ),
     co.Sequential(
         co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),

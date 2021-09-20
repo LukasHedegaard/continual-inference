@@ -1,8 +1,7 @@
 from collections import OrderedDict
 from enum import Enum
 from functools import reduce, wraps
-from numbers import Number
-from typing import Callable, List, Optional, Sequence, Tuple, TypeVar, Union, overload
+from typing import Callable, List, Optional, Sequence, TypeVar, Union, overload
 
 import torch
 from torch import Tensor, nn
@@ -10,7 +9,7 @@ from torch import Tensor, nn
 from .delay import Delay
 from .logging import getLogger
 from .module import CallMode, CoModule, PaddingMode, TensorPlaceholder
-from .utils import load_state_dict, state_dict, temporary_parameter
+from .utils import load_state_dict, num_from, state_dict, temporary_parameter
 
 logger = getLogger(__name__)
 
@@ -83,13 +82,6 @@ def nonempty(fn: ReductionFunc) -> ReductionFunc:
     return wrapped
 
 
-def num_from(tuple_or_num: Union[Number, Tuple[Number, ...]], dim=0) -> Number:
-    if isinstance(tuple_or_num, Number):
-        return tuple_or_num
-
-    return tuple_or_num[dim]
-
-
 class FlattenableStateDict:
     """Mixes in the ability to flatten state dicts.
     It is assumed that classes that inherit this modlue also inherit from nn.Module
@@ -98,7 +90,7 @@ class FlattenableStateDict:
     flatten_state_dict = False
 
     def __init__(self, *args, **kwargs):
-        ...
+        ...  # pragma: no cover
 
     def state_dict(
         self, destination=None, prefix="", keep_vars=False, flatten=False
@@ -148,10 +140,6 @@ class Broadcast(CoModule, nn.Module):
     def forward_steps(self, input: T, pad_end=False, update_state=True) -> List[T]:
         return self.forward(input)
 
-    @property
-    def delay(self) -> int:
-        return 0
-
 
 class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
     """Container for parallel modules.
@@ -198,7 +186,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
                 (
                     key,
                     (
-                        Sequential(Delay(max_delay - module.delay), module)
+                        Sequential(module, Delay(max_delay - module.delay))
                         if module.delay < max_delay
                         else module
                     ),
@@ -217,10 +205,12 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         if len(delays) != 1:  # pragma: no cover
             logger.warning(
                 f"It recommended that parallel modules have the same delay, but found delays {delays}. "
-                "Other temporal consistency cannot be guaranteed."
+                "Temporal consistency cannot be guaranteed."
             )
-
         self._delay = max(delays)
+
+        receptive_fields = set(m.receptive_field for m in self)
+        self._receptive_field = max(receptive_fields)
 
     def add_module(self, name: str, module: Optional["nn.Module"]) -> None:
         co_add_module(self, name, module)
@@ -247,6 +237,10 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
             with temporary_parameter(m, "call_mode", CallMode.FORWARD):
                 outs.append(m(inputs[i]))
         return outs
+
+    @property
+    def receptive_field(self) -> int:
+        return self._receptive_field
 
     @property
     def delay(self) -> int:
@@ -294,10 +288,6 @@ class Reduce(CoModule, nn.Module):
 
     def forward_steps(self, inputs: List[T], pad_end=False, update_state=True) -> T:
         return self.reduce(inputs)
-
-    @property
-    def delay(self) -> int:
-        return 0
 
 
 class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
@@ -369,19 +359,29 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         return input
 
     @property
-    def delay(self):
-        return sum(getattr(m, "delay", 0) for m in self)
+    def receptive_field(self) -> int:
+        reverse_modules = [m for m in self][::-1]
+        rf = reverse_modules[0].receptive_field
+        for m in reverse_modules[1:]:
+            s = num_from(getattr(m, "stride", 1))
+            rf = s * rf + m.receptive_field - s
+        return rf
 
     @property
     def stride(self) -> int:
         tot = 1
         for m in self:
-            tot *= num_from(getattr(m, "stride", 1))
+            tot *= num_from(m.stride)
         return tot
 
     @property
     def padding(self) -> int:
-        return max(num_from(getattr(m, "padding", 0)) for m in self)
+        # return sum(num_from(m.padding) for m in self)
+        m = [m for m in self]
+        p = num_from(m[0].padding)
+        for i in range(1, len(m)):
+            p += num_from(m[i].padding) * num_from(m[i - 1].stride)
+        return p
 
     @staticmethod
     def build_from(module: nn.Sequential) -> "Sequential":
@@ -413,7 +413,6 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
-
     """
 
     @overload
@@ -458,7 +457,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
                 (
                     key,
                     (
-                        Sequential(Delay(max_delay - module.delay), module)
+                        Sequential(module, Delay(max_delay - module.delay))
                         if module.delay < max_delay
                         else module
                     ),
@@ -484,10 +483,10 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         )
 
         delays = set(m.delay for m in self)
-        assert (
-            len(delays) == 1
-        ), f"BroadcastReduce modules should have the same delay, but found delays {delays}."
-        self._delay = delays.pop()
+        self._delay = max(delays)
+
+        receptive_fields = set(m.receptive_field for m in self)
+        self._receptive_field = max(receptive_fields)
 
     def add_module(self, name: str, module: Optional["nn.Module"]) -> None:
         co_add_module(self, name, module)
@@ -525,17 +524,9 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
 
         return self.reduce(outs)
 
-        # Modules may shrink the output map differently.
-        # If an "even" shrink is detected, attempt to automatically
-        # shrink the longest values to fit as if padding was used.
-        # assert all(
-        #     [(t - min_t) % 2 == 0 for t in ts]
-        # ), f"Found incompatible temporal output-shapes {ts}"
-        # shrink = [(t - min_t) // 2 for t in ts]
-
-        # return self.reduce(
-        #     [o[:, :, slice(s, -s or None)] for (s, o) in zip(shrink, outs)]
-        # )
+    @property
+    def receptive_field(self) -> int:
+        return self._receptive_field
 
     @property
     def delay(self) -> int:
@@ -562,8 +553,20 @@ def Residual(
     module: CoModule,
     temporal_fill: PaddingMode = None,
     reduce: Reduction = "sum",
-    forward_shrink: bool = False,
-):
+    phantom_padding: bool = False,
+) -> BroadcastReduce:
+    """[summary]
+
+    Args:
+        module (CoModule): module to which a residual should be added.
+        temporal_fill (PaddingMode, optional): temporal fill type in delay. Defaults to None.
+        reduce (Reduction, optional): Reduction function. Defaults to "sum".
+        phantom_padding (bool, optional):
+            Set residual delay to operate as if equal padding was used for the . Defaults to False.
+
+    Returns:
+        BroadcastReduce: BroadcastReduce module with residual.
+    """
     assert num_from(getattr(module, "stride", 1)) == 1, (
         "The simple `Residual` only works for modules with temporal stride=1. "
         "Complex residuals can be achieved using `BroadcastReduce` or the `Broadcast`, `Parallel`, and `Reduce` modules."
@@ -571,9 +574,16 @@ def Residual(
     temporal_fill = temporal_fill or getattr(
         module, "temporal_fill", PaddingMode.REPLICATE.value
     )
+    equal_padding = module.receptive_field - num_from(module.padding) * 2 == 1
+    do_phantom_padding = phantom_padding and not equal_padding
+
+    delay = module.delay
+    if do_phantom_padding:
+        assert delay % 2 == 0, "Auto-shrink only works for even-number delays."
+        delay = delay // 2
     return BroadcastReduce(
         # Residual first yields easier broadcasting in reduce functions
-        Delay(module.delay, temporal_fill, forward_shrink),
+        Delay(delay, temporal_fill, auto_shrink=do_phantom_padding),
         module,
         reduce=reduce,
         auto_delay=False,
@@ -601,6 +611,9 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
 
         # Ensure modules have the same delay
         self._delay = max(on_true.delay, getattr(on_false, "delay", 0))
+        self._receptive_field = max(
+            on_true.receptive_field, getattr(on_false, "receptive_field", 1)
+        )
 
         self.add_module(
             "0",
@@ -641,3 +654,7 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
     @property
     def delay(self) -> int:
         return self._delay
+
+    @property
+    def receptive_field(self) -> int:
+        return self._receptive_field

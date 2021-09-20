@@ -26,4 +26,5 @@ from .pooling import (  # noqa: F401
     MaxPool3d,
 )
 from .ptflops import _register_ptflops  # noqa: F401
+from .shape import Reshape  # noqa: F401
 from .utils import flat_state_dict, load_state_dict, state_dict  # noqa: F401

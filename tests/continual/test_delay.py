@@ -101,13 +101,18 @@ def test_repr():
     delay = Delay(delay=2)
     assert delay.__repr__() == "Delay(2)"
 
-    delay = Delay(delay=2, forward_shrink=True)
-    assert delay.__repr__() == "Delay(2, forward_shrink=True)"
+    delay = Delay(delay=2, auto_shrink=True)
+    assert delay.__repr__() == "Delay(2, auto_shrink=True)"
 
 
-def test_forward_shrink():
+def test_auto_shrink():
     sample = torch.rand((2, 2, 5, 3))
-    delay = Delay(delay=2, forward_shrink=True)
+    delay = Delay(delay=1, auto_shrink=True)
 
+    # forward
     output = delay.forward(sample)
-    assert torch.equal(sample[:, :, 2:-2], output)
+    assert torch.equal(sample[:, :, 1:-1], output)
+
+    # forward_steps
+    output = delay.forward_steps(sample)
+    assert torch.equal(sample[:, :, 1:-1], output)

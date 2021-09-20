@@ -22,20 +22,20 @@ class Delay(CoModule, torch.nn.Module):
         self,
         delay: int,
         temporal_fill: PaddingMode = "zeros",
-        forward_shrink: bool = False,
+        auto_shrink: bool = False,
     ):
         """Initialise Delay block
 
         Args:
             delay (int): the number of steps to delay an output.
             temporal_fill (PaddingMode, optional): Temporal state initialisation mode ("zeros" or "replicate"). Defaults to "zeros".
-            forward_shrink (int, optional): Whether to shrink the temporal dimension of the feature map during forward.
+            auto_shrink (int, optional): Whether to shrink the temporal dimension of the feature map during forward.
                 This is handy for residuals that are parallel to modules which reduce the number of temporal steps. Defaults to False.
         """
         assert delay >= 0
         assert temporal_fill in {"zeros", "replicate"}
         self._delay = delay
-        self.forward_shrink = forward_shrink
+        self.auto_shrink = auto_shrink
         self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
             temporal_fill
         ]
@@ -99,24 +99,35 @@ class Delay(CoModule, torch.nn.Module):
         return CoModule.forward_step(self, input, update_state)
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
+        first_run = self.get_state() is None
         if self._delay == 0:
             return input
 
         with temporary_parameter(self, "padding", (self.delay,)):
             output = CoModule.forward_steps(self, input, pad_end, update_state)
 
+        if self.auto_shrink and first_run:
+            output = output[:, :, self.delay :]
         return output
 
     def forward(self, input: Tensor) -> Tensor:
         # No delay during regular forward
-        if not self.forward_shrink or self.delay == 0:
+        if not self.auto_shrink or self.delay == 0:
             return input
         return input[:, :, self.delay : -self.delay]
+
+    @property
+    def receptive_field(self) -> int:
+        return self.delay + 1
 
     @property
     def delay(self) -> int:
         return self._delay
 
+    @property
+    def stride(self) -> int:
+        return 1
+
     def extra_repr(self):
-        shrink_str = ", forward_shrink=True" if self.forward_shrink else ""
+        shrink_str = ", auto_shrink=True" if self.auto_shrink else ""
         return f"{self.delay}" + shrink_str

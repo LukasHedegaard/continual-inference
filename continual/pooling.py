@@ -222,8 +222,8 @@ class _PoolNd(CoModule, nn.Module):
         return CoModule.forward_steps(self, input, pad_end, update_state)
 
     @property
-    def delay(self):
-        return self.dilation[0] * (self.kernel_size[0] - 1)
+    def receptive_field(self) -> int:
+        return self.dilation[0] * self.kernel_size[0]
 
 
 class AvgPool1d(nn.AvgPool1d, _PoolNd):

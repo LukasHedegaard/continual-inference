@@ -13,6 +13,8 @@ from torch.nn.modules.module import (
     _global_forward_pre_hooks,
 )
 
+from continual.utils import num_from
+
 
 class TensorPlaceholder:
     shape: Tuple[int]
@@ -112,10 +114,18 @@ class CoModule(ABC):
                 getattr(cls, fn, None)
             ), f"{cls} should implement a `{fn}` function which performs {description} to satisfy the CoModule interface."
 
-        assert hasattr(cls, "delay") and type(cls.delay) in {
-            int,
-            property,
-        }, f"{cls} should implement a `delay` property to satisfy the CoModule interface."
+        for prop in {"delay", "receptive_field"}:
+            assert type(getattr(cls, prop, None)) in {
+                int,
+                property,
+            }, f"{cls} should implement a `{prop}` property to satisfy the CoModule interface."
+
+        for prop in {"stride", "padding"}:
+            assert type(getattr(cls, prop, None)) in {
+                int,
+                property,
+                tuple,
+            }, f"{cls} should implement a `{prop}` property to satisfy the CoModule interface."
 
     @staticmethod
     def is_valid(module):
@@ -145,7 +155,14 @@ class CoModule(ABC):
         """Clean model state"""
         ...  # pragma: no cover
 
+    receptive_field: int = 1
+    stride: int = 1
+    padding: int = 0
     make_padding = torch.zeros_like
+
+    @property
+    def delay(self) -> int:
+        return self.receptive_field - 1 - num_from(self.padding)
 
     def forward_step(
         self, input: Tensor, update_state=True

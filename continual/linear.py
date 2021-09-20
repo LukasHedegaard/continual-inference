@@ -73,10 +73,6 @@ class Linear(CoModule, nn.Linear):
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         return self.forward(input)
 
-    @property
-    def delay(self) -> int:
-        return 0
-
     @staticmethod
     def build_from(
         module: nn.Linear,

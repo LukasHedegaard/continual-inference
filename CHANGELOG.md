@@ -10,6 +10,26 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 
 
+## [0.14.0]
+### Added
+- Added `phantom_padding` to `Residual`.
+- Added `receptive_field` property.
+- Added `Reshape` module.
+
+### Changed
+- Rename `forward_shrink` argument to `auto_shrink` in `Delay`.
+- Torch requirement to v1.9.
+- Replace `Lambda` unsqueeze_step with takes_time and new default to False.
+
+## Fixed
+- `padding` property in sequence.
+- `delay` property in sequence.
+- `strict` mode in `load_state_dict`.
+
+## Removed
+- Assertion error in `BroadcastReduce` for modules with different delays.
+
+
 ## [0.13.0]
 ### Added
 - Add `forward_shrink` option to `Delay` and `Residual`.

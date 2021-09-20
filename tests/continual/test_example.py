@@ -26,6 +26,10 @@ def test_readme_example():
     assert torch.allclose(nn_output[:, :, : co_conv.delay], firsts)
     assert torch.allclose(nn_output[:, :, co_conv.delay], last)
 
+    # Temporal properties
+    assert co_conv.receptive_field == 3
+    assert co_conv.delay == 2
+
 
 def test_residual():
     x = torch.randn((1, 2, 5, 3, 3))
@@ -85,7 +89,7 @@ def test_inception_module():
         ),
         co.Sequential(
             norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
-            norm_relu(co.Conv3d(16, 32, kernel_size=3, padding=1), 32),
+            norm_relu(co.Conv3d(16, 32, kernel_size=5, padding=2), 32),
         ),
         co.Sequential(
             co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
