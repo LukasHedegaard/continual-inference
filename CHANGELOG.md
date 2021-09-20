@@ -9,6 +9,8 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+
+## [0.14.0]
 ### Added
 - Added `phantom_padding` to `Residual`.
 - Added `receptive_field` property.
