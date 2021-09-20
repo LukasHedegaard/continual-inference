@@ -376,11 +376,12 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
 
     @property
     def padding(self) -> int:
-        # return sum(num_from(m.padding) for m in self)
         m = [m for m in self]
         p = num_from(m[0].padding)
+        s = num_from(m[0].stride)
         for i in range(1, len(m)):
-            p += num_from(m[i].padding) * num_from(m[i - 1].stride)
+            p += num_from(m[i].padding) * s
+            s = s * num_from(m[i].stride)
         return p
 
     @staticmethod

@@ -10,6 +10,10 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 
 
+## Fixed
+- Sequential `padding` computation.
+
+
 ## [0.14.0]
 ### Added
 - Added `phantom_padding` to `Residual`.

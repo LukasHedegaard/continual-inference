@@ -1,3 +1,4 @@
+import math
 from collections import OrderedDict
 
 import torch
@@ -65,6 +66,51 @@ def test_sequential():
     coseq.clean_state()
     co_output_firsts = coseq.forward_steps(long_example_clip[:, :, :-1])
     assert torch.allclose(co_output_firsts, output[:, :, :-1])
+
+
+def test_sequential_receptive_field():
+    sample = torch.randn((1, 1, 100))
+
+    # No padding, stride 1
+    net = co.Sequential(*[co.Conv1d(1, 1, 9) for _ in range(10)])
+    assert net.receptive_field == 9 + 8 * 9
+
+    output = net.forward(sample)
+    assert output.shape[2] == 100 - (net.receptive_field - 1)
+
+    # Padding, stride 1
+    net = co.Sequential(*[co.Conv1d(1, 1, 9, padding=4) for _ in range(10)])
+    assert net.receptive_field == 9 + 8 * 9
+
+    output = net.forward(sample)
+    assert output.shape[2] == 100 - (net.receptive_field - 1) + 2 * net.padding
+
+    # No padding, mixed stride
+    net = co.Sequential(
+        co.Conv1d(1, 1, 3, padding=0, stride=1),
+        co.Conv1d(1, 1, 3, padding=0, stride=2),
+        co.Conv1d(1, 1, 3, padding=0, stride=3),
+        co.Conv1d(1, 1, 3, padding=0, stride=1),
+    )
+    assert net.receptive_field == 21
+
+    output = net.forward(sample)
+    assert output.shape[2] == math.ceil((100 - (net.receptive_field - 1)) / net.stride)
+
+    # Padding, mixed stride
+    net = co.Sequential(
+        co.Conv1d(1, 1, 3, padding=1, stride=1),
+        co.Conv1d(1, 1, 3, padding=1, stride=2),
+        co.Conv1d(1, 1, 3, padding=1, stride=3),
+        co.Conv1d(1, 1, 3, padding=1, stride=1),
+    )
+    assert net.receptive_field == 21
+
+    output = net.forward(sample)
+    assert net.padding == 1 + 1 + 2 + 2 * 3
+    assert output.shape[2] == math.ceil(
+        (100 - (net.receptive_field - 1) + 2 * net.padding) / net.stride
+    )
 
 
 def test_sequential_with_TensorPlaceholder():
