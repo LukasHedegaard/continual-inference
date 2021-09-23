@@ -389,6 +389,10 @@ def test_conditional_both_cases():
 
     mod = co.Conditional(is_training, co.Multiply(2), co.Multiply(3))
     assert mod.receptive_field == 1
+    assert (
+        mod.__repr__()
+        == """Conditional(\n  predicate=is_training\n  (0): Lambda(_multiply, takes_time=True)\n  (1): Lambda(_multiply, takes_time=True)\n)"""
+    )
 
     mod.train()
     assert torch.equal(mod.forward(x), x * 2)
@@ -413,6 +417,18 @@ def test_conditional_delay():
     assert mod.delay == 3
     assert mod._modules["0"].delay == 3
     assert mod._modules["1"].delay == 3
+
+
+def test_condition_torch_modules():
+    mod = co.Conditional(
+        lambda a, b: True,
+        torch.nn.Sigmoid(),
+        torch.nn.Softmax(),
+    )
+    assert (
+        mod.__repr__()
+        == "Conditional(\n  predicate=lambda a, b: True\n  (0): Sigmoid()\n  (1): Softmax(dim=None)\n)"
+    )
 
 
 def test_broadcast():

@@ -9,9 +9,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+## Added
+- `Conditional` predicate print in `__repr__`.
 
 ## Fixed
 - Sequential `padding` computation.
+- `Lambda` `__repr__` function prints.
 
 
 ## [0.14.0]

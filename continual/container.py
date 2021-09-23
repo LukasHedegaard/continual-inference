@@ -9,7 +9,13 @@ from torch import Tensor, nn
 from .delay import Delay
 from .logging import getLogger
 from .module import CallMode, CoModule, PaddingMode, TensorPlaceholder
-from .utils import load_state_dict, num_from, state_dict, temporary_parameter
+from .utils import (
+    function_repr,
+    load_state_dict,
+    num_from,
+    state_dict,
+    temporary_parameter,
+)
 
 logger = getLogger(__name__)
 
@@ -600,11 +606,13 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
         on_true: CoModule,
         on_false: CoModule = None,
     ):
+        from continual.convert import continual  # Break cyclical import
+
         assert callable(predicate), "The pased function should be callable."
-        assert isinstance(on_true, CoModule), "on_true should be a CoModule."
-        assert (
-            isinstance(on_false, CoModule) or on_false is None
-        ), "on_false should be a CoModule or None."
+        if not isinstance(on_true, CoModule):
+            on_true = continual(on_true)
+        if not (isinstance(on_false, CoModule) or on_false is None):
+            on_false = continual(on_false)
 
         nn.Module.__init__(self)
 
@@ -659,3 +667,6 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
     @property
     def receptive_field(self) -> int:
         return self._receptive_field
+
+    def extra_repr(self):
+        return f"predicate={function_repr(self.predicate)}"

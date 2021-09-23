@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from contextlib import contextmanager
-from functools import reduce
+from functools import partial, reduce
+from inspect import getsource
 from numbers import Number
 from typing import Tuple, Union
 
@@ -163,3 +164,29 @@ def num_from(tuple_or_num: Union[Number, Tuple[Number, ...]], dim=0) -> Number:
         return tuple_or_num
 
     return tuple_or_num[dim]
+
+
+def function_repr(fn):
+    if isinstance(fn, partial):
+        fn = fn.func
+    s = fn.__name__
+    if s == "<lambda>":
+        s = getsource(fn)
+        s = s[s.find("lambda") :]
+
+        # first ':'
+        i = s.find(":", 0)
+
+        stack = 0
+        for c in s[i + 1 :]:
+            i += 1
+            if c == "(":
+                stack += 1
+            elif c == ")":
+                stack -= 1
+            if (stack == 0 and c == ",") or (stack == -1 and c == ")"):
+                break
+
+        s = s[:i]
+        s = s.rstrip()
+    return s
