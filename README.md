@@ -9,6 +9,9 @@ __PyTorch building blocks for Continual Inference Networks__
   <a href="https://badge.fury.io/py/continual-inference">
     <img src="https://badge.fury.io/py/continual-inference.svg" height="20" >
   </a>
+  <a href="https://pepy.tech/project/continual-inference">
+    <img src="https://pepy.tech/badge/continual-inference/month" height="20">
+  </a>
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG"/>
   </a>
@@ -23,6 +26,7 @@ __PyTorch building blocks for Continual Inference Networks__
   </a>
   <sup>*</sup>
 </div>
+
 
 ###### \*We match PyTorch interfaces exacly. This reduces the codefactor to "A-" due to method arguments named "input".
 
