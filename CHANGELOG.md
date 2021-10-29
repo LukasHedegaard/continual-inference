@@ -9,6 +9,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.15.0]
 ## Added
 - `ParallelDispatch` module.
 - `Conditional` predicate print in `__repr__`.
