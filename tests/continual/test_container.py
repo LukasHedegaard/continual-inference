@@ -1,6 +1,7 @@
 import math
 from collections import OrderedDict
 
+import pytest
 import torch
 from torch import nn
 
@@ -514,3 +515,22 @@ def test_parallel_sequential():
     o2 = mod2.forward(x)
 
     assert torch.equal(o1, o2)
+
+
+def test_parallel_dispatch():
+    with pytest.raises(AssertionError):
+        co.ParallelDispatch([1.0, "nah"])
+
+    inputs = [10, 11, 12]
+
+    mapping = [2, 0, [0, 2], 2]
+
+    module = co.ParallelDispatch(mapping)
+
+    outputs1 = module.forward(inputs)
+    outputs2 = module.forward_step(inputs)
+    outputs3 = module.forward_steps(inputs)
+
+    assert outputs1 == [12, 10, [10, 12], 12]
+    assert outputs2 == [12, 10, [10, 12], 12]
+    assert outputs3 == [12, 10, [10, 12], 12]

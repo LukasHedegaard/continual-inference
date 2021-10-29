@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, abc
 from enum import Enum
 from functools import reduce, wraps
 from typing import Callable, List, Optional, Sequence, TypeVar, Union, overload
@@ -264,6 +264,62 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         for m in self:
             if hasattr(m, "clean_state"):
                 m.clean_state()
+
+
+class ParallelDispatch(CoModule, nn.Module):
+    """Parallel dispatch of many input streams to many output streams"""
+
+    def __init__(
+        self,
+        dispatch_mapping: Sequence[Union[int, Sequence[int]]],
+    ):
+        """Initialise ParallelDispatch
+
+        Args:
+            dispatch_mapping (Sequence[Union[int, Sequence[int]]]):
+                input-to-output mapping, where the integers signify the input stream ordering
+                and the positions denote corresponding output ordering.
+                Examples:
+                    [1,0] to shufle order of streams.
+                    [0,1,1] to copy stream 1 onto a new stream.
+                    [[0,1],2] to collect stream 0 and 1 while keeping stream 2 separate.
+
+        """
+        nn.Module.__init__(self)
+
+        def is_int_or_valid_list(x):
+            if isinstance(x, int):
+                return True
+            elif isinstance(x, abc.Sequence):
+                return all(is_int_or_valid_list(z) for z in x)
+            else:
+                return False
+
+        assert isinstance(dispatch_mapping, abc.Sequence) and is_int_or_valid_list(
+            dispatch_mapping
+        ), "The dispatch_mapping should be of type Sequence[Union[StreamId, Sequence[StreamId]]]"
+
+        self.dispatch_mapping = dispatch_mapping
+
+    def forward(self, input: List[T]) -> List[Union[T, List[T]]]:
+        def dispatch(mapping):
+            nonlocal input
+            if isinstance(mapping, abc.Sequence):
+                return [dispatch(m) for m in mapping]
+            else:
+                return input[mapping]
+
+        return dispatch(self.dispatch_mapping)
+
+    def forward_step(
+        self, input: List[T], update_state=True
+    ) -> List[Union[T, List[T]]]:
+        return self.forward(input)
+
+    def forward_steps(
+        self, input: List[T], pad_end=False, update_state=True
+    ) -> List[Union[T, List[T]]]:
+        return self.forward(input)
 
 
 class Reduce(CoModule, nn.Module):

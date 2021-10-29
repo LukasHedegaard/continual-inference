@@ -212,6 +212,7 @@ Below is a list of the modules and utilities included in the library:
     - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
     - `co.Broadcast` - Broadcast one stream to multiple.
     - `co.Parallel` - Parallel wrapper for modules. Like `co.Sequential`, this module performs automatic conersion of torch.nn modules.
+    - `co.ParallelDispatch` - Parallel dispatch of many input streams to many output streams.
     - `co.Reduce` - Reduce multiple input streams to one.
     - `co.Residual` - Residual wrapper for modules.
     - `co.BroadcastReduce` - BroadcastReduce wrapper for modules.
