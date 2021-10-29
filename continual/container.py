@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, abc
 from enum import Enum
 from functools import reduce, wraps
 from typing import Callable, List, Optional, Sequence, TypeVar, Union, overload
@@ -9,7 +9,13 @@ from torch import Tensor, nn
 from .delay import Delay
 from .logging import getLogger
 from .module import CallMode, CoModule, PaddingMode, TensorPlaceholder
-from .utils import load_state_dict, num_from, state_dict, temporary_parameter
+from .utils import (
+    function_repr,
+    load_state_dict,
+    num_from,
+    state_dict,
+    temporary_parameter,
+)
 
 logger = getLogger(__name__)
 
@@ -260,6 +266,62 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
                 m.clean_state()
 
 
+class ParallelDispatch(CoModule, nn.Module):
+    """Parallel dispatch of many input streams to many output streams"""
+
+    def __init__(
+        self,
+        dispatch_mapping: Sequence[Union[int, Sequence[int]]],
+    ):
+        """Initialise ParallelDispatch
+
+        Args:
+            dispatch_mapping (Sequence[Union[int, Sequence[int]]]):
+                input-to-output mapping, where the integers signify the input stream ordering
+                and the positions denote corresponding output ordering.
+                Examples:
+                    [1,0] to shufle order of streams.
+                    [0,1,1] to copy stream 1 onto a new stream.
+                    [[0,1],2] to collect stream 0 and 1 while keeping stream 2 separate.
+
+        """
+        nn.Module.__init__(self)
+
+        def is_int_or_valid_list(x):
+            if isinstance(x, int):
+                return True
+            elif isinstance(x, abc.Sequence):
+                return all(is_int_or_valid_list(z) for z in x)
+            else:
+                return False
+
+        assert isinstance(dispatch_mapping, abc.Sequence) and is_int_or_valid_list(
+            dispatch_mapping
+        ), "The dispatch_mapping should be of type Sequence[Union[StreamId, Sequence[StreamId]]]"
+
+        self.dispatch_mapping = dispatch_mapping
+
+    def forward(self, input: List[T]) -> List[Union[T, List[T]]]:
+        def dispatch(mapping):
+            nonlocal input
+            if isinstance(mapping, abc.Sequence):
+                return [dispatch(m) for m in mapping]
+            else:
+                return input[mapping]
+
+        return dispatch(self.dispatch_mapping)
+
+    def forward_step(
+        self, input: List[T], update_state=True
+    ) -> List[Union[T, List[T]]]:
+        return self.forward(input)
+
+    def forward_steps(
+        self, input: List[T], pad_end=False, update_state=True
+    ) -> List[Union[T, List[T]]]:
+        return self.forward(input)
+
+
 class Reduce(CoModule, nn.Module):
     """Reduce multiple input streams to a single output"""
 
@@ -376,11 +438,12 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
 
     @property
     def padding(self) -> int:
-        # return sum(num_from(m.padding) for m in self)
         m = [m for m in self]
         p = num_from(m[0].padding)
+        s = num_from(m[0].stride)
         for i in range(1, len(m)):
-            p += num_from(m[i].padding) * num_from(m[i - 1].stride)
+            p += num_from(m[i].padding) * s
+            s = s * num_from(m[i].stride)
         return p
 
     @staticmethod
@@ -599,11 +662,13 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
         on_true: CoModule,
         on_false: CoModule = None,
     ):
+        from continual.convert import continual  # Break cyclical import
+
         assert callable(predicate), "The pased function should be callable."
-        assert isinstance(on_true, CoModule), "on_true should be a CoModule."
-        assert (
-            isinstance(on_false, CoModule) or on_false is None
-        ), "on_false should be a CoModule or None."
+        if not isinstance(on_true, CoModule):
+            on_true = continual(on_true)
+        if not (isinstance(on_false, CoModule) or on_false is None):
+            on_false = continual(on_false)
 
         nn.Module.__init__(self)
 
@@ -658,3 +723,6 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
     @property
     def receptive_field(self) -> int:
         return self._receptive_field
+
+    def extra_repr(self):
+        return f"predicate={function_repr(self.predicate)}"

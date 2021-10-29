@@ -66,12 +66,12 @@ def test_lambda():
     assert torch.equal(target, mod(x))
 
     # takes_time = False
-    mod = Lambda.build_from(lambda x: torch.ones_like(x) * 42, takes_time=False)
+    mod = Lambda.build_from(lambda x: torch.ones_like(x) * 42, takes_time=True)
     assert torch.equal(target, mod(x))
 
     # __repr__
     assert (
-        mod.__repr__() == "Lambda(lambda x: torch.ones_like(x) * 42, takes_time=False)"
+        mod.__repr__() == "Lambda(lambda x: torch.ones_like(x) * 42, takes_time=True)"
     )
 
     modules = []

@@ -9,6 +9,9 @@ __PyTorch building blocks for Continual Inference Networks__
   <a href="https://badge.fury.io/py/continual-inference">
     <img src="https://badge.fury.io/py/continual-inference.svg" height="20" >
   </a>
+  <a href="https://pepy.tech/project/continual-inference">
+    <img src="https://pepy.tech/badge/continual-inference/month" height="20">
+  </a>
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG"/>
   </a>
@@ -23,6 +26,7 @@ __PyTorch building blocks for Continual Inference Networks__
   </a>
   <sup>*</sup>
 </div>
+
 
 ###### \*We match PyTorch interfaces exacly. This reduces the codefactor to "A-" due to method arguments named "input".
 
@@ -208,6 +212,7 @@ Below is a list of the modules and utilities included in the library:
     - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
     - `co.Broadcast` - Broadcast one stream to multiple.
     - `co.Parallel` - Parallel wrapper for modules. Like `co.Sequential`, this module performs automatic conersion of torch.nn modules.
+    - `co.ParallelDispatch` - Parallel dispatch of many input streams to many output streams.
     - `co.Reduce` - Reduce multiple input streams to one.
     - `co.Residual` - Residual wrapper for modules.
     - `co.BroadcastReduce` - BroadcastReduce wrapper for modules.

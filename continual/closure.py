@@ -1,11 +1,11 @@
 from functools import partial
-from inspect import getsource
 from typing import Callable, Union
 
 import torch
 from torch import Tensor, nn
 
 from .module import CoModule
+from .utils import function_repr
 
 
 class Lambda(CoModule, nn.Module):
@@ -25,30 +25,11 @@ class Lambda(CoModule, nn.Module):
         self.takes_time = takes_time
 
     def __repr__(self) -> str:
-        s = self.fn.__name__
-        if s == "<lambda>":
-            s = getsource(self.fn)
-            s = s[s.find("lambda") :]
-
-            take_right_parens = 0
-            stack = 0
-            for c in s:
-                if c == "(":
-                    stack += 1
-                    take_right_parens += 1
-                elif c == ")":
-                    stack -= 1
-                if stack == -1:
-                    break
-
-            if take_right_parens > 0:
-                i = -1
-                for _ in range(take_right_parens + 1):
-                    i = s.find(")", i + 1)
-                s = s[:i]
-
-            s = s.rstrip()
-        return f"Lambda({s})"
+        s = f"Lambda({function_repr(self.fn)}"
+        if self.takes_time:
+            s += ", takes_time=True"
+        s += ")"
+        return s
 
     def forward(self, input: Tensor) -> Tensor:
         if self.takes_time:

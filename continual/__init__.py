@@ -4,6 +4,7 @@ from .container import (  # noqa: F401
     BroadcastReduce,
     Conditional,
     Parallel,
+    ParallelDispatch,
     Reduce,
     Residual,
     Sequential,

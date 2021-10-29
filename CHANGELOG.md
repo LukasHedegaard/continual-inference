@@ -10,6 +10,16 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 
 
+## [0.15.0]
+### Added
+- `ParallelDispatch` module.
+- `Conditional` predicate print in `__repr__`.
+
+### Fixed
+- Sequential `padding` computation.
+- `Lambda` `__repr__` function prints.
+
+
 ## [0.14.0]
 ### Added
 - Added `phantom_padding` to `Residual`.
@@ -21,12 +31,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Torch requirement to v1.9.
 - Replace `Lambda` unsqueeze_step with takes_time and new default to False.
 
-## Fixed
+### Fixed
 - `padding` property in sequence.
 - `delay` property in sequence.
 - `strict` mode in `load_state_dict`.
 
-## Removed
+### Removed
 - Assertion error in `BroadcastReduce` for modules with different delays.
 
 

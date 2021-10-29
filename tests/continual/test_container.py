@@ -1,5 +1,7 @@
+import math
 from collections import OrderedDict
 
+import pytest
 import torch
 from torch import nn
 
@@ -65,6 +67,51 @@ def test_sequential():
     coseq.clean_state()
     co_output_firsts = coseq.forward_steps(long_example_clip[:, :, :-1])
     assert torch.allclose(co_output_firsts, output[:, :, :-1])
+
+
+def test_sequential_receptive_field():
+    sample = torch.randn((1, 1, 100))
+
+    # No padding, stride 1
+    net = co.Sequential(*[co.Conv1d(1, 1, 9) for _ in range(10)])
+    assert net.receptive_field == 9 + 8 * 9
+
+    output = net.forward(sample)
+    assert output.shape[2] == 100 - (net.receptive_field - 1)
+
+    # Padding, stride 1
+    net = co.Sequential(*[co.Conv1d(1, 1, 9, padding=4) for _ in range(10)])
+    assert net.receptive_field == 9 + 8 * 9
+
+    output = net.forward(sample)
+    assert output.shape[2] == 100 - (net.receptive_field - 1) + 2 * net.padding
+
+    # No padding, mixed stride
+    net = co.Sequential(
+        co.Conv1d(1, 1, 3, padding=0, stride=1),
+        co.Conv1d(1, 1, 3, padding=0, stride=2),
+        co.Conv1d(1, 1, 3, padding=0, stride=3),
+        co.Conv1d(1, 1, 3, padding=0, stride=1),
+    )
+    assert net.receptive_field == 21
+
+    output = net.forward(sample)
+    assert output.shape[2] == math.ceil((100 - (net.receptive_field - 1)) / net.stride)
+
+    # Padding, mixed stride
+    net = co.Sequential(
+        co.Conv1d(1, 1, 3, padding=1, stride=1),
+        co.Conv1d(1, 1, 3, padding=1, stride=2),
+        co.Conv1d(1, 1, 3, padding=1, stride=3),
+        co.Conv1d(1, 1, 3, padding=1, stride=1),
+    )
+    assert net.receptive_field == 21
+
+    output = net.forward(sample)
+    assert net.padding == 1 + 1 + 2 + 2 * 3
+    assert output.shape[2] == math.ceil(
+        (100 - (net.receptive_field - 1) + 2 * net.padding) / net.stride
+    )
 
 
 def test_sequential_with_TensorPlaceholder():
@@ -343,6 +390,10 @@ def test_conditional_both_cases():
 
     mod = co.Conditional(is_training, co.Multiply(2), co.Multiply(3))
     assert mod.receptive_field == 1
+    assert (
+        mod.__repr__()
+        == """Conditional(\n  predicate=is_training\n  (0): Lambda(_multiply, takes_time=True)\n  (1): Lambda(_multiply, takes_time=True)\n)"""
+    )
 
     mod.train()
     assert torch.equal(mod.forward(x), x * 2)
@@ -367,6 +418,18 @@ def test_conditional_delay():
     assert mod.delay == 3
     assert mod._modules["0"].delay == 3
     assert mod._modules["1"].delay == 3
+
+
+def test_condition_torch_modules():
+    mod = co.Conditional(
+        lambda a, b: True,
+        torch.nn.Sigmoid(),
+        torch.nn.Softmax(),
+    )
+    assert (
+        mod.__repr__()
+        == "Conditional(\n  predicate=lambda a, b: True\n  (0): Sigmoid()\n  (1): Softmax(dim=None)\n)"
+    )
 
 
 def test_broadcast():
@@ -452,3 +515,22 @@ def test_parallel_sequential():
     o2 = mod2.forward(x)
 
     assert torch.equal(o1, o2)
+
+
+def test_parallel_dispatch():
+    with pytest.raises(AssertionError):
+        co.ParallelDispatch([1.0, "nah"])
+
+    inputs = [10, 11, 12]
+
+    mapping = [2, 0, [0, 2], 2]
+
+    module = co.ParallelDispatch(mapping)
+
+    outputs1 = module.forward(inputs)
+    outputs2 = module.forward_step(inputs)
+    outputs3 = module.forward_steps(inputs)
+
+    assert outputs1 == [12, 10, [10, 12], 12]
+    assert outputs2 == [12, 10, [10, 12], 12]
+    assert outputs3 == [12, 10, [10, 12], 12]
