@@ -22,6 +22,8 @@ class Lambda(CoModule, nn.Module):
         nn.Module.__init__(self)
         assert callable(fn), "The pased function should be callable."
         self.fn = fn
+        if not hasattr(self.fn, "__name__") and hasattr(self.fn, "__repr__"):
+            self.fn.__name__ = self.fn.__repr__()
         self.takes_time = takes_time
 
     def __repr__(self) -> str:

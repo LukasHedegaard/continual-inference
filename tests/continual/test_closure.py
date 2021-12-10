@@ -65,6 +65,10 @@ def test_lambda():
     mod = Lambda.build_from(lambda x: torch.ones_like(x) * 42)
     assert torch.equal(target, mod(x))
 
+    # Functor
+    functor = torch.nn.Sigmoid()
+    assert torch.equal(functor(x), Lambda(functor)(x))
+
     # takes_time = False
     mod = Lambda.build_from(lambda x: torch.ones_like(x) * 42, takes_time=True)
     assert torch.equal(target, mod(x))
