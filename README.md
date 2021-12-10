@@ -266,10 +266,11 @@ In addition, we support interoperability with a wide range of modules from `torc
     - `nn.Softmax2d`
     - `nn.LogSoftmax`
 
-- Batch Normalisation
+- Normalisation
     - `nn.BatchNorm1d`
     - `nn.BatchNorm2d`
     - `nn.BatchNorm3d`
+    - `nn.LayerNorm`
 
 - Dropout
     - `nn.Dropout`
