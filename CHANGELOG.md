@@ -9,6 +9,10 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.15.1]
+### Added
+- `nn.LayerNorm` to automatically convertible modules
+
 
 ## [0.15.0]
 ### Added
@@ -18,6 +22,9 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ### Fixed
 - Sequential `padding` computation.
 - `Lambda` `__repr__` function prints.
+
+### Removed
+- CI testing for python v3.6.
 
 
 ## [0.14.0]
