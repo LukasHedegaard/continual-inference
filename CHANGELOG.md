@@ -9,6 +9,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.15.1]
 ### Added
 - `nn.LayerNorm` to automatically convertible modules
 
