@@ -9,6 +9,10 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.15.3]
+### Added
+- Call-mode specific functions in `co.Lambda`
+
 
 ## [0.15.2]
 ### Added
