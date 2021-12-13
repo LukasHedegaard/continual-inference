@@ -167,6 +167,12 @@ def num_from(tuple_or_num: Union[Number, Tuple[Number, ...]], dim=0) -> Number:
 
 
 def function_repr(fn):
+    if fn is None:
+        return ""
+
+    if isinstance(fn, nn.Module):
+        fn.__name__ = fn.__repr__()
+
     if isinstance(fn, partial):
         fn = fn.func
     s = fn.__name__

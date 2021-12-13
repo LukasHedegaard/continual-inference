@@ -63,13 +63,12 @@ def test_lambda():
 
     # Anonymous
     mod = Lambda.build_from(lambda x: torch.ones_like(x) * 42)
-    assert torch.equal(target, mod(x))
+    assert torch.equal(target, mod.forward_steps(x))
 
     # Functor
     functor = torch.nn.Sigmoid()
     assert torch.equal(functor(x), Lambda(functor)(x))
 
-    # takes_time = False
     mod = Lambda.build_from(lambda x: torch.ones_like(x) * 42, takes_time=True)
     assert torch.equal(target, mod(x))
 
@@ -81,6 +80,27 @@ def test_lambda():
     modules = []
     modules.append(("view", Lambda(lambda x: x.view(x.shape[0], -1))))
     assert modules[0][1].__repr__() == "Lambda(lambda x: x.view(x.shape[0], -1))"
+
+
+def test_lambda_call_specific_fns():
+    x = torch.ones((1, 1, 2, 2))
+
+    mod = Lambda(
+        fn=lambda x: x + 1,
+        forward_only_fn=lambda x: x + 2,
+        forward_step_only_fn=lambda x: x + 3,
+        forward_steps_only_fn=lambda x: x + 4,
+    )
+
+    assert torch.equal(x + 2, mod.forward(x))
+    assert torch.equal(x.squeeze(2) + 3, mod.forward_step(x))
+    assert torch.equal(x + 4, mod.forward_steps(x))
+
+    # __repr__
+    assert (
+        mod.__repr__()
+        == "Lambda(lambda x: x + 1, lambda x: x + 2, lambda x: x + 3, lambda x: x + 4)"
+    )
 
 
 def test_unity():
