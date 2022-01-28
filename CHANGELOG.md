@@ -9,6 +9,11 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.15.4]
+### Fixed
+- FLOPs module registration compatibility with ptflops >=v0.6.8.
+
+
 ## [0.15.3]
 ### Added
 - Call-mode specific functions in `co.Lambda`

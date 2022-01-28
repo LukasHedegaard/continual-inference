@@ -32,7 +32,12 @@ logger = getLogger(__name__)
 # Register modules in `ptflops`
 def _register_ptflops():
     try:
-        from ptflops import flops_counter as fc
+        import ptflops
+
+        if hasattr(ptflops, "pytorch_ops"):  # >= v0.6.8
+            fc = ptflops.pytorch_ops
+        else:  # < v0.6.7
+            fc = ptflops.flops_counter
 
         # Conv
         fc.MODULES_MAPPING[Conv1d] = fc.conv_flops_counter_hook
