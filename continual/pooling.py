@@ -76,7 +76,7 @@ class _PoolNd(CoModule, nn.Module):
         self.dilation = _tuple(dilation)
         assert (
             self.kernel_size[0] > 0
-        ), "A pooling module should over at least on time step."
+        ), "A pooling module should span over at least one time step."
 
         self._spatial_pool_fn = spatial_pool_fn
 
