@@ -176,9 +176,20 @@ class _ConvCoNd(CoModule, _ConvNd):
 
         tot = len(buffer)
         if stride_index == self.stride[0] - 1:
-            x_out = x_out.clone()
-            for i in range(tot):
-                x_out += buffer[(i + index) % tot, :, :, tot - i - 1]
+            x_out = x_out + (
+                torch.sum(
+                    buffer[
+                        torch.remainder(torch.arange(tot) + index, tot),
+                        :,
+                        :,
+                        torch.arange(tot - 1, -1, -1),
+                    ],
+                    dim=0,
+                )
+            )
+            # x_out = x_out.clone()
+            # for i in range(tot):
+            #     x_out += buffer[(i + index) % tot, :, :, tot - i - 1]
 
             if self.bias is not None:
                 x_out += self.bias[
@@ -189,7 +200,7 @@ class _ConvCoNd(CoModule, _ConvNd):
 
         # Update next state
         if self.kernel_size[0] > 1:
-            next_buffer = buffer.clone() if self.training else buffer.detach()
+            next_buffer = buffer.clone() if self.training else buffer
             next_buffer[index] = x_rest
             next_index = (index + 1) % tot
         else:
