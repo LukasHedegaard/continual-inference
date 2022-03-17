@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Callable, Tuple
 
 import torch
@@ -21,12 +22,23 @@ logger = getLogger(__name__)
 
 State = Tuple[Tensor, int, int]
 
+_forward_step_impl = None
+try:
+    from torch.utils.cpp_extension import load as load_cpp
 
-__all__ = [
-    "Conv1d",
-    "Conv2d",
-    "Conv3d",
-]
+    _forward_step_impl = load_cpp(
+        name="cpp_impl",
+        sources=[str(Path(__file__).parent / "conv.cpp")],
+        verbose=False,
+    ).forward_step
+except Exception as e:  # pragma: no cover
+    logger.warning(
+        "Unable to compile CoConv C++ implementation. Falling back to Python version."
+    )
+    logger.warning(e)
+
+
+__all__ = ["Conv1d", "Conv2d", "Conv3d", "_forward_step_impl"]
 
 
 class _ConvCoNd(CoModule, _ConvNd):
@@ -101,6 +113,8 @@ class _ConvCoNd(CoModule, _ConvNd):
             self.kernel_size[0] - 1,
             *[0 for _ in self.padding[1:]],
         )
+        self._step_padding = (self.kernel_size[0] - 1, *self.padding[1:])
+        self._step_stride = (1, *self.stride[1:])
 
         # init_state is called in `_forward_step`
 
@@ -145,6 +159,31 @@ class _ConvCoNd(CoModule, _ConvNd):
             len(input.shape) == self._input_len - 1
         ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}"
 
+        if (
+            _forward_step_impl is not None
+            and not self.training
+            and self.padding_mode == "zeros"
+        ):
+            # Call C++ impl
+            output, next_state = _forward_step_impl(
+                input,
+                self.weight,
+                self.bias,
+                self.stride,
+                self.padding,
+                self._step_padding,
+                self.dilation,
+                self.groups,
+                *(prev_state or (None, None, None)),
+            )
+            if output is None:
+                output = TensorPlaceholder()
+            return output, next_state
+        return self._forward_step_py(input, prev_state)
+
+    def _forward_step_py(
+        self, input: Tensor, prev_state: State
+    ) -> Tuple[Tensor, State]:
         # e.g. B, C -> B, C, 1
         x = input.unsqueeze(2).to(device=self.weight.device)
 
@@ -153,8 +192,8 @@ class _ConvCoNd(CoModule, _ConvNd):
                 input=x,
                 weight=self.weight,
                 bias=None,
-                stride=(1, *self.stride[1:]),
-                padding=(self.kernel_size[0] - 1, *self.padding[1:]),
+                stride=self._step_stride,
+                padding=self._step_padding,
                 dilation=self.dilation,
                 groups=self.groups,
             )
@@ -163,7 +202,7 @@ class _ConvCoNd(CoModule, _ConvNd):
                 input=F.pad(x, self._step_space_rprt, mode=self.padding_mode),
                 weight=self.weight,
                 bias=None,
-                stride=(1, *self.stride[1:]),
+                stride=self._step_stride,
                 padding=self._step_time_pad,
                 dilation=self.dilation,
                 groups=self.groups,

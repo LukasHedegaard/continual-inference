@@ -8,10 +8,94 @@ from continual.module import TensorPlaceholder
 torch.manual_seed(42)
 
 
-def test_Conv1d():
+def test_cpp_impl_1d():
+    C = 2
+    T = 5
+    L = 10
+    sample = torch.normal(mean=torch.zeros(L * C)).reshape((1, C, L))
+
+    # Regular
+    conv = nn.Conv1d(in_channels=C, out_channels=1, kernel_size=T, bias=True)
+    target = conv(sample)
+
+    # Continual
+    co_conv = co.Conv1d.build_from(conv, "zeros")
+    co_conv.train()
+
+    # Py impl is used when training
+    output = []
+
+    for i in range(sample.shape[2]):
+        output.append(co_conv.forward_step(sample[:, :, i]))
+
+    assert all(isinstance(output[i], TensorPlaceholder) for i in range(co_conv.delay))
+
+    outputs = torch.stack(output[co_conv.delay :], dim=2)
+    assert torch.allclose(outputs, target)
+
+    # Cpp impl used when not training
+    co_conv.clean_state()
+    co_conv.eval()
+
+    output_cpp = []
+
+    for i in range(sample.shape[2]):
+        output_cpp.append(co_conv.forward_step(sample[:, :, i]))
+
+    assert all(
+        isinstance(output_cpp[i], TensorPlaceholder) for i in range(co_conv.delay)
+    )
+    outputs_cpp = torch.stack(output_cpp[co_conv.delay :], dim=2)
+    assert torch.allclose(outputs_cpp, target)
+
+
+def test_cpp_impl_2d():
     C = 2
     T = 3
+    S = 2
     L = 5
+    H = 3
+    sample = torch.normal(mean=torch.zeros(L * C * H)).reshape((1, C, L, H))
+
+    # Regular
+    conv = nn.Conv2d(in_channels=C, out_channels=1, kernel_size=(T, S), bias=True)
+    target = conv(sample)
+
+    # Continual
+    co_conv = co.Conv2d.build_from(conv, "zeros")
+    co_conv.train()
+
+    # Py impl is used when training
+    output = []
+
+    for i in range(sample.shape[2]):
+        output.append(co_conv.forward_step(sample[:, :, i]))
+
+    assert all(isinstance(output[i], TensorPlaceholder) for i in range(co_conv.delay))
+
+    output = torch.stack(output[co_conv.delay :], dim=2)
+    assert torch.allclose(output, target)
+
+    # Cpp impl used when not training
+    co_conv.clean_state()
+    co_conv.eval()
+
+    output_cpp = []
+
+    for i in range(sample.shape[2]):
+        output_cpp.append(co_conv.forward_step(sample[:, :, i]))
+
+    assert all(
+        isinstance(output_cpp[i], TensorPlaceholder) for i in range(co_conv.delay)
+    )
+    output_cpp = torch.stack(output_cpp[co_conv.delay :], dim=2)
+    assert torch.allclose(output_cpp, target)
+
+
+def test_Conv1d():
+    C = 2
+    T = 5
+    L = 10
     sample = torch.normal(mean=torch.zeros(L * C)).reshape((1, C, L))
 
     # Regular

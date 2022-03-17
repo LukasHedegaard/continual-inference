@@ -1,4 +1,5 @@
 from setuptools import find_packages, setup
+from torch.utils import cpp_extension
 
 
 def long_description():
@@ -39,6 +40,8 @@ setup(
         "docs": from_file("requirements/docs.txt"),
     },
     packages=find_packages(exclude=["tests", "docs", "figures", "requirements"]),
+    # ext_modules=[cpp_extension.CppExtension("conv_cpp", ["continual/conv.cpp"])],
+    # cmdclass={"build_ext": cpp_extension.BuildExtension},
     keywords=["deep learning", "pytorch", "AI", "online", "inference", "continual"],
     classifiers=[
         "Environment :: Console",
