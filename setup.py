@@ -26,7 +26,7 @@ def from_file(file_name: str = "requirements.txt", comment_char: str = "#"):
 
 setup(
     name="continual-inference",
-    version="0.15.4",
+    version="0.15.6",
     description="Building blocks for Continual Inference Networks in PyTorch",
     long_description=long_description(),
     long_description_content_type="text/markdown",
@@ -40,6 +40,8 @@ setup(
         "docs": from_file("requirements/docs.txt"),
     },
     packages=find_packages(exclude=["tests", "docs", "figures", "requirements"]),
+    package_data={"": ["continual/conv.cpp"]},
+    include_package_data=True,
     # ext_modules=[cpp_extension.CppExtension("conv_cpp", ["continual/conv.cpp"])],
     # cmdclass={"build_ext": cpp_extension.BuildExtension},
     keywords=["deep learning", "pytorch", "AI", "online", "inference", "continual"],
