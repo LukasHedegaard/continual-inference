@@ -1,5 +1,4 @@
 from setuptools import find_packages, setup
-from torch.utils import cpp_extension
 
 
 def long_description():
