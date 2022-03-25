@@ -9,6 +9,10 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+- `phantom_padding` renamed to `residual_shrink`.
+
+
 ## [0.15.6]
 ### Fixed
 - Missing cpp file in package.

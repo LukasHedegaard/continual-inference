@@ -224,7 +224,7 @@ def test_residual_shrink():
 
     co_conv = co.Conv1d.build_from(conv)
 
-    co_res = co.Residual(co_conv, phantom_padding=True)
+    co_res = co.Residual(co_conv, residual_shrink=True)
 
     # Target behavior: Discard outputs from temporal padding
     target = conv(input) + input[:, :, 1:-1]

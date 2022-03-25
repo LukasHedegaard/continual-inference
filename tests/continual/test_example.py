@@ -6,6 +6,16 @@ from torch import nn
 import continual as co
 
 
+def test_paper_example():
+    net = co.Sequential(
+        co.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=2, padding=2),
+        co.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=1, padding=0),
+    )
+    assert net.receptive_field == 7
+    assert net.padding == 2
+    assert net.delay == 4
+
+
 def test_readme_example():
     #                      B, C, T, H, W
     example = torch.randn((1, 1, 5, 3, 3))
@@ -36,15 +46,20 @@ def test_residual():
     conv = co.Conv3d(2, 2, kernel_size=3, padding=1)
     residual1 = co.Sequential(
         co.Broadcast(2),
-        co.Parallel(conv, co.Delay(2)),
+        co.Parallel(conv, co.Delay(1)),
         co.Reduce("sum"),
     )
 
-    residual2 = co.Residual(conv, reduce="sum")
+    residual2 = co.BroadcastReduce(conv, co.Delay(1), reduce="sum")
 
+    residual3 = co.Residual(conv, reduce="sum")
+
+    assert len(set([residual1.delay, residual2.delay, residual3.delay])) == 1
     o1 = residual1.forward(x)
     o2 = residual2.forward(x)
+    o3 = residual3.forward(x)
     assert torch.equal(o1, o2)
+    assert torch.equal(o1, o3)
 
 
 def test_mb_conv():
@@ -74,26 +89,26 @@ def test_inception_module():
     #                      B,  C, T, H, W
     example = torch.randn((1, 192, 7, 5, 5))
 
-    def norm_relu(module, channels):
+    def norm_relu(module):
         return co.Sequential(
             module,
-            nn.BatchNorm3d(channels),
+            nn.BatchNorm3d(module.out_channels),
             nn.ReLU(),
         )
 
     inception_module = co.BroadcastReduce(
         co.Conv3d(192, 64, kernel_size=1),
         co.Sequential(
-            norm_relu(co.Conv3d(192, 96, kernel_size=1), 96),
-            norm_relu(co.Conv3d(96, 128, kernel_size=3, padding=1), 128),
+            norm_relu(co.Conv3d(192, 96, kernel_size=1)),
+            norm_relu(co.Conv3d(96, 128, kernel_size=3, padding=1)),
         ),
         co.Sequential(
-            norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
-            norm_relu(co.Conv3d(16, 32, kernel_size=5, padding=2), 32),
+            norm_relu(co.Conv3d(192, 16, kernel_size=1)),
+            norm_relu(co.Conv3d(16, 32, kernel_size=5, padding=2)),
         ),
         co.Sequential(
             co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
-            norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
+            norm_relu(co.Conv3d(192, 32, kernel_size=1)),
         ),
         reduce="concat",
     )
