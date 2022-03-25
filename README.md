@@ -237,7 +237,6 @@ Below is a list of the modules and utilities included in the library:
 In addition, we support interoperability with a wide range of modules from `torch.nn`:
 
 - Activation
-    - `nn.BatchNorm1d`
     - `nn.Threshold`
     - `nn.ReLU`
     - `nn.RReLU`
