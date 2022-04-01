@@ -390,8 +390,10 @@ Specifically, extra care was taken to ensure out-of-the-box compatibility with:
 - [ride](https://github.com/LukasHedegaard/ride)
 
 
-## Citations
-This library
+## Citation
+If you use this library or the continual modules, please consider citing
+
+### This library
 ```bibtex
 @article{hedegaard2021colib,
   title={Continual Inference Library},
@@ -401,7 +403,8 @@ This library
 }
 ```
 
-[Continual 3D CNNs](https://github.com/LukasHedegaard/co3d) [![Paper](http://img.shields.io/badge/paper-arxiv.2106.00050-B31B1B.svg)](https://arxiv.org/abs/2106.00050)
+### Continual Convolutions
+[![Paper](http://img.shields.io/badge/paper-arxiv.2106.00050-B31B1B.svg)](https://arxiv.org/abs/2106.00050)
 ```bibtex
 @article{hedegaard2021co3d,
   title={Continual 3D Convolutional Neural Networks for Real-time Processing of Videos},
@@ -411,12 +414,23 @@ This library
 }
 ```
 
-<!-- [Continual Skeletons](https://github.com/LukasHedegaard/continual-skeletons)
+[![Paper](http://img.shields.io/badge/paper-arxiv.2203.11009-B31B1B.svg)](https://arxiv.org/abs/2203.11009)
 ```bibtex
-@article{hedegaard2021coskelleton,
-  title={Continual Skeletons for Efficient Online Activity Recognition},
+@article{hedegaard2021costgcn,
+  title={Online Skeleton-based Action Recognition with Continual Spatio-Temporal Graph Convolutional Networks},
   author={Lukas Hedegaard and Negar Heidari and Alexandros Iosifidis},
-  journal={TBD},
-  year={2021}
+  journal={preprint, arXiv: 2203.11009}, 
+  year={2022}
 }
-``` -->
+```
+
+### Continual Transformers
+[![Paper](http://img.shields.io/badge/paper-arxiv.2201.06268-B31B1B.svg)](https://arxiv.org/abs/2201.06268)
+```bibtex
+@article{hedegaard2022cotrans,
+  title={Continual Transformers: Redundancy-Free Attention for Online Inference},
+  author={Lukas Hedegaard and Alexandros Iosifidis},
+  journal={preprint, arXiv:2201.06268},
+  year={2022}
+}
+```
