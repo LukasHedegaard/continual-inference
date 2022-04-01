@@ -10,8 +10,9 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 
 ### Added
-- `co.RNN`.
 - "lagging" option for shrink in `co.Delay` and `co.Residual`.
+- `co.RNN`.
+- `co.LSTM`.
 
 ### Changed
 - `phantom_padding` renamed to `residual_shrink`.

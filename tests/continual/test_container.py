@@ -18,7 +18,8 @@ def test_rnn_conv_seq():
 
     coseq = co.Sequential(
         co.RNN(input_size=C, hidden_size=3, num_layers=4),
-        co.Conv1d(in_channels=3, out_channels=1, kernel_size=3),
+        co.Conv1d(in_channels=3, out_channels=2, kernel_size=3),
+        co.LSTM(input_size=2, hidden_size=1, num_layers=4),
     )
 
     # forward
