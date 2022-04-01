@@ -11,6 +11,37 @@ from continual.module import TensorPlaceholder
 torch.manual_seed(42)
 
 
+def test_rnn_conv_seq():
+    C = 2
+    T = 10
+    sample = torch.normal(mean=torch.zeros(C * T)).reshape((1, C, T))
+
+    coseq = co.Sequential(
+        co.RNN(input_size=C, hidden_size=3, num_layers=4),
+        co.Conv1d(in_channels=3, out_channels=1, kernel_size=3),
+    )
+
+    # forward
+    target = coseq.forward(sample)
+
+    # forward_steps
+    out_steps = coseq.forward_steps(sample[:, :, :-1], update_state=True)
+    assert torch.allclose(out_steps, target[:, :, :-1])
+
+    # forward_step
+    out_last = coseq.forward_step(sample[:, :, -1], update_state=True)
+    assert torch.allclose(out_last, target[:, :, -1])
+
+    # Clean state can be used to restart seq computation
+    coseq.clean_state()
+    out_steps2 = coseq.forward_steps(sample[:, :, :-1])
+    assert torch.allclose(out_steps2, target[:, :, :-1])
+
+    # Forward assumes state is clean
+    target2 = coseq.forward(sample)
+    assert torch.allclose(target2, target)
+
+
 def test_sequential():
     S = 3
 
