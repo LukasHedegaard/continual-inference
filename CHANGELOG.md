@@ -9,6 +9,8 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.16.0]
+
 ### Added
 - "lagging" option for shrink in `co.Delay` and `co.Residual`.
 - `co.RNN`.
