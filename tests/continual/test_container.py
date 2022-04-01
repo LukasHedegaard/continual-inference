@@ -216,7 +216,7 @@ def test_residual():
     assert torch.allclose(out_last, target[:, :, -2])
 
 
-def test_residual_shrink():
+def test_residual_shrink_centered():
     input = torch.arange(6, dtype=torch.float).reshape((1, 1, 6))
 
     conv = nn.Conv1d(1, 1, kernel_size=3, padding=0, bias=False)
@@ -253,6 +253,38 @@ def test_residual_shrink():
     # forward_step
     out_last = co_res.forward_step(input[:, :, -1])
     assert torch.allclose(out_last, target[:, :, -1])
+
+
+def test_residual_shrink_lagging():
+    input = torch.arange(6, dtype=torch.float).reshape((1, 1, 6))
+
+    co_conv = co.Conv1d(1, 1, kernel_size=3, padding=0, bias=False)
+    torch.nn.init.ones_(co_conv.weight)
+
+    co_res = co.Residual(co_conv, residual_shrink="lagging")
+
+    # forward
+    out_manual_res = co_conv.forward(input) + input[:, :, : -co_conv.delay]
+    out_res = co_res.forward(input)
+    assert torch.allclose(out_res, out_manual_res)
+
+    # forward_step
+    output_step = []
+    for t in range(input.shape[2]):
+        y = co_res.forward_step(input[:, :, t])
+        if isinstance(y, torch.Tensor):
+            output_step.append(y)
+    output_step = torch.stack(output_step, dim=2)
+    assert torch.allclose(output_step, out_manual_res)
+
+    # forward_steps
+    co_res.clean_state()
+    out_firsts = co_res.forward_steps(input[:, :, :-1], pad_end=False)
+    assert torch.allclose(out_firsts, out_manual_res[:, :, :3])
+
+    # forward_step
+    out_last = co_res.forward_step(input[:, :, -1])
+    assert torch.allclose(out_last, out_manual_res[:, :, -1])
 
 
 def test_broadcast_reduce():

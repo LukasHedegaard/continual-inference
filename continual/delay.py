@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 import torch
 from torch import Tensor
@@ -22,20 +22,22 @@ class Delay(CoModule, torch.nn.Module):
         self,
         delay: int,
         temporal_fill: PaddingMode = "zeros",
-        auto_shrink: bool = False,
+        auto_shrink: Union[bool, str] = False,
     ):
         """Initialise Delay block
 
         Args:
             delay (int): the number of steps to delay an output.
             temporal_fill (PaddingMode, optional): Temporal state initialisation mode ("zeros" or "replicate"). Defaults to "zeros".
-            auto_shrink (int, optional): Whether to shrink the temporal dimension of the feature map during forward.
-                This is handy for residuals that are parallel to modules which reduce the number of temporal steps. Defaults to False.
+            auto_shrink (bool | str, optional): Whether to shrink the temporal dimension of the feature map during forward.
+                This module is handy for residuals that are parallel to modules which reduce the number of temporal steps.
+                Options: "centered" or True: Centered residual shrink; "lagging": lagging shrink. Defaults to False.
         """
         assert delay >= 0
-        assert temporal_fill in {"zeros", "replicate"}
         self._delay = delay
+        assert auto_shrink in {True, False, "centered", "lagging"}
         self.auto_shrink = auto_shrink
+        assert temporal_fill in {"zeros", "replicate"}
         self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
             temporal_fill
         ]
@@ -106,7 +108,7 @@ class Delay(CoModule, torch.nn.Module):
         with temporary_parameter(self, "padding", (self.delay,)):
             output = CoModule.forward_steps(self, input, pad_end, update_state)
 
-        if self.auto_shrink and first_run:
+        if first_run and self.auto_shrink in {True, "centered"}:
             output = output[:, :, self.delay :]
         return output
 
@@ -114,6 +116,8 @@ class Delay(CoModule, torch.nn.Module):
         # No delay during regular forward
         if not self.auto_shrink or self.delay == 0:
             return input
+        if self.auto_shrink == "lagging":
+            return input[:, :, : -self.delay]
         return input[:, :, self.delay : -self.delay]
 
     @property

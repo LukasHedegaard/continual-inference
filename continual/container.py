@@ -616,7 +616,7 @@ def Residual(
     module: CoModule,
     temporal_fill: PaddingMode = None,
     reduce: Reduction = "sum",
-    residual_shrink: bool = False,
+    residual_shrink: Union[bool, str] = False,
 ) -> BroadcastReduce:
     """[summary]
 
@@ -625,7 +625,8 @@ def Residual(
         temporal_fill (PaddingMode, optional): temporal fill type in delay. Defaults to None.
         reduce (Reduction, optional): Reduction function. Defaults to "sum".
         residual_shrink (bool, optional):
-            Set residual delay to operate as if equal padding was used for the . Defaults to False.
+            Set residual to shrink its forward to match the temporal dimension reduction of the wrapped module.
+            Options: "centered" or True: Centered residual shrink; "lagging": lagging shrink. Defaults to False.
 
     Returns:
         BroadcastReduce: BroadcastReduce module with residual.
@@ -637,16 +638,18 @@ def Residual(
     temporal_fill = temporal_fill or getattr(
         module, "temporal_fill", PaddingMode.REPLICATE.value
     )
-    equal_padding = module.receptive_field - num_from(module.padding) * 2 == 1
-    do_residual_shrink = residual_shrink and not equal_padding
-
     delay = module.delay
-    if do_residual_shrink:
+    equal_padding = module.receptive_field - num_from(module.padding) * 2 == 1
+    if equal_padding:
+        residual_shrink = False
+
+    if residual_shrink in {True, "centered"}:
         assert delay % 2 == 0, "Auto-shrink only works for even-number delays."
         delay = delay // 2
+
     return BroadcastReduce(
         # Residual first yields easier broadcasting in reduce functions
-        Delay(delay, temporal_fill, auto_shrink=do_residual_shrink),
+        Delay(delay, temporal_fill, auto_shrink=residual_shrink),
         module,
         reduce=reduce,
         auto_delay=False,
