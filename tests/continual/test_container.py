@@ -11,6 +11,38 @@ from continual.module import TensorPlaceholder
 torch.manual_seed(42)
 
 
+def test_rnn_conv_seq():
+    C = 2
+    T = 10
+    sample = torch.normal(mean=torch.zeros(C * T)).reshape((1, C, T))
+
+    coseq = co.Sequential(
+        co.RNN(input_size=C, hidden_size=3, num_layers=4),
+        co.Conv1d(in_channels=3, out_channels=2, kernel_size=3),
+        co.LSTM(input_size=2, hidden_size=1, num_layers=4),
+    )
+
+    # forward
+    target = coseq.forward(sample)
+
+    # forward_steps
+    out_steps = coseq.forward_steps(sample[:, :, :-1], update_state=True)
+    assert torch.allclose(out_steps, target[:, :, :-1])
+
+    # forward_step
+    out_last = coseq.forward_step(sample[:, :, -1], update_state=True)
+    assert torch.allclose(out_last, target[:, :, -1])
+
+    # Clean state can be used to restart seq computation
+    coseq.clean_state()
+    out_steps2 = coseq.forward_steps(sample[:, :, :-1])
+    assert torch.allclose(out_steps2, target[:, :, :-1])
+
+    # Forward assumes state is clean
+    target2 = coseq.forward(sample)
+    assert torch.allclose(target2, target)
+
+
 def test_sequential():
     S = 3
 
@@ -216,7 +248,7 @@ def test_residual():
     assert torch.allclose(out_last, target[:, :, -2])
 
 
-def test_residual_shrink():
+def test_residual_shrink_centered():
     input = torch.arange(6, dtype=torch.float).reshape((1, 1, 6))
 
     conv = nn.Conv1d(1, 1, kernel_size=3, padding=0, bias=False)
@@ -224,7 +256,7 @@ def test_residual_shrink():
 
     co_conv = co.Conv1d.build_from(conv)
 
-    co_res = co.Residual(co_conv, phantom_padding=True)
+    co_res = co.Residual(co_conv, residual_shrink=True)
 
     # Target behavior: Discard outputs from temporal padding
     target = conv(input) + input[:, :, 1:-1]
@@ -253,6 +285,38 @@ def test_residual_shrink():
     # forward_step
     out_last = co_res.forward_step(input[:, :, -1])
     assert torch.allclose(out_last, target[:, :, -1])
+
+
+def test_residual_shrink_lagging():
+    input = torch.arange(6, dtype=torch.float).reshape((1, 1, 6))
+
+    co_conv = co.Conv1d(1, 1, kernel_size=3, padding=0, bias=False)
+    torch.nn.init.ones_(co_conv.weight)
+
+    co_res = co.Residual(co_conv, residual_shrink="lagging")
+
+    # forward
+    out_manual_res = co_conv.forward(input) + input[:, :, : -co_conv.delay]
+    out_res = co_res.forward(input)
+    assert torch.allclose(out_res, out_manual_res)
+
+    # forward_step
+    output_step = []
+    for t in range(input.shape[2]):
+        y = co_res.forward_step(input[:, :, t])
+        if isinstance(y, torch.Tensor):
+            output_step.append(y)
+    output_step = torch.stack(output_step, dim=2)
+    assert torch.allclose(output_step, out_manual_res)
+
+    # forward_steps
+    co_res.clean_state()
+    out_firsts = co_res.forward_steps(input[:, :, :-1], pad_end=False)
+    assert torch.allclose(out_firsts, out_manual_res[:, :, :3])
+
+    # forward_step
+    out_last = co_res.forward_step(input[:, :, -1])
+    assert torch.allclose(out_last, out_manual_res[:, :, -1])
 
 
 def test_broadcast_reduce():

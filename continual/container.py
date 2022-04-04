@@ -48,6 +48,12 @@ ReductionFunc = Callable[[Sequence[Tensor]], Tensor]
 ReductionFuncOrEnum = Union[Reduction, ReductionFunc]
 
 
+def apply_forward(module: CoModule, input: Tensor):
+    if isinstance(module, nn.RNNBase):
+        return module.forward(input)[0]
+    return module(input)
+
+
 def reduce_sum(inputs: Sequence[Tensor]) -> Tensor:
     assert len(inputs) >= 2
     return reduce(torch.Tensor.add, inputs[1:], inputs[0])
@@ -241,7 +247,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         outs = []
         for i, m in enumerate(self):
             with temporary_parameter(m, "call_mode", CallMode.FORWARD):
-                outs.append(m(inputs[i]))
+                outs.append(apply_forward(m, inputs[i]))
         return outs
 
     @property
@@ -395,7 +401,7 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
     def forward(self, input):
         for m in self:
             with temporary_parameter(m, "call_mode", CallMode.FORWARD):
-                input = m(input)  # == module.forward
+                input = apply_forward(m, input)
         return input
 
     def forward_step(self, input, update_state=True):
@@ -464,7 +470,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     """Broadcast an input to parallel modules and reduce.
     This module is a shorthand for
 
-    >>> co.Sequential(co.Broadcast(),co.Parallel(*args),co.Reduce(reduce))
+    >>> co.Sequential(co.Broadcast(), co.Parallel(*args), co.Reduce(reduce))
 
     Args:
         *args: Either vargs of modules or an OrderedDict.
@@ -583,7 +589,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         outs = []
         for m in self:
             with temporary_parameter(m, "call_mode", CallMode.FORWARD):
-                outs.append(m(input))  # == m.forward
+                outs.append(apply_forward(m, input))
 
         return self.reduce(outs)
 
@@ -616,7 +622,7 @@ def Residual(
     module: CoModule,
     temporal_fill: PaddingMode = None,
     reduce: Reduction = "sum",
-    phantom_padding: bool = False,
+    residual_shrink: Union[bool, str] = False,
 ) -> BroadcastReduce:
     """[summary]
 
@@ -624,8 +630,9 @@ def Residual(
         module (CoModule): module to which a residual should be added.
         temporal_fill (PaddingMode, optional): temporal fill type in delay. Defaults to None.
         reduce (Reduction, optional): Reduction function. Defaults to "sum".
-        phantom_padding (bool, optional):
-            Set residual delay to operate as if equal padding was used for the . Defaults to False.
+        residual_shrink (bool, optional):
+            Set residual to shrink its forward to match the temporal dimension reduction of the wrapped module.
+            Options: "centered" or True: Centered residual shrink; "lagging": lagging shrink. Defaults to False.
 
     Returns:
         BroadcastReduce: BroadcastReduce module with residual.
@@ -637,16 +644,18 @@ def Residual(
     temporal_fill = temporal_fill or getattr(
         module, "temporal_fill", PaddingMode.REPLICATE.value
     )
-    equal_padding = module.receptive_field - num_from(module.padding) * 2 == 1
-    do_phantom_padding = phantom_padding and not equal_padding
-
     delay = module.delay
-    if do_phantom_padding:
+    equal_padding = module.receptive_field - num_from(module.padding) * 2 == 1
+    if equal_padding:
+        residual_shrink = False
+
+    if residual_shrink in {True, "centered"}:
         assert delay % 2 == 0, "Auto-shrink only works for even-number delays."
         delay = delay // 2
+
     return BroadcastReduce(
         # Residual first yields easier broadcasting in reduce functions
-        Delay(delay, temporal_fill, auto_shrink=do_phantom_padding),
+        Delay(delay, temporal_fill, auto_shrink=residual_shrink),
         module,
         reduce=reduce,
         auto_delay=False,
@@ -697,9 +706,9 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
 
     def forward(self, input: Tensor) -> Tensor:
         if self.predicate(self, input):
-            return self._modules["0"](input)
+            return apply_forward(self._modules["0"], input)
         elif "1" in self._modules:
-            return self._modules["1"](input)
+            return apply_forward(self._modules["1"], input)
         return input
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
