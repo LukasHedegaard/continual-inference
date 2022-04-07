@@ -1,5 +1,5 @@
 from setuptools import find_packages, setup
-from continual import __about__ as about
+import continual.__about__ as about
 
 
 def long_description():
