@@ -1,5 +1,13 @@
+import sys
+
 from setuptools import find_packages, setup
-import continual.__about__ as about
+
+try:
+    from continual import __about__ as about
+except ImportError:
+    # alternative https://stackoverflow.com/a/67692/4521646
+    sys.path.append("ride")
+    import __about__ as about  # noqa: F401
 
 
 def long_description():
