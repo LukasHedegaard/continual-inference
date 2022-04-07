@@ -1,4 +1,5 @@
 from setuptools import find_packages, setup
+from continual import __about__ as about
 
 
 def long_description():
@@ -25,13 +26,13 @@ def from_file(file_name: str = "requirements.txt", comment_char: str = "#"):
 
 setup(
     name="continual-inference",
-    version="0.16.0",
-    description="Building blocks for Continual Inference Networks in PyTorch",
+    version=about.__version__,
+    description=about.__docs__,
     long_description=long_description(),
     long_description_content_type="text/markdown",
-    author="Lukas Hedegaard",
-    author_email="lukasxhedegaard@gmail.com",
-    url="https://github.com/LukasHedegaard/continual-inference",
+    author=about.__author__,
+    author_email=about.__author_email__,
+    url=about.__homepage__,
     install_requires=from_file("requirements.txt"),
     extras_require={
         "build": from_file("requirements/build.txt"),
