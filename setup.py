@@ -6,7 +6,7 @@ try:
     from continual import __about__ as about
 except ImportError:
     # alternative https://stackoverflow.com/a/67692/4521646
-    sys.path.append("ride")
+    sys.path.append("continual")
     import __about__ as about  # noqa: F401
 
 
