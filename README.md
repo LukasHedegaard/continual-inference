@@ -1,8 +1,8 @@
-<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" width=400>
+<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" style="width: 30vw; min-width: 400px;">
 
 __PyTorch building blocks for Continual Inference Networks__
 
-<div align="left">
+<div align="center">
   <a href="https://pypi.org/project/continual-inference/">
     <img src="https://img.shields.io/pypi/pyversions/continual-inference" height="20" >
   </a>
@@ -13,22 +13,24 @@ __PyTorch building blocks for Continual Inference Networks__
     <img src="https://pepy.tech/badge/continual-inference/month" height="20">
   </a>
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
-    <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG"/>
+    <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG" height="20"/>
   </a>
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" height="20">
+  </a>
+  <a href="https://arxiv.org/abs/2204.03418">
+    <img src="http://img.shields.io/badge/paper-arxiv.2204.03418-B31B1B.svg" height="20" >
   </a>
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" height="20">
   </a>
   <a href="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/overview/main">
-    <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="CodeFactor" />
+    <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="CodeFactor" height="20" />
   </a>
   <sup>*</sup>
 </div>
 
-
-###### \*We match PyTorch interfaces exacly. This reduces the codefactor to "A-" due to method arguments named "input".
+\*We match PyTorch interfaces exacly. This reduces the codefactor to "A-" due to method arguments named "input".
 
 ## Install 
 ```bash
@@ -116,13 +118,13 @@ The last conversion from a non-CIN to a CIN is possible due to a recent break-th
 Below, we see principle sketches, which compare regular and continual convolutions during online / continual inference.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/regular-convolution.png" width="500">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/regular-convolution.png" style="width: 25vw; min-width: 350px;">
   <br>
   (1) <br> 
   Regular Convolution. 
 	A regular temporal convolutional layer leads to redundant computations during online processing of video clips, as illustrated by the repeated convolution of inputs (green b,c,d) with a kernel (blue α,β) in the temporal dimension. Moreover, prior inputs (b,c,d) must be stored between time-steps for online processing tasks.
   <br><br>
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/continual-convolution.png" width="500">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/continual-convolution.png" style="width: 25vw; min-width: 350px;">
   <br>
   (2) <br>
   Continual Convolution. 
@@ -235,7 +237,6 @@ Below is a list of the modules and utilities included in the library:
     - `co.One` - Maps input to output of ones.
 
 - Converters
-    <!-- - `co.Residual` - residual connection, which automatically adds delay if needed -->
     - `co.continual` - conversion function from `torch.nn` modules to `co` modules.
     - `co.forward_stepping` - functional wrapper, which enhances temporally local `torch.nn` modules with the forward_stepping functions.
 
@@ -306,7 +307,7 @@ residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
 ### Continual 3D [MBConv](https://arxiv.org/pdf/1801.04381.pdf)
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/mb_conv.png" width="150">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/mb_conv.png" style="width: 15vw; min-width: 200px;">
   <br>
   MobileNetV2 Inverted residual block. Source: https://arxiv.org/pdf/1801.04381.pdf
 </div>
@@ -329,7 +330,7 @@ mb_conv = co.Residual(
 ### Continual 3D [Squeeze-and-Excitation module](https://arxiv.org/pdf/1709.01507.pdf)
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/se_block.png" width="230">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/se_block.png" style="width: 15vw; min-width: 200px;">
   <br>
   Squeeze-and-Excitation block. 
   Scale refers to a broadcasted element-wise multiplication.
@@ -355,7 +356,7 @@ se = co.Residual(
 ### Continual 3D [Inception module](https://arxiv.org/pdf/1409.4842v1.pdf)
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/inception_block.png" width="450">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/inception_block.png" style="width: 25vw; min-width: 350px;">
   <br>
   Inception module with dimension reductions. Source: https://arxiv.org/pdf/1409.4842v1.pdf
 </div>
@@ -396,20 +397,31 @@ Specifically, extra care was taken to ensure out-of-the-box compatibility with:
 
 
 ## Citation
-If you use this library or the continual modules, please consider citing
+If you use this library or the continual modules, please consider citing:
 
 ### This library
+<div align="left">
+<a href="https://arxiv.org/abs/2204.03418">
+  <img src="http://img.shields.io/badge/paper-arxiv.2204.03418-B31B1B.svg" height="20" >
+</a>
+</div>
+
 ```bibtex
-@article{hedegaard2021colib,
-  title={Continual Inference Library},
-  author={Lukas Hedegaard},
-  journal={GitHub. Note: https://github.com/LukasHedegaard/continual-inference},
+@article{hedegaard2022colib,
+  title={Continual Inference: A Library for Efficient Online Inference with Deep Neural Networks in PyTorch},
+  author={Lukas Hedegaard and Alexandros Iosifidis},
+  journal={preprint, arXiv:2204.03418},
   year={2021}
 }
 ```
 
 ### Continual Convolutions
-[![Paper](http://img.shields.io/badge/paper-arxiv.2106.00050-B31B1B.svg)](https://arxiv.org/abs/2106.00050)
+<div align="left">
+<a href="https://arxiv.org/abs/2106.00050">
+  <img src="http://img.shields.io/badge/paper-arxiv.2106.00050-B31B1B.svg" height="20" >
+</a>
+</div>
+
 ```bibtex
 @article{hedegaard2021co3d,
   title={Continual 3D Convolutional Neural Networks for Real-time Processing of Videos},
@@ -419,7 +431,12 @@ If you use this library or the continual modules, please consider citing
 }
 ```
 
-[![Paper](http://img.shields.io/badge/paper-arxiv.2203.11009-B31B1B.svg)](https://arxiv.org/abs/2203.11009)
+<div align="left">
+<a href="https://arxiv.org/abs/2203.11009">
+  <img src="http://img.shields.io/badge/paper-arxiv.2203.11009-B31B1B.svg" height="20" >
+</a>
+</div>
+
 ```bibtex
 @article{hedegaard2021costgcn,
   title={Online Skeleton-based Action Recognition with Continual Spatio-Temporal Graph Convolutional Networks},
@@ -430,7 +447,12 @@ If you use this library or the continual modules, please consider citing
 ```
 
 ### Continual Transformers
-[![Paper](http://img.shields.io/badge/paper-arxiv.2201.06268-B31B1B.svg)](https://arxiv.org/abs/2201.06268)
+<div align="left">
+<a href="https://arxiv.org/abs/2201.06268">
+  <img src="http://img.shields.io/badge/paper-arxiv.2201.06268-B31B1B.svg" height="20" >
+</a>
+</div>
+
 ```bibtex
 @article{hedegaard2022cotrans,
   title={Continual Transformers: Redundancy-Free Attention for Online Inference},
