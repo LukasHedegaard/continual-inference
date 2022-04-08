@@ -15,7 +15,7 @@ Continual Inference
    :name: pl_docs
    :caption: Understanding Continual Inference
 
-   Library Design <>
+   Library Design <https://arxiv.org/abs/2204.03418>
    Continual 3D CNNs <https://arxiv.org/abs/2106.00050>
    Continual Spatio-temporal Graph Convolutional Networks <https://arxiv.org/abs/2106.00050>
    Continual Transformers <https://arxiv.org/abs/2201.06268>
@@ -33,7 +33,7 @@ Continual Inference
    :maxdepth: 2
    :name: Examples
    :caption: Examples
-   
+
    common/examples
 
 .. toctree::
