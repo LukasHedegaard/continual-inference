@@ -9,6 +9,11 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+- Citations for Continual Inference lib paper.
+- Docs.
+
+
 ## [0.16.0]
 
 ### Added
