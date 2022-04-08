@@ -15,10 +15,10 @@ Continual Inference
    :name: pl_docs
    :caption: Understanding Continual Inference
 
-   Library Design <https://arxiv.org/abs/2204.03418>
-   Continual 3D CNNs <https://arxiv.org/abs/2106.00050>
-   Continual Spatio-temporal Graph Convolutional Networks <https://arxiv.org/abs/2106.00050>
-   Continual Transformers <https://arxiv.org/abs/2201.06268>
+   Library Design <https://arxiv.org/pdf/2204.03418.pdf>
+   Continual 3D CNNs <https://arxiv.org/pdf/2106.00050.pdf>
+   Continual Spatio-temporal Graph Convolutional Networks <https://arxiv.org/pdf/2203.11009.pdf>
+   Continual Transformers <https://arxiv.org/pdf/2201.06268.pdf>
 
 
 .. toctree::
