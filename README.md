@@ -18,6 +18,9 @@ __PyTorch building blocks for Continual Inference Networks__
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" height="20">
   </a>
+  <a href="https://arxiv.org/abs/2204.03418">
+    <img src="http://img.shields.io/badge/paper-arxiv.2204.03418-B31B1B.svg" height="20" >
+  </a>
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" height="20">
   </a>
@@ -397,6 +400,12 @@ Specifically, extra care was taken to ensure out-of-the-box compatibility with:
 If you use this library or the continual modules, please consider citing
 
 ### This library
+<div align="left">
+<a href="https://arxiv.org/abs/2204.03418">
+  <img src="http://img.shields.io/badge/paper-arxiv.2204.03418-B31B1B.svg" height="20" >
+</a>
+</div>
+
 ```bibtex
 @article{hedegaard2021colib,
   title={Continual Inference Library},
