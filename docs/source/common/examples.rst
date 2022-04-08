@@ -8,6 +8,7 @@ Basic blocks
 - `Continual MobileNetV2 Inverted residual block <https://github.com/LukasHedegaard/continual-inference/blob/e4bc1e54ed3e570757d41cd657464851e8ec118b/tests/continual/test_example.py#L65>`_
 - `Continual Squeeze-and-Excitation module <https://github.com/LukasHedegaard/continual-inference/blob/e4bc1e54ed3e570757d41cd657464851e8ec118b/tests/continual/test_example.py#L161>`_
 - `Continual Inception module <https://github.com/LukasHedegaard/continual-inference/blob/e4bc1e54ed3e570757d41cd657464851e8ec118b/tests/continual/test_example.py#L88>`_
+- `CNN + RNN mix <https://github.com/LukasHedegaard/continual-inference/blob/1f304dc3c750521ec1f6c0807ce1d7b93ef20723/tests/continual/test_container.py#L14>`_
 
 Video-based Human Activity Recognition with Co3D CNNs
 -----------
@@ -28,4 +29,3 @@ Online Action Detection with Continual Transformers
 Audio Classification with Continual Transformers
 -----------
 - `Continual Transformer Encoder <https://gitlab.au.dk/maleci/continual-transformer-audio-classification>`_
-
