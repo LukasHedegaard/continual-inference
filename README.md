@@ -2,7 +2,7 @@
 
 __PyTorch building blocks for Continual Inference Networks__
 
-<div align="center">
+<div align="left">
   <a href="https://pypi.org/project/continual-inference/">
     <img src="https://img.shields.io/pypi/pyversions/continual-inference" height="20" >
   </a>
