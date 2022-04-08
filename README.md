@@ -397,7 +397,7 @@ Specifically, extra care was taken to ensure out-of-the-box compatibility with:
 
 
 ## Citation
-If you use this library or the continual modules, please consider citing
+If you use this library or the continual modules, please consider citing:
 
 ### This library
 <div align="left">
@@ -407,10 +407,10 @@ If you use this library or the continual modules, please consider citing
 </div>
 
 ```bibtex
-@article{hedegaard2021colib,
-  title={Continual Inference Library},
-  author={Lukas Hedegaard},
-  journal={GitHub. Note: https://github.com/LukasHedegaard/continual-inference},
+@article{hedegaard2022colib,
+  title={Continual Inference: A Library for Efficient Online Inference with Deep Neural Networks in PyTorch},
+  author={Lukas Hedegaard and Alexandros Iosifidis},
+  journal={preprint, arXiv:2204.03418},
   year={2021}
 }
 ```
