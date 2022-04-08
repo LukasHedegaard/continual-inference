@@ -9,6 +9,9 @@ __PyTorch building blocks for Continual Inference Networks__
   <a href="https://badge.fury.io/py/continual-inference">
     <img src="https://badge.fury.io/py/continual-inference.svg" height="20" >
   </a>
+  <a href='https://continual-inference.readthedocs.io/en/latest/?badge=latest'>
+    <img src='https://readthedocs.org/projects/continual-inference/badge/?version=latest' alt='Documentation Status' />
+  </a>
   <a href="https://pepy.tech/project/continual-inference">
     <img src="https://pepy.tech/badge/continual-inference/month" height="20">
   </a>
