@@ -12,6 +12,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ### Added
 - Citations for Continual Inference lib paper.
 - Docs.
+- `RecyclingPositionalEncoding`.
 
 
 ## [0.16.0]

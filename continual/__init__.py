@@ -26,6 +26,7 @@ from .pooling import (  # noqa: F401
     MaxPool2d,
     MaxPool3d,
 )
+from .positional_encoding import RecyclingPositionalEncoding  # noqa: F401
 from .ptflops import _register_ptflops  # noqa: F401
 from .rnn import GRU, LSTM, RNN  # noqa: F401
 from .shape import Reshape  # noqa: F401
