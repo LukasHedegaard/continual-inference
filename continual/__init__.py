@@ -14,6 +14,12 @@ from .convert import continual, forward_stepping  # noqa: F401
 from .delay import Delay  # noqa: F401
 from .linear import Linear  # noqa: F401
 from .module import CoModule, PaddingMode, TensorPlaceholder, call_mode  # noqa: F401
+from .multihead_attention.retroactive_mha import (  # noqa: F401
+    RetroactiveMultiheadAttention,
+)
+from .multihead_attention.single_output_mha import (  # noqa: F401
+    SingleOutputMultiheadAttention,
+)
 from .pooling import (  # noqa: F401
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
