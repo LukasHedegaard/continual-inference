@@ -13,7 +13,7 @@ __PyTorch building blocks for Continual Inference Networks__
     <img src="https://readthedocs.org/projects/continual-inference/badge/?version=latest" alt="Documentation Status" height="20"/>
   </a>
   <a href="https://pepy.tech/project/continual-inference">
-    <img src="https://pepy.tech/badge/continual-inference/month" height="20">
+    <img src="https://pepy.tech/badge/continual-inference" height="20">
   </a>
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG" height="20"/>
@@ -33,7 +33,6 @@ __PyTorch building blocks for Continual Inference Networks__
   <sup>*</sup>
 </div>
 
-\*We match PyTorch interfaces exacly. This reduces the codefactor to "A-" due to method arguments named "input".
 
 ## Install 
 ```bash
