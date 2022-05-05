@@ -8,8 +8,6 @@ from torch.nn.modules.activation import MultiheadAttention
 
 from continual.module import CoModule, TensorPlaceholder
 
-MaybeTensor = Union[Tensor, TensorPlaceholder]
-
 State = List[Tensor]
 
 
@@ -379,14 +377,14 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         prev_state: State = None,
         *args,
         **kwargs,
-    ) -> Tuple[MaybeTensor, State]:
+    ) -> Tuple[Union[Tensor, TensorPlaceholder], State]:
         """Forward computation for a single step with state initialisation
 
         Args:
             query, key, value: step inputs of shape `(B, E)` where B is the batch size and E is the embedding dimension.
 
         Returns:
-            Tuple[MaybeTensor, State]: Step output and new state.
+            Tuple[Union[Tensor, TensorPlaceholder], State]: Step output and new state.
         """
         if prev_state is None:
             prev_state = (
@@ -435,7 +433,7 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         update_state=True,
         *args,
         **kwargs,
-    ) -> MaybeTensor:
+    ) -> Union[Tensor, TensorPlaceholder]:
         """
         Args:
             query, key, value: step_inputs for mapping a query and a set of key-value pairs to an output.
@@ -483,7 +481,7 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         update_state=True,
         *args,
         **kwargs,
-    ) -> MaybeTensor:
+    ) -> Union[Tensor, TensorPlaceholder]:
         """Forward computation for multiple steps with state initialisation
 
         Args:

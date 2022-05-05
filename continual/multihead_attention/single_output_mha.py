@@ -1,15 +1,15 @@
 import math
 from functools import partial
 from logging import getLogger
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from continual.module import CallMode
+from continual.module import CallMode, TensorPlaceholder
 
-from .mha_base import MaybeTensor, MultiheadAttentionBase
+from .mha_base import MultiheadAttentionBase
 
 logger = getLogger(__name__)
 
@@ -113,7 +113,8 @@ def _scaled_dot_product_attention_step(
 
 class SingleOutputMultiheadAttention(MultiheadAttentionBase):
     """
-    Continual Single-output MultiHeadAttention.
+    Continual Single-output MultiHeadAttention as proposed by Hedegaard et al. in
+    "Continual Transformers: Redundancy-Free Attention for Online Inference"
     https://arxiv.org/abs/2201.06268
 
     Args:
@@ -145,7 +146,7 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         add_zero_attn=False,
         kdim=None,
         vdim=None,
-        batch_first=False,
+        batch_first=True,
         device=None,
         dtype=None,
         sequence_len=None,
@@ -269,7 +270,7 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         update_state=True,
         *args,
         **kwargs,
-    ) -> MaybeTensor:
+    ) -> Union[Tensor, TensorPlaceholder]:
         """
         Args:
             query, key, value: step_inputs for mapping a query and a set of key-value pairs to an output.
@@ -299,7 +300,7 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         update_state=True,
         *args,
         **kwargs,
-    ) -> MaybeTensor:
+    ) -> Union[Tensor, TensorPlaceholder]:
         """Forward computation for multiple steps with state initialisation
 
         Args:
