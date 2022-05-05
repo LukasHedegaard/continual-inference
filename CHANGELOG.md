@@ -12,6 +12,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ### Added
 - Citations for Continual Inference lib paper.
 - Docs.
+- Automatic conversion for RNN modules.
 - Continual Transformer modules, including:
     - `RecyclingPositionalEncoding`.
     - `RetroactiveMultiheadAttention`.

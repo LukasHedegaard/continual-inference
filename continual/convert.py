@@ -24,6 +24,7 @@ from .pooling import (
     MaxPool2d,
     MaxPool3d,
 )
+from .rnn import GRU, LSTM, RNN
 
 logger = getLogger(__name__)
 
@@ -208,3 +209,8 @@ register(nn.Sequential, Sequential)
 
 # Closure
 register(FunctionType, Lambda)
+
+# RNN
+register(nn.RNN, RNN)
+register(nn.LSTM, LSTM)
+register(nn.GRU, GRU)
