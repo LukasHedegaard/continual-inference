@@ -146,6 +146,7 @@ def sum_last_pairs(inputs: Sequence[Tensor]) -> Tensor:
     return reduce(torch.Tensor.add, inputs[1:], inputs[0])
 
 
+# TODO: Inherit from Sequential to add attributed and methods such as build_from?
 def SingleOutputTransformerEncoderLayer(
     d_model: int,
     nhead: int,
@@ -213,7 +214,7 @@ def SingleOutputTransformerEncoderLayer(
         ),
     )
 
-
+# TODO: Inherit from Sequential to add attributed and methods such as build_from?
 def RetroactiveTransformerEncoderLayer(
     d_model: int,
     nhead: int,
@@ -281,7 +282,7 @@ def RetroactiveTransformerEncoderLayer(
         ),
     )
 
-
+# TODO: impl
 def StepLocalTransformerEncoderLayer(
     d_model: int,
     nhead: int,
@@ -296,7 +297,6 @@ def StepLocalTransformerEncoderLayer(
     sequence_len: int = None,
 ):
     ...
-
 
 def TransformerEncoderLayerFactory(
     d_model: int,
@@ -336,6 +336,7 @@ def TransformerEncoderLayerFactory(
     return TransformerEncoderLayer
 
 
+# TODO: Inherit from Sequential to add attributed and methods such as build_from?
 def TransformerEncoder(encoder_layer, num_layers, norm: nn.Module = None):
     """Continual Transformer Encoder as proposed by Hedegaard et al. in
     "Continual Transformers: Redundancy-Free Attention for Online Inference"
@@ -370,6 +371,7 @@ def TransformerEncoder(encoder_layer, num_layers, norm: nn.Module = None):
     return Sequential(OrderedDict([layers]))
 
 
+# TODO: impl and merge with TransformerEncoder
 def build_transformer_encoder_from(
     trans_enc: nn.TransformerEncoder, sequence_len: int
 ) -> Sequential:
