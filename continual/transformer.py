@@ -214,6 +214,7 @@ def SingleOutputTransformerEncoderLayer(
         ),
     )
 
+
 # TODO: Inherit from Sequential to add attributed and methods such as build_from?
 def RetroactiveTransformerEncoderLayer(
     d_model: int,
@@ -282,6 +283,7 @@ def RetroactiveTransformerEncoderLayer(
         ),
     )
 
+
 # TODO: impl
 def StepLocalTransformerEncoderLayer(
     d_model: int,
@@ -297,6 +299,7 @@ def StepLocalTransformerEncoderLayer(
     sequence_len: int = None,
 ):
     ...
+
 
 def TransformerEncoderLayerFactory(
     d_model: int,
