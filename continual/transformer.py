@@ -1,8 +1,7 @@
-import re
 from collections import OrderedDict
 from enum import Enum
-from functools import reduce
-from typing import Callable, Sequence, Tuple, Union
+from functools import partial, reduce
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import torch
 from torch import Tensor, nn
@@ -32,6 +31,7 @@ class MhaType(Enum):
 
     RETROACTIVE = "retroactive"
     SINGLE_OUTPUT = "single_output"
+    SINGLE_OUTPUT_FORWARD = "single_output_forward"
     REGULAR = "regular"
 
 
@@ -147,7 +147,6 @@ def sum_last_pairs(inputs: Sequence[Tensor]) -> Tensor:
     return reduce(torch.Tensor.add, inputs[1:], inputs[0])
 
 
-# TODO: Inherit from Sequential to add attributed and methods such as build_from?
 def SingleOutputTransformerEncoderLayer(
     d_model: int,
     nhead: int,
@@ -189,14 +188,22 @@ def SingleOutputTransformerEncoderLayer(
                     "linear1",
                     Linear(d_model, dim_feedforward, channel_dim=1, **factory_kwargs),
                 ),
-                ("activation", activation),
-                # Bad name, kept for weight-compat with torch impl:
-                ("dropout", nn.Dropout(dropout)),
+                (
+                    "activation",
+                    activation,
+                ),
+                (
+                    "dropout",
+                    nn.Dropout(dropout),
+                ),
                 (
                     "linear2",
                     Linear(dim_feedforward, d_model, channel_dim=1, **factory_kwargs),
                 ),
-                ("dropout2", nn.Dropout(dropout)),
+                (
+                    "dropout2",
+                    nn.Dropout(dropout),
+                ),
             ]
         )
     )
@@ -209,7 +216,10 @@ def SingleOutputTransformerEncoderLayer(
                         "residual",
                         SelectOrDelay(mha.delay) if single_output_forward else Unity(),
                     ),
-                    ("self_attn", mha),
+                    (
+                        "self_attn",
+                        mha,
+                    ),
                 ]
             ),
             reduce=sum_last_pairs,
@@ -227,7 +237,6 @@ def SingleOutputTransformerEncoderLayer(
     )
 
 
-# TODO: Inherit from Sequential to add attributed and methods such as build_from?
 def RetroactiveTransformerEncoderLayer(
     d_model: int,
     nhead: int,
@@ -262,8 +271,7 @@ def RetroactiveTransformerEncoderLayer(
         OrderedDict(
             [
                 ("linear1", Linear(d_model, dim_feedforward, **factory_kwargs)),
-                ("activation", activation),
-                # Bad name, kept for weight-compat with torch impl:
+                ("activation", Lambda(activation, takes_time=True)),
                 ("dropout", nn.Dropout(dropout)),
                 ("linear2", Linear(dim_feedforward, d_model, **factory_kwargs)),
                 ("dropout2", nn.Dropout(dropout)),
@@ -331,6 +339,9 @@ def TransformerEncoderLayerFactory(
         factory_fn = {
             MhaType.RETROACTIVE: RetroactiveTransformerEncoderLayer,
             MhaType.SINGLE_OUTPUT: SingleOutputTransformerEncoderLayer,
+            MhaType.SINGLE_OUTPUT_FORWARD: partial(
+                SingleOutputTransformerEncoderLayer, single_output_forward=True
+            ),
             MhaType.REGULAR: StepLocalTransformerEncoderLayer,
         }[MhaType(mha_type)]
 
@@ -373,7 +384,7 @@ class TransformerEncoder(Sequential):
 
     def __init__(
         self,
-        encoder_layer: Callable[[MhaType], Sequential],
+        encoder_layer: Callable[[MhaType, Optional[bool]], Sequential],
         num_layers: int,
         norm: nn.Module = None,
     ):
@@ -384,8 +395,24 @@ class TransformerEncoder(Sequential):
         else:
             layers.append(encoder_layer(MhaType.RETROACTIVE))
             for _ in range(2, num_layers - 1):
-                layers.append(encoder_layer(MhaType.REGULAR))
-            layers.append(encoder_layer(MhaType.SINGLE_OUTPUT))
+                layers.append(
+                    RetroactiveLambda(encoder_layer(MhaType.REGULAR), takes_time=True)
+                )
+            layers.append(
+                RetroactiveLambda(
+                    encoder_layer(MhaType.SINGLE_OUTPUT_FORWARD), takes_time=True
+                )
+            )
+
+            def unity(x):
+                return x
+
+            def squeeze_last(x):
+                return x.squeeze(-1)
+
+            layers.append(
+                Lambda(unity, None, squeeze_last, squeeze_last, takes_time=True)
+            )
 
         Sequential.__init__(self, OrderedDict([("layers", Sequential(*layers))]))
         if norm is not None:
@@ -415,14 +442,38 @@ class TransformerEncoder(Sequential):
         )
 
         # Transfer weights
-        sd = trans_enc.state_dict()
         new_sd = {}
-        for k in net.state_dict().keys():
-            kn = k.replace(".fn", "").replace("._ff_block.1", "")
-            kr = re.search(r"(layers.\d.)\d.([\w\d.]+)", kn)
-            if isinstance(kr, re.Match):
-                kn = "".join(kr.group(1, 2))
-            new_sd[k] = sd[kn]
+
+        net_keys = list(net.state_dict().keys())
+        match_keys, key_inds = zip(
+            *sorted(
+                [
+                    (
+                        k.replace("fn.", "")
+                        .replace("_ff_block.", "")
+                        .replace(".0.self_attn", ".self_attn"),
+                        i,
+                    )
+                    for i, k in enumerate(net_keys)
+                ],
+                key=lambda x: x[0],
+            )
+        )
+
+        reg_keys, weights = zip(
+            *sorted(
+                [item for item in trans_enc.state_dict().items()], key=lambda x: x[0]
+            )
+        )
+
+        assert all(
+            [
+                ".".join(k1.split(".")[-2:]) == ".".join(k2.split(".")[-2:])
+                for k1, k2 in zip(match_keys, reg_keys)
+            ]
+        )
+
+        new_sd = {net_keys[key_inds[i]]: weights[i] for i in range(len(net_keys))}
 
         net.load_state_dict(new_sd)
 
