@@ -8,7 +8,7 @@ from torch import Tensor
 
 from continual.module import CallMode, TensorPlaceholder
 
-from .mha_base import MultiheadAttentionBase
+from .mha_base import MultiheadAttentionBase, scaled_dot_prod_attn_flops
 
 logger = getLogger(__name__)
 
@@ -360,7 +360,7 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         # Multi-head Scaled Dot-Product Attention
         f += self.num_heads * {
             CallMode.FORWARD: scaled_dot_prod_attn_flops,
-            CallMode.FORWARD_STEP: scaled_dot_prod_attn_step_flops,
+            CallMode.FORWARD_STEP: retractive_scaled_dot_prod_attn_step_flops,
         }[self.call_mode](
             self.sequence_len,
             self.embed_dim // self.num_heads,
@@ -375,25 +375,7 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         return f
 
 
-def scaled_dot_prod_attn_flops(
-    sequence_len, embed_dim, include_muls=True, include_adds=False, include_exps=False
-):
-    n = sequence_len
-    d = embed_dim
-
-    flops = 0
-
-    if include_muls:
-        flops += 2 * n * n * d + 2 * n * d
-    if include_adds:
-        flops += 2 * n * n - n * d - n
-    if include_exps:
-        flops += n * n
-
-    return flops
-
-
-def scaled_dot_prod_attn_step_flops(
+def retractive_scaled_dot_prod_attn_step_flops(
     sequence_len, embed_dim, include_muls=True, include_adds=False, include_exps=False
 ):
     n = sequence_len

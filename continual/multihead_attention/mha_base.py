@@ -305,7 +305,7 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         key_padding_mask: Optional[Tensor] = None,
         need_weights: bool = True,
         attn_mask: Optional[Tensor] = None,
-    ) -> Tuple[Tensor, Optional[Tensor]]:
+    ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
         r"""
         Args:
             query, key, value: map a query and a set of key-value pairs to an output.
@@ -584,3 +584,21 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
             if module.bias_v is not None:
                 comodule.bias_v.copy_(module.bias_v)
         return comodule
+
+
+def scaled_dot_prod_attn_flops(
+    sequence_len, embed_dim, include_muls=True, include_adds=False, include_exps=False
+):
+    n = sequence_len
+    d = embed_dim
+
+    flops = 0
+
+    if include_muls:
+        flops += 2 * n * n * d + 2 * n * d
+    if include_adds:
+        flops += 2 * n * n - n * d - n
+    if include_exps:
+        flops += n * n
+
+    return flops

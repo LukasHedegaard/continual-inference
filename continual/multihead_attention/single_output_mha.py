@@ -9,7 +9,7 @@ from torch import Tensor
 
 from continual.module import CallMode, TensorPlaceholder
 
-from .mha_base import MultiheadAttentionBase
+from .mha_base import MultiheadAttentionBase, scaled_dot_prod_attn_flops
 
 logger = getLogger(__name__)
 
@@ -153,6 +153,7 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         query_index=-1,
         forward_returns_attn_mask=True,
         embed_dim_second=False,
+        single_output_forward=True,
     ) -> None:
         MultiheadAttentionBase.__init__(
             self,
@@ -181,6 +182,7 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         )
         assert query_index < sequence_len
         self.query_index = query_index
+        self.single_output_forward = single_output_forward
 
     def get_state(self) -> Optional[State]:
         """Get model state
@@ -241,7 +243,12 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         key_padding_mask: Optional[Tensor] = None,
         need_weights: bool = True,
         attn_mask: Optional[Tensor] = None,
-    ) -> Tuple[Tensor, Optional[Tensor]]:
+    ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
+        if not self.single_output_forward:
+            return MultiheadAttentionBase.forward(
+                self, query, key, value, key_padding_mask, need_weights, attn_mask
+            )
+
         if key is None:
             key = query
         if value is None:
@@ -349,8 +356,10 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
 
         # Multi-head Scaled Dot-Product Attention
         f += self.num_heads * {
-            CallMode.FORWARD: scaled_dot_prod_attn_flops,
-            CallMode.FORWARD_STEP: scaled_dot_prod_attn_step_flops,
+            CallMode.FORWARD: single_output_scaled_dot_prod_attn_flops
+            if self.single_output_forward
+            else scaled_dot_prod_attn_flops,
+            CallMode.FORWARD_STEP: single_output_scaled_dot_prod_attn_flops,
         }[self.call_mode](
             self.sequence_len,
             self.embed_dim // self.num_heads,
@@ -365,7 +374,7 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         return f
 
 
-def scaled_dot_prod_attn_flops(
+def single_output_scaled_dot_prod_attn_flops(
     sequence_len, embed_dim, include_muls=True, include_adds=False, include_exps=False
 ):
     n = sequence_len
@@ -381,11 +390,3 @@ def scaled_dot_prod_attn_flops(
         flops += n
 
     return flops
-
-
-def scaled_dot_prod_attn_step_flops(
-    sequence_len, embed_dim, include_muls=True, include_adds=False, include_exps=False
-):
-    return scaled_dot_prod_attn_flops(
-        sequence_len, embed_dim, include_muls, include_adds, include_exps
-    )
