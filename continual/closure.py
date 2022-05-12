@@ -56,7 +56,7 @@ class Lambda(CoModule, nn.Module):
         )
 
     def __repr__(self) -> str:
-        s = "Lambda("
+        s = self.__class__.__name__ + "("
         if callable(self.fn):
             s += f"{function_repr(self.fn)}"
         if callable(self.forward_only_fn):
