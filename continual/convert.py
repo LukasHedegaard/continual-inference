@@ -25,6 +25,7 @@ from .pooling import (
     MaxPool3d,
 )
 from .rnn import GRU, LSTM, RNN
+from .transformer import TransformerEncoder
 
 logger = getLogger(__name__)
 
@@ -48,10 +49,7 @@ def forward_stepping(module: nn.Module, dim: int = 2):
     def forward_step(func: Callable[[Tensor], Tensor]):
         @wraps(func)
         def call(x: Tensor, update_state=True) -> Tensor:
-            x = x.unsqueeze(dim)
-            x = func(x)
-            x = x.squeeze(dim)
-            return x
+            return func(x.unsqueeze(dim)).squeeze(dim)
 
         return call
 
@@ -214,3 +212,6 @@ register(FunctionType, Lambda)
 register(nn.RNN, RNN)
 register(nn.LSTM, LSTM)
 register(nn.GRU, GRU)
+
+# Transformer
+register(nn.TransformerEncoder, TransformerEncoder)

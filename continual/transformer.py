@@ -1,3 +1,4 @@
+import re
 from collections import OrderedDict
 from enum import Enum
 from functools import reduce
@@ -9,7 +10,7 @@ from torch import Tensor, nn
 from continual.delay import State as DelayState
 from continual.module import TensorPlaceholder
 
-from .closure import Lambda
+from .closure import Lambda, Unity
 from .container import BroadcastReduce, Residual, Sequential
 from .delay import Delay, PaddingMode
 from .linear import Linear
@@ -18,7 +19,7 @@ from .multihead_attention import (
     SingleOutputMultiheadAttention,
 )
 
-__all__ = ["TransformerEncoder", "TransformerEncoderLayerFactory", "MhaType"]
+__all__ = ["TransformerEncoder", "TransformerEncoderLayerFactory"]
 
 
 class MhaType(Enum):
@@ -159,6 +160,7 @@ def SingleOutputTransformerEncoderLayer(
     device=None,
     dtype=None,
     sequence_len: int = None,
+    single_output_forward=False,
 ):
 
     factory_kwargs = {"device": device, "dtype": dtype}
@@ -177,16 +179,23 @@ def SingleOutputTransformerEncoderLayer(
         dtype=dtype,
         sequence_len=sequence_len,
         forward_returns_attn_mask=False,
+        single_output_forward=single_output_forward,
     )
 
     ff = Sequential(
         OrderedDict(
             [
-                ("linear1", Linear(d_model, dim_feedforward, **factory_kwargs)),
+                (
+                    "linear1",
+                    Linear(d_model, dim_feedforward, channel_dim=1, **factory_kwargs),
+                ),
                 ("activation", activation),
                 # Bad name, kept for weight-compat with torch impl:
                 ("dropout", nn.Dropout(dropout)),
-                ("linear2", Linear(dim_feedforward, d_model, **factory_kwargs)),
+                (
+                    "linear2",
+                    Linear(dim_feedforward, d_model, channel_dim=1, **factory_kwargs),
+                ),
                 ("dropout2", nn.Dropout(dropout)),
             ]
         )
@@ -196,8 +205,11 @@ def SingleOutputTransformerEncoderLayer(
         BroadcastReduce(
             OrderedDict(
                 [
-                    ("residual", SelectOrDelay(mha.delay)),
-                    ("self_atn", mha),
+                    (
+                        "residual",
+                        SelectOrDelay(mha.delay) if single_output_forward else Unity(),
+                    ),
+                    ("self_attn", mha),
                 ]
             ),
             reduce=sum_last_pairs,
@@ -264,7 +276,7 @@ def RetroactiveTransformerEncoderLayer(
             OrderedDict(
                 [
                     ("residual", RetroactiveUnity(mha.delay)),
-                    ("self_atn", mha),
+                    ("self_attn", mha),
                 ]
             ),
             reduce="sum",
@@ -313,7 +325,7 @@ def TransformerEncoderLayerFactory(
     device=None,
     dtype=None,
     sequence_len: int = None,
-) -> Callable[[str], Sequential]:
+) -> Callable[[MhaType], Sequential]:
     def TransformerEncoderLayer(mha_type: MhaType):
 
         factory_fn = {
@@ -339,8 +351,7 @@ def TransformerEncoderLayerFactory(
     return TransformerEncoderLayer
 
 
-# TODO: Inherit from Sequential to add attributed and methods such as build_from?
-def TransformerEncoder(encoder_layer, num_layers, norm: nn.Module = None):
+class TransformerEncoder(Sequential):
     """Continual Transformer Encoder as proposed by Hedegaard et al. in
     "Continual Transformers: Redundancy-Free Attention for Online Inference"
     https://arxiv.org/abs/2201.06268TransformerEncoder
@@ -354,28 +365,65 @@ def TransformerEncoder(encoder_layer, num_layers, norm: nn.Module = None):
         norm: the layer normalization component (optional).
 
     Examples::
-        >>> transformer_encoder = co.TransformerEncoder(num_layers=2)
+        >>> encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8)
+        >>> transformer_encoder = co.TransformerEncoder(encoder_layer, num_layers=2)
         >>> src = torch.rand(10, 512, 32)
         >>> out = transformer_encoder(src)
     """
 
-    layers = []
-    if num_layers == 1:
-        layers.append(("block1", encoder_layer(MhaType.SINGLE_OUTPUT)))
-    else:
-        layers.append(("block1", encoder_layer(MhaType.RETROACTIVE)))
-        for i in range(2, num_layers - 1):
-            layers.append((f"block{i}", encoder_layer(MhaType.REGULAR)))
-        layers.append((f"block{num_layers}", encoder_layer(MhaType.SINGLE_OUTPUT)))
+    def __init__(
+        self,
+        encoder_layer: Callable[[MhaType], Sequential],
+        num_layers: int,
+        norm: nn.Module = None,
+    ):
 
-    if norm is not None:
-        layers.append(("norm", norm))
+        layers = []
+        if num_layers == 1:
+            layers.append(encoder_layer(MhaType.SINGLE_OUTPUT))
+        else:
+            layers.append(encoder_layer(MhaType.RETROACTIVE))
+            for _ in range(2, num_layers - 1):
+                layers.append(encoder_layer(MhaType.REGULAR))
+            layers.append(encoder_layer(MhaType.SINGLE_OUTPUT))
 
-    return Sequential(OrderedDict([layers]))
+        Sequential.__init__(self, OrderedDict([("layers", Sequential(*layers))]))
+        if norm is not None:
+            self.add_module("norm", Lambda(norm, takes_time=False))
 
+    @staticmethod
+    def build_from(
+        trans_enc: nn.TransformerEncoder, sequence_len: int
+    ) -> "TransformerEncoder":
+        assert isinstance(trans_enc, nn.TransformerEncoder)
 
-# TODO: impl and merge with TransformerEncoder
-def build_transformer_encoder_from(
-    trans_enc: nn.TransformerEncoder, sequence_len: int
-) -> Sequential:
-    ...
+        # Create model
+        tel = trans_enc.layers[0]
+        layer_factory = TransformerEncoderLayerFactory(
+            d_model=tel.self_attn.embed_dim,
+            nhead=tel.self_attn.num_heads,
+            dim_feedforward=tel.linear1.out_features,
+            dropout=tel.dropout.p,
+            activation=tel.activation,
+            layer_norm_eps=tel.norm1.eps,
+            device=tel.linear1.weight.device,
+            dtype=tel.linear1.weight.dtype,
+            sequence_len=sequence_len,
+        )
+        net = TransformerEncoder(
+            layer_factory, num_layers=trans_enc.num_layers, norm=trans_enc.norm
+        )
+
+        # Transfer weights
+        sd = trans_enc.state_dict()
+        new_sd = {}
+        for k in net.state_dict().keys():
+            kn = k.replace(".fn", "").replace("._ff_block.1", "")
+            kr = re.search(r"(layers.\d.)\d.([\w\d.]+)", kn)
+            if isinstance(kr, re.Match):
+                kn = "".join(kr.group(1, 2))
+            new_sd[k] = sd[kn]
+
+        net.load_state_dict(new_sd)
+
+        return net
