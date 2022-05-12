@@ -24,6 +24,8 @@ from .pooling import (
     MaxPool2d,
     MaxPool3d,
 )
+from .rnn import GRU, LSTM, RNN
+from .transformer import TransformerEncoder
 
 logger = getLogger(__name__)
 
@@ -47,10 +49,7 @@ def forward_stepping(module: nn.Module, dim: int = 2):
     def forward_step(func: Callable[[Tensor], Tensor]):
         @wraps(func)
         def call(x: Tensor, update_state=True) -> Tensor:
-            x = x.unsqueeze(dim)
-            x = func(x)
-            x = x.squeeze(dim)
-            return x
+            return func(x.unsqueeze(dim)).squeeze(dim)
 
         return call
 
@@ -209,29 +208,10 @@ register(nn.Sequential, Sequential)
 # Closure
 register(FunctionType, Lambda)
 
+# RNN
+register(nn.RNN, RNN)
+register(nn.LSTM, LSTM)
+register(nn.GRU, GRU)
 
-# Register modules in `ptflops`
-try:
-    from ptflops import flops_counter as fc
-
-    # Conv
-    fc.MODULES_MAPPING[Conv1d] = fc.conv_flops_counter_hook
-    fc.MODULES_MAPPING[Conv2d] = fc.conv_flops_counter_hook
-    fc.MODULES_MAPPING[Conv3d] = fc.conv_flops_counter_hook
-
-    # Pooling
-    fc.MODULES_MAPPING[AvgPool1d] = fc.pool_flops_counter_hook
-    fc.MODULES_MAPPING[MaxPool1d] = fc.pool_flops_counter_hook
-    fc.MODULES_MAPPING[AvgPool2d] = fc.pool_flops_counter_hook
-    fc.MODULES_MAPPING[MaxPool2d] = fc.pool_flops_counter_hook
-    fc.MODULES_MAPPING[AdaptiveAvgPool2d] = fc.pool_flops_counter_hook
-    fc.MODULES_MAPPING[AdaptiveMaxPool2d] = fc.pool_flops_counter_hook
-    fc.MODULES_MAPPING[AvgPool3d] = fc.pool_flops_counter_hook
-    fc.MODULES_MAPPING[MaxPool3d] = fc.pool_flops_counter_hook
-    fc.MODULES_MAPPING[AdaptiveAvgPool3d] = fc.pool_flops_counter_hook
-    fc.MODULES_MAPPING[AdaptiveMaxPool3d] = fc.pool_flops_counter_hook
-
-except ModuleNotFoundError:  # pragma: no cover
-    pass
-except Exception as e:  # pragma: no cover
-    logger.warning(f"Failed to add flops_counter_hook: {e}")
+# Transformer
+register(nn.TransformerEncoder, TransformerEncoder)

@@ -13,7 +13,7 @@ __PyTorch building blocks for Continual Inference Networks__
     <img src="https://readthedocs.org/projects/continual-inference/badge/?version=latest" alt="Documentation Status" height="20"/>
   </a>
   <a href="https://pepy.tech/project/continual-inference">
-    <img src="https://pepy.tech/badge/continual-inference/month" height="20">
+    <img src="https://pepy.tech/badge/continual-inference" height="20">
   </a>
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG" height="20"/>
@@ -33,7 +33,6 @@ __PyTorch building blocks for Continual Inference Networks__
   <sup>*</sup>
 </div>
 
-\*We match PyTorch interfaces exacly. This reduces the codefactor to "A-" due to method arguments named "input".
 
 ## Install 
 ```bash
@@ -218,6 +217,15 @@ Below is a list of the modules and utilities included in the library:
     - `co.LSTM`
     - `co.GRU`
 
+- Transformers:
+    - `co.TransformerEncoder`
+    - `co.TransformerEncoderLayerFactory` - Factory function corresponding to `nn.TransformerEncoderLayer`.
+    - `co.SingleOutputTransformerEncoderLayer` - SingleOutputMHA version of `nn.TransformerEncoderLayer`.
+    - `co.RetroactiveTransformerEncoderLayer` - RetroactiveMHA version of `nn.TransformerEncoderLayer`.
+    - `co.RetroactiveMultiheadAttention` - Retroactive version of `nn.MultiheadAttention`.
+    - `co.SingleOutputMultiheadAttention` - Single-output version of `nn.MultiheadAttention`.
+    - `co.RecyclingPositionalEncoding` - Positional Encoding used for Continual Transformers.
+
 - Containers
     - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
     - `co.Broadcast` - Broadcast one stream to multiple.
@@ -227,6 +235,9 @@ Below is a list of the modules and utilities included in the library:
     - `co.Residual` - Residual wrapper for modules.
     - `co.BroadcastReduce` - BroadcastReduce wrapper for modules.
     - `co.Conditional` - Conditionally checks whether to invoke a module at runtime.
+
+- Transformer modules
+    - `co.RecyclingPositionalEncoding` - Positional encoding for continual inference.
 
 - Other
     - `co.Delay` - Pure delay module (e.g. needed in residuals).
