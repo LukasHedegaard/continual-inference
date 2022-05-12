@@ -66,9 +66,9 @@ def _scaled_dot_product_attention_step(
 
         - Output: attention values have shape :math:`(B, Nt, E)`; new state
     """
-    if attn_mask is not None:
+    if attn_mask is not None:  # pragma: no cover
         logger.warning("attn_mask is not supported yet and will be skipped")
-    if dropout_p != 0.0:
+    if dropout_p != 0.0:  # pragma: no cover
         logger.warning("dropout_p is not supported yet and will be skipped")
 
     (
@@ -94,7 +94,7 @@ def _scaled_dot_product_attention_step(
     attn = torch.bmm(q_sel, K_T_new)
     attn_sm = F.softmax(attn, dim=-1)
 
-    if dropout_p > 0.0:
+    if dropout_p > 0.0:  # pragma: no cover
         attn_sm = F.dropout(attn_sm, p=dropout_p)
 
     # (B, Nt, Ns) x (B, Ns, E) -> (B, Nt, E)
@@ -335,7 +335,7 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
 
         # Linear projection
         steps_taken = {
-            CallMode.FORWARD: self.sequence_len,
+            CallMode.FORWARD: 1 if self.single_output_forward else self.sequence_len,
             CallMode.FORWARD_STEP: 1,
         }[self.call_mode]
 

@@ -67,9 +67,9 @@ def _scaled_dot_product_attention_step(
 
         - Output: attention values have shape :math:`(B, Nt, E)`; new state
     """
-    if attn_mask is not None:
+    if attn_mask is not None:  # pragma: no cover
         logger.warning("attn_mask is not supported yet and will be skipped")
-    if dropout_p != 0.0:
+    if dropout_p != 0.0:  # pragma: no cover
         logger.warning("dropout_p is not supported yet and will be skipped")
 
     (

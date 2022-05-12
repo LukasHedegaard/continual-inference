@@ -40,7 +40,7 @@ def _register_ptflops():
 
         if hasattr(ptflops, "pytorch_ops"):  # >= v0.6.8
             fc = ptflops.pytorch_ops
-        else:  # < v0.6.7
+        else:  # < v0.6.7 # pragma: no cover
             fc = ptflops.flops_counter
 
         def get_hook(Module):
