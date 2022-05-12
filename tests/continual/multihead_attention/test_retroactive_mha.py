@@ -105,7 +105,7 @@ def test_scaled_dot_product_attention_step():
 
     # Sanity check
     target1, _ = _scaled_dot_product_attention(query1, key1, value1)
-    assert torch.allclose(target1, output1, atol=1e-7)
+    assert torch.allclose(target1, output1, atol=1e-6)
 
     # == Ready for actual test! ==
 
@@ -145,7 +145,7 @@ def test_scaled_dot_product_attention_step():
     for p, n in zip(prev_state, new_state):
         assert p.shape == n.shape
 
-    assert torch.allclose(target2, output2, atol=1e-7)
+    assert torch.allclose(target2, output2, atol=1e-6)
 
     # Now, let's try from zero-init
     state = _scaled_dot_product_attention_default_state(B, N, E, H, dtype=torch.float)
@@ -154,12 +154,12 @@ def test_scaled_dot_product_attention_step():
             state, query1[:, i], key1[:, i], value1[:, i]
         )
 
-    assert torch.allclose(output_step, target1, atol=1e-7)
+    assert torch.allclose(output_step, target1, atol=1e-6)
 
     output_step, state = _scaled_dot_product_attention_step(
         state, query_step, key_step, value_step
     )
-    assert torch.allclose(output_step, target2, atol=1e-7)
+    assert torch.allclose(output_step, target2, atol=1e-6)
 
 
 def test_flops():
