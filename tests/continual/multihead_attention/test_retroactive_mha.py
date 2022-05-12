@@ -232,3 +232,9 @@ def test_flops():
 
     assert 0.5 * flops > co_step_flops
     assert co_step_params == params
+
+    # Including adds and exps in flops
+    co_step_flops_all = co_net.flops(
+        include_muls=True, include_adds=True, include_exps=True
+    )
+    assert co_step_flops_all > co_step_flops
