@@ -217,6 +217,15 @@ Below is a list of the modules and utilities included in the library:
     - `co.LSTM`
     - `co.GRU`
 
+- Transformers:
+    - `co.TransformerEncoder`
+    - `co.TransformerEncoderLayerFactory` - Factory function corresponding to `nn.TransformerEncoderLayer`.
+    - `co.SingleOutputTransformerEncoderLayer` - SingleOutputMHA version of `nn.TransformerEncoderLayer`.
+    - `co.RetroactiveTransformerEncoderLayer` - RetroactiveMHA version of `nn.TransformerEncoderLayer`.
+    - `co.RetroactiveMultiheadAttention` - Retroactive version of `nn.MultiheadAttention`.
+    - `co.SingleOutputMultiheadAttention` - Single-output version of `nn.MultiheadAttention`.
+    - `co.RecyclingPositionalEncoding` - Positional Encoding used for Continual Transformers.
+
 - Containers
     - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
     - `co.Broadcast` - Broadcast one stream to multiple.
