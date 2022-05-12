@@ -86,9 +86,13 @@ def test_trans_enc_b2():
     # Forward step
     o_step = enc.forward_steps(query[:, :, :-1])  # init
 
-    o_step = enc.forward_step(query[:, :, -1])
+    o_step = enc.forward_step(query[:, :, -1], update_state=False)
 
     assert torch.allclose(o[:, :, -1], o_step)
+
+    # Same result with forward_steps
+    o_step2 = enc.forward_steps(query[:, :, -1].unsqueeze(-1))
+    assert torch.allclose(o_step, o_step2.squeeze(-1))
 
     # FLOPs
     flops, _ = get_model_complexity_info(

@@ -12,10 +12,11 @@ State = List[Tensor]
 
 
 def _clone_state(state):
-    return [s.clone() for s in state]
+    return [s.clone() if isinstance(s, torch.Tensor) else s for s in state]
 
 
-def multi_head_attention_forward_step(  # noqa: C901 - copy of impl in PyTorch
+# Copy of torch.nn impl
+def multi_head_attention_forward_step(  # noqa: C901
     scaled_dot_product_attention_step: Callable,
     prev_state: Any,
     query: Tensor,
@@ -41,7 +42,7 @@ def multi_head_attention_forward_step(  # noqa: C901 - copy of impl in PyTorch
     v_proj_weight: Optional[Tensor] = None,
     static_k: Optional[Tensor] = None,
     static_v: Optional[Tensor] = None,
-) -> Tuple[Tensor, Any]:
+) -> Tuple[Tensor, Any]:  # pragma: no cover
     """
     Args:
         query, key, value: map a query and a set of key-value pairs to an output.
@@ -287,15 +288,15 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
 
     @abstractmethod
     def get_state(self) -> Optional[Any]:
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def set_state(self, state: Any):
-        ...
+        ...  # pragma: no cover
 
     @abstractmethod
     def clean_state(self):
-        ...
+        ...  # pragma: no cover
 
     def forward(
         self,
