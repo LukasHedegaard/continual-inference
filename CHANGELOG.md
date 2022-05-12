@@ -14,9 +14,13 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Docs.
 - Automatic conversion for RNN modules.
 - Continual Transformer modules, including:
-    - `RecyclingPositionalEncoding`.
-    - `RetroactiveMultiheadAttention`.
-    - `SingleOutputMultiheadAttention`.
+    - `RecyclingPositionalEncoding`
+    - `RetroactiveMultiheadAttention`
+    - `SingleOutputMultiheadAttention`
+    - `SingleOutputTransformerEncoderLayer`
+    - `RetroactiveTransformerEncoderLayer`
+    - `TransformerEncoderLayerFactory`
+    - `TransformerEncoder`
 
 
 ## [0.16.0]
