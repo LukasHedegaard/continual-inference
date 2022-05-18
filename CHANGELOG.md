@@ -222,7 +222,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Example of Squeeze and Excitation block
 
 ### Changed
-- `co._PoolNd` attribute naming: "temporal_" removed as prefix for kernel_size, stride, dilation, and padding.
+- `co._PoolNd` attribute naming: "temporal_*" removed as prefix for kernel_size, stride, dilation, and padding.
 
 
 ## [0.4.0]
