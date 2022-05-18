@@ -375,11 +375,11 @@ class TransformerEncoder(Sequential):
         num_layers: the number of sub-encoder-layers in the encoder (required).
         norm: the layer normalization component (optional).
 
-    Examples::
-        >>> encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8)
-        >>> transformer_encoder = co.TransformerEncoder(encoder_layer, num_layers=2)
-        >>> src = torch.rand(10, 512, 32)
-        >>> out = transformer_encoder(src)
+    Examples:
+        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8)
+        transformer_encoder = co.TransformerEncoder(encoder_layer, num_layers=2)
+        src = torch.rand(10, 512, 32)
+        out = transformer_encoder(src)
     """
 
     def __init__(
