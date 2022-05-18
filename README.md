@@ -33,6 +33,7 @@ __PyTorch building blocks for Continual Inference Networks__
   <sup>*</sup>
 </div>
 
+###### \*We match PyTorch interfaces exacly. This reduces the codefactor to "A-" due to method arguments named "input".
 
 ## Install 
 ```bash
