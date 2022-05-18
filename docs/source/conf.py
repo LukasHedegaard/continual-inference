@@ -32,7 +32,7 @@ try:
 except ImportError:
     # alternative https://stackoverflow.com/a/67692/4521646
     sys.path.append(os.path.join(PATH_ROOT, "continual"))
-    import continual.__about__ as about
+    import __about__ as about
 
 # -- Project documents -------------------------------------------------------
 
