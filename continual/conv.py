@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Callable, Tuple
 
 import torch
@@ -23,19 +22,20 @@ logger = getLogger(__name__)
 State = Tuple[Tensor, int, int]
 
 _forward_step_impl = None
-try:
-    from torch.utils.cpp_extension import load as load_cpp
+# from pathlib import Path
+# try:
+#     from torch.utils.cpp_extension import load as load_cpp
 
-    _forward_step_impl = load_cpp(
-        name="cpp_impl",
-        sources=[str(Path(__file__).parent / "conv.cpp")],
-        verbose=False,
-    ).forward_step
-except Exception as e:  # pragma: no cover
-    logger.warning(
-        "Unable to compile CoConv C++ implementation. Falling back to Python version."
-    )
-    logger.warning(e)
+#     _forward_step_impl = load_cpp(
+#         name="cpp_impl",
+#         sources=[str(Path(__file__).parent / "conv.cpp")],
+#         verbose=False,
+#     ).forward_step
+# except Exception as e:  # pragma: no cover
+#     logger.warning(
+#         "Unable to compile CoConv C++ implementation. Falling back to Python version."
+#     )
+#     logger.warning(e)
 
 
 __all__ = ["Conv1d", "Conv2d", "Conv3d", "_forward_step_impl"]

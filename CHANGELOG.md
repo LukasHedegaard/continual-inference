@@ -24,6 +24,9 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
     - `TransformerEncoderLayerFactory`
     - `TransformerEncoder`
 
+### Removed
+- Conv cpp impl.
+
 
 ## [0.16.0]
 
