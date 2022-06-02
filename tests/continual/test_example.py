@@ -78,11 +78,23 @@ def test_mb_conv():
         )
     )
 
+    # Temporal properties
+    assert mb_conv.receptive_field == 3
+    assert mb_conv.delay == 1
+
+    mb_conv.eval()
     output = mb_conv.forward(example)
     assert output.shape == (1, 32, 7, 5, 5)
 
-    output_steps = mb_conv.forward_steps(example, pad_end=True)
-    assert output_steps.shape == output.shape
+    firsts = mb_conv.forward_steps(example[:, :, :6])
+    last = mb_conv.forward_step(example[:, :, 6])
+
+    assert torch.allclose(
+        output[:, :, : -mb_conv.padding - mb_conv.delay], firsts, atol=1e-7
+    )
+    assert torch.allclose(
+        output[:, :, -mb_conv.padding - mb_conv.delay], last, atol=1e-7
+    )
 
 
 def test_inception_module():
