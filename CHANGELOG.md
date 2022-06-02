@@ -9,6 +9,15 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.17.1]
+
+### Added
+- Missing part on Continual Transformers in README.
+
+### Removed
+- Conv cpp impl.
+
+
 ## [0.17.0]
 
 ### Added
@@ -23,9 +32,6 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
     - `RetroactiveTransformerEncoderLayer`
     - `TransformerEncoderLayerFactory`
     - `TransformerEncoder`
-
-### Removed
-- Conv cpp impl.
 
 
 ## [0.16.0]
