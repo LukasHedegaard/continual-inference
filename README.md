@@ -481,3 +481,6 @@ If you use this library or the continual modules, please consider citing:
   year={2022}
 }
 ```
+
+## Acknowledgement
+This work has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 871449 (OpenDR).
