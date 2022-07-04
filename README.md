@@ -430,7 +430,7 @@ If you use this library or the continual modules, please consider citing:
   title={Continual Inference: A Library for Efficient Online Inference with Deep Neural Networks in PyTorch},
   author={Lukas Hedegaard and Alexandros Iosifidis},
   journal={preprint, arXiv:2204.03418},
-  year={2021}
+  year={2022}
 }
 ```
 
@@ -442,11 +442,12 @@ If you use this library or the continual modules, please consider citing:
 </div>
 
 ```bibtex
-@article{hedegaard2021co3d,
-  title={Continual 3D Convolutional Neural Networks for Real-time Processing of Videos},
-  author={Lukas Hedegaard and Alexandros Iosifidis},
-  journal={preprint, arXiv:2106.00050},
-  year={2021}
+@inproceedings{hedegaard2022co3d,
+    title={Continual 3D Convolutional Neural Networks for Real-time Processing of Videos},
+    author={Lukas Hedegaard and Alexandros Iosifidis},
+    pages={1--18},
+    booktitle={European Conference on Computer Vision (ECCV)},
+    year={2022},
 }
 ```
 
