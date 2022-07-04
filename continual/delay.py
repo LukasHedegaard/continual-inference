@@ -135,3 +135,43 @@ class Delay(CoModule, torch.nn.Module):
     def extra_repr(self):
         shrink_str = ", auto_shrink=True" if self.auto_shrink else ""
         return f"{self.delay}" + shrink_str
+
+
+class DiscardFirstSteps(CoModule, torch.nn.Module):
+    """Discard when data is first passed to module"""
+
+    def __init__(
+        self,
+        num_steps: int,
+    ):
+        assert num_steps >= 0
+        self._num_steps = num_steps
+        super(DiscardFirstSteps, self).__init__()
+
+    def init_state(
+        self,
+        first_output: Tensor,
+    ) -> State:
+        state_index = -self._num_steps
+        return state_index
+
+    def clean_state(self):
+        if hasattr(self, "state_index"):
+            del self.state_index
+
+    def get_state(self):
+        if hasattr(self, "state_index") and self.state_buffer is not None:
+            return self.state_index
+
+    def set_state(self, state: State):
+        self.state_index = state
+
+    def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
+        index = prev_state or self.init_state(input)
+        if index >= 0:
+            return input, index
+        else:
+            return TensorPlaceholder(input.shape), index + 1
+
+    def forward(self, input: Tensor) -> Tensor:
+        return input[:, :, -self._num_steps :].unsqueeze(2)
