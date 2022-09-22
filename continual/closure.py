@@ -32,9 +32,11 @@ class Lambda(CoModule, nn.Module):
     ):
         nn.Module.__init__(self)
         assert callable(fn) or all(
-            callable(forward_only_fn),
-            callable(forward_step_only_fn),
-            callable(forward_steps_only_fn),
+            [
+                callable(forward_only_fn),
+                callable(forward_step_only_fn),
+                callable(forward_steps_only_fn),
+            ]
         ), "Either fn or all of forward_only_fn, forward_step_only_fn, and forward_steps_only_fn should be callable."
 
         self.fn = fn

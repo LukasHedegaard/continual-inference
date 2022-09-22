@@ -9,6 +9,9 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [Unreleased]
 
+### Fixed 
+- Fix assertion bug in co.Lambda
+
 ## [0.17.1]
 
 ### Added
