@@ -237,9 +237,6 @@ Below is a list of the modules and utilities included in the library:
     - `co.BroadcastReduce` - BroadcastReduce wrapper for modules.
     - `co.Conditional` - Conditionally checks whether to invoke a module at runtime.
 
-- Transformer modules
-    - `co.RecyclingPositionalEncoding` - Positional encoding for continual inference.
-
 - Other
     - `co.Delay` - Pure delay module (e.g. needed in residuals).
     - `co.Reshape` - Reshape non-temporal dimensions.
