@@ -237,18 +237,11 @@ class _ConvCoNd(CoModule, _ConvNd):
             #     x_out += buffer[(i + index) % tot, :, :, tot - i - 1]
 
             if self.bias is not None:
-                x_out += self.bias[
-                    (None, slice(None), *(None for _ in range(self._input_len - 3)))
-                ]
+                bias = self.bias.unsqueeze(0)
+                for _ in range(self._input_len - 3):
+                    bias = bias.unsqueeze(-1)
+                x_out += bias
 
-                # bias = self.bias.unsqueeze(0)
-                # for _ in range(self._input_len - 3):
-                #     bias = bias.unsqueeze(-1)
-
-                # x_out += bias
-                # bias_sel = [None, slice(None)]
-                # bias_sel.extend(list((None,) * (self._input_len - 3)))
-                # x_out += self.bias[bias_sel]
         else:
             x_out = TensorPlaceholder(x_out.shape)
 
@@ -287,27 +280,29 @@ class _ConvCoNd(CoModule, _ConvNd):
         assert (
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."
-        output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
-        # if self.padding_mode == "zeros":
-        #     output = self._conv_func(
-        #         input=input,
-        #         weight=self.weight,
-        #         bias=None,
-        #         stride=self._step_stride,
-        #         padding=self._step_padding,
-        #         dilation=self.dilation,
-        #         groups=self.groups,
-        #     )
-        # else:
-        #     output = self._conv_func(
-        #         input=F.pad(input, self._step_space_rprt, mode=self.padding_mode),
-        #         weight=self.weight,
-        #         bias=None,
-        #         stride=self._step_stride,
-        #         padding=self._step_time_pad,
-        #         dilation=self.dilation,
-        #         groups=self.groups,
-        #     )
+        # output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
+        if self.padding_mode == "zeros":
+            output = self._conv_func(
+                input=input,
+                weight=self.weight,
+                bias=self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups,
+            )
+        else:
+            output = self._conv_func(
+                input=F.pad(
+                    input, self._reversed_padding_repeated_twice, mode=self.padding_mode
+                ),
+                weight=self.weight,
+                bias=self.bias,
+                stride=self.stride,
+                padding=(0,) * len(self.padding),
+                dilation=self.dilation,
+                groups=self.groups,
+            )
 
         return output
 
