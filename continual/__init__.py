@@ -1,3 +1,4 @@
+from .__about__ import __copyright__, __license__, __version__  # noqa: F401
 from .closure import Add, Constant, Lambda, Multiply, One, Unity, Zero  # noqa: F401
 from .container import (  # noqa: F401
     Broadcast,
@@ -41,4 +42,3 @@ from .transformer import (  # noqa: F401
     TransformerEncoderLayerFactory,
 )
 from .utils import flat_state_dict, load_state_dict, state_dict  # noqa: F401
-from .__about__ import __version__, __license__, __copyright__  # noqa: F401

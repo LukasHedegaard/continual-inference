@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from continual.module import CallMode, TensorPlaceholder
+from continual.module import TensorPlaceholder, _callmode
 
 from .mha_base import MultiheadAttentionBase, scaled_dot_prod_attn_flops
 
@@ -335,8 +335,10 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
 
         # Linear projection
         steps_taken = {
-            CallMode.FORWARD: 1 if self.single_output_forward else self.sequence_len,
-            CallMode.FORWARD_STEP: 1,
+            _callmode("forward"): 1
+            if self.single_output_forward
+            else self.sequence_len,
+            _callmode("forward_step"): 1,
         }[self.call_mode]
 
         f += (
@@ -356,10 +358,10 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
 
         # Multi-head Scaled Dot-Product Attention
         f += self.num_heads * {
-            CallMode.FORWARD: single_output_scaled_dot_prod_attn_flops
+            _callmode("forward"): single_output_scaled_dot_prod_attn_flops
             if self.single_output_forward
             else scaled_dot_prod_attn_flops,
-            CallMode.FORWARD_STEP: single_output_scaled_dot_prod_attn_flops,
+            _callmode("forward_step"): single_output_scaled_dot_prod_attn_flops,
         }[self.call_mode](
             self.sequence_len,
             self.embed_dim // self.num_heads,

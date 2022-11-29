@@ -150,8 +150,8 @@ class _PoolNd(CoModule, nn.Module):
             [padding for _ in range(buf_len)],
             dim=0,
         )
-        state_index = 0
-        stride_index = self.stride[0] - buf_len + self.padding[0]
+        state_index = torch.tensor(0)
+        stride_index = torch.tensor(self.stride[0] - buf_len + self.padding[0])
 
         if not hasattr(self, "state_buffer"):
             self.register_buffer("state_buffer", state_buffer, persistent=False)

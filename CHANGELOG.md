@@ -15,6 +15,13 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ### Added
 - Add about info to package root.
 
+### Changed
+- Change call_mode internally from enum to tensor.
+- Change internal state_indexes to tensors.
+- Change stride to tuple.
+- Change padding to tuple.
+
+
 ## [0.17.1]
 
 ### Added

@@ -1,14 +1,14 @@
 from collections import OrderedDict, abc
 from enum import Enum
 from functools import reduce, wraps
-from typing import Callable, List, Optional, Sequence, TypeVar, Union, overload
+from typing import Callable, List, Optional, Sequence, Tuple, TypeVar, Union, overload
 
 import torch
 from torch import Tensor, nn
 
 from .delay import Delay
 from .logging import getLogger
-from .module import CallMode, CoModule, PaddingMode, TensorPlaceholder
+from .module import CoModule, PaddingMode, TensorPlaceholder, _callmode
 from .utils import (
     function_repr,
     load_state_dict,
@@ -87,7 +87,9 @@ def reduce_mul(inputs: Sequence[Tensor]) -> Tensor:
 def nonempty(fn: ReductionFunc) -> ReductionFunc:
     @wraps(fn)
     def wrapped(inputs: Sequence[Tensor]) -> Tensor:
-        if any(len(inp) == 0 for inp in inputs):
+        if any(
+            inp.shape[0] == 0 or isinstance(inp, TensorPlaceholder) for inp in inputs
+        ):
             return TensorPlaceholder(inputs[0].shape)  # pragma: no cover
         return fn(inputs)
 
@@ -230,7 +232,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
     def forward_step(self, inputs: List[T], update_state=True) -> List[T]:
         outs = []
         for i, m in enumerate(self):
-            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEP):
+            with temporary_parameter(m, "call_mode", _callmode("forward_step")):
                 outs.append(m(inputs[i], update_state=update_state))
         return outs
 
@@ -239,14 +241,14 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
     ) -> List[T]:
         outs = []
         for i, m in enumerate(self):
-            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEPS):
+            with temporary_parameter(m, "call_mode", _callmode("forward_steps")):
                 outs.append(m(inputs[i], pad_end=pad_end, update_state=update_state))
         return outs
 
     def forward(self, inputs: List[T]) -> List[T]:
         outs = []
         for i, m in enumerate(self):
-            with temporary_parameter(m, "call_mode", CallMode.FORWARD):
+            with temporary_parameter(m, "call_mode", _callmode("forward")):
                 outs.append(apply_forward(m, inputs[i]))
         return outs
 
@@ -259,12 +261,12 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         return self._delay
 
     @property
-    def stride(self) -> int:
-        return num_from(getattr(next(iter(self)), "stride", 1))
+    def stride(self) -> Tuple[int]:
+        return getattr(next(iter(self)), "stride", (1,))
 
     @property
-    def padding(self) -> int:
-        return max(num_from(getattr(m, "padding", 0)) for m in self)
+    def padding(self) -> Tuple[int]:
+        return (max(getattr(m, "padding", (0,))[0] for m in self),)
 
     def clean_state(self):
         for m in self:
@@ -400,17 +402,17 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
 
     def forward(self, input):
         for m in self:
-            with temporary_parameter(m, "call_mode", CallMode.FORWARD):
+            with temporary_parameter(m, "call_mode", _callmode("forward")):
                 input = apply_forward(m, input)
         return input
 
     def forward_step(self, input, update_state=True):
         for module in self:
             # ptflops only works when __call__ is triggered
-            with temporary_parameter(module, "call_mode", CallMode.FORWARD_STEP):
-                input = module(  # == module.forward_step
+            with temporary_parameter(module, "call_mode", _callmode("forward_step")):
+                input = module(
                     input, update_state=update_state
-                )
+                )  # == module.forward_step
             if not type(input) in {Tensor, list}:
                 return TensorPlaceholder()
         return input
@@ -420,7 +422,7 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
             if not type(input) in {Tensor, list} or len(input) == 0:
                 return TensorPlaceholder()  # pragma: no cover
             # ptflops only works when __call__ is triggered
-            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEPS):
+            with temporary_parameter(m, "call_mode", _callmode("forward_steps")):
                 # == m.forward_steps
                 input = m(input, pad_end=pad_end, update_state=update_state)
 
@@ -431,26 +433,29 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         reverse_modules = [m for m in self][::-1]
         rf = reverse_modules[0].receptive_field
         for m in reverse_modules[1:]:
-            s = num_from(getattr(m, "stride", 1))
+            s = getattr(m, "stride", [1])
+            if not isinstance(s, tuple):
+                print("hey")
+            s = s[0]
             rf = s * rf + m.receptive_field - s
         return rf
 
     @property
-    def stride(self) -> int:
+    def stride(self) -> Tuple[int]:
         tot = 1
         for m in self:
-            tot *= num_from(m.stride)
-        return tot
+            tot *= m.stride[0]
+        return (tot,)
 
     @property
-    def padding(self) -> int:
+    def padding(self) -> Tuple[int]:
         m = [m for m in self]
-        p = num_from(m[0].padding)
-        s = num_from(m[0].stride)
+        p = m[0].padding[0]
+        s = m[0].stride[0]
         for i in range(1, len(m)):
-            p += num_from(m[i].padding) * s
-            s = s * num_from(m[i].stride)
-        return p
+            p += m[i].padding[0] * s
+            s = s * m[i].stride[0]
+        return (p,)
 
     @staticmethod
     def build_from(module: nn.Sequential) -> "Sequential":
@@ -563,7 +568,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
         outs = []
         for m in self:
-            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEP):
+            with temporary_parameter(m, "call_mode", "forward_step"):
                 outs.append(m(input, update_state=update_state))  # == m.forward_step
         if all(isinstance(o, Tensor) for o in outs):
             return self.reduce(outs)
@@ -579,7 +584,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         outs = []
         for m in self:
-            with temporary_parameter(m, "call_mode", CallMode.FORWARD_STEPS):
+            with temporary_parameter(m, "call_mode", "forward_steps"):
                 # m.forward_steps
                 outs.append(m(input, pad_end=pad_end, update_state=update_state))
 
@@ -588,7 +593,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def forward(self, input: Tensor) -> Tensor:
         outs = []
         for m in self:
-            with temporary_parameter(m, "call_mode", CallMode.FORWARD):
+            with temporary_parameter(m, "call_mode", "forward"):
                 outs.append(apply_forward(m, input))
 
         return self.reduce(outs)
@@ -602,12 +607,12 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         return self._delay
 
     @property
-    def stride(self) -> int:
-        return num_from(getattr(next(iter(self)), "stride", 1))
+    def stride(self) -> Tuple[int]:
+        return getattr(next(iter(self)), "stride", (1,))
 
     @property
-    def padding(self) -> int:
-        return max(num_from(getattr(m, "padding", 0)) for m in self)
+    def padding(self) -> Tuple[int]:
+        return (max(getattr(m, "padding", (0,))[0] for m in self),)
 
     def clean_state(self):
         for m in self:

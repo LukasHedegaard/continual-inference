@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Union
 import torch
 from torch import Tensor
 
-from continual.module import CallMode, TensorPlaceholder
+from continual.module import TensorPlaceholder, _callmode
 
 from .mha_base import MultiheadAttentionBase, scaled_dot_prod_attn_flops
 
@@ -337,8 +337,8 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
 
         # Linear projection
         steps_taken = {
-            CallMode.FORWARD: self.sequence_len,
-            CallMode.FORWARD_STEP: 1,
+            _callmode("forward"): self.sequence_len,
+            _callmode("forward_step"): 1,
         }[self.call_mode]
 
         f += (
@@ -359,8 +359,8 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
 
         # Multi-head Scaled Dot-Product Attention
         f += self.num_heads * {
-            CallMode.FORWARD: scaled_dot_prod_attn_flops,
-            CallMode.FORWARD_STEP: retractive_scaled_dot_prod_attn_step_flops,
+            _callmode("forward"): scaled_dot_prod_attn_flops,
+            _callmode("forward_step"): retractive_scaled_dot_prod_attn_step_flops,
         }[self.call_mode](
             self.sequence_len,
             self.embed_dim // self.num_heads,

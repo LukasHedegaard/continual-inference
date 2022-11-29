@@ -116,7 +116,7 @@ def test_sequential_receptive_field():
     assert net.receptive_field == 9 + 8 * 9
 
     output = net.forward(sample)
-    assert output.shape[2] == 100 - (net.receptive_field - 1) + 2 * net.padding
+    assert output.shape[2] == 100 - (net.receptive_field - 1) + 2 * net.padding[0]
 
     # No padding, mixed stride
     net = co.Sequential(
@@ -128,7 +128,9 @@ def test_sequential_receptive_field():
     assert net.receptive_field == 21
 
     output = net.forward(sample)
-    assert output.shape[2] == math.ceil((100 - (net.receptive_field - 1)) / net.stride)
+    assert output.shape[2] == math.ceil(
+        (100 - (net.receptive_field - 1)) / net.stride[0]
+    )
 
     # Padding, mixed stride
     net = co.Sequential(
@@ -140,9 +142,9 @@ def test_sequential_receptive_field():
     assert net.receptive_field == 21
 
     output = net.forward(sample)
-    assert net.padding == 1 + 1 + 2 + 2 * 3
+    assert net.padding[0] == 1 + 1 + 2 + 2 * 3
     assert output.shape[2] == math.ceil(
-        (100 - (net.receptive_field - 1) + 2 * net.padding) / net.stride
+        (100 - (net.receptive_field - 1) + 2 * net.padding[0]) / net.stride[0]
     )
 
 
@@ -177,8 +179,8 @@ def test_sequential_with_TensorPlaceholder():
     torch.nn.init.ones_(seq[2].weight)
 
     coseq = co.Sequential.build_from(seq)
-    assert coseq.stride == 4
-    assert coseq.padding == 3
+    assert coseq.stride[0] == 4
+    assert coseq.padding[0] == 3
     assert coseq.receptive_field == 8
     assert coseq.delay == 4
 
@@ -330,9 +332,9 @@ def test_broadcast_reduce():
     torch.nn.init.ones_(c1.weight)
     par = co.BroadcastReduce(OrderedDict([("c5", c5), ("c3", c3), ("c1", c1)]))
 
-    assert par.stride == 1
+    assert par.stride[0] == 1
     assert par.delay == 2
-    assert par.padding == 2
+    assert par.padding[0] == 2
     assert par.receptive_field == 5
     assert "BroadcastReduce(" in par.__repr__() and "reduce=" in par.__repr__()
 
@@ -515,8 +517,8 @@ def test_parallel():
 
     par = co.Parallel(OrderedDict([("c3", c3), ("c1", c1)]))
     assert par.delay == 1
-    assert par.padding == 1
-    assert par.stride == 1
+    assert par.padding[0] == 1
+    assert par.stride[0] == 1
 
     o1 = par.forward(xx)
     assert torch.equal(c3.forward(x), o1[0])

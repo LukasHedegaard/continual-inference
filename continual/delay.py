@@ -129,8 +129,8 @@ class Delay(CoModule, torch.nn.Module):
         return self._delay
 
     @property
-    def stride(self) -> int:
-        return 1
+    def stride(self) -> Tuple[int]:
+        return (1,)
 
     def extra_repr(self):
         shrink_str = ", auto_shrink=True" if self.auto_shrink else ""
@@ -152,7 +152,7 @@ class DiscardFirstSteps(CoModule, torch.nn.Module):
         self,
         first_output: Tensor,
     ) -> State:
-        state_index = -self._num_steps
+        state_index = torch.tensor(-self._num_steps)
         return state_index
 
     def clean_state(self):

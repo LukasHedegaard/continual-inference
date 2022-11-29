@@ -5,6 +5,7 @@ from inspect import getsource
 from numbers import Number
 from typing import Tuple, Union
 
+import torch
 from torch import Tensor, nn
 
 from .logging import getLogger
@@ -159,7 +160,26 @@ def load_state_dict(
     return nn.Module.load_state_dict(module, state_dict, strict)
 
 
-def num_from(tuple_or_num: Union[Number, Tuple[Number, ...]], dim=0) -> Number:
+def num_from(
+    tuple_or_num: Union[
+        torch.Tensor,
+        int,
+        Tuple[int],
+        Tuple[int, int],
+        Tuple[int, int, int],
+        Tuple[int, int, int, int],
+    ],
+    dim: int = 0,
+):
+    """Extract number from dimension or leave as is
+
+    Args:
+        tuple_or_num (Union[Number, Tuple[Number, ...]]): _description_
+        dim (int, optional): _description_. Defaults to 0.
+
+    Returns:
+        Number: Number found along dimension
+    """
     if isinstance(tuple_or_num, Number):
         return tuple_or_num
 

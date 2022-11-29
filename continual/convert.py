@@ -11,7 +11,7 @@ from .container import Sequential
 from .conv import Conv1d, Conv2d, Conv3d
 from .linear import Linear
 from .logging import getLogger
-from .module import CallMode, CoModule, call_mode
+from .module import CoModule, _callmode, call_mode
 from .pooling import (
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
@@ -74,23 +74,23 @@ def forward_stepping(module: nn.Module, dim: int = 2):
     module.forward_step = forward_step(module.forward)
     module.delay = 0
     module.receptive_field = 1
-    module.stride = getattr(module, "stride", 1)
-    module.padding = getattr(module, "padding", 0)
+    module.stride = tuple(getattr(module, "stride", [1]))
+    module.padding = tuple(getattr(module, "padding", [0]))
     module.build_from = build_from
     module.get_state = dummy
     module.set_state = dummy
     module.clean_state = dummy
 
     # Call mode
-    module.call_mode = CallMode.FORWARD
+    module.call_mode = _callmode("forward")
 
     def forward_with_callmode(*args, **kwargs):
         _call_mode = (
             call_mode.cur
-            if call_mode.prev
-            else getattr(module, "call_mode", CallMode.FORWARD)
+            if call_mode.prev is not None
+            else getattr(module, "call_mode", _callmode("forward"))
         )
-        if _call_mode == CallMode.FORWARD:
+        if _call_mode == _callmode("forward"):
             return orig_forward(*args, *kwargs)
         return CoModule._call_impl(module, *args, **kwargs)
 

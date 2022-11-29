@@ -13,13 +13,11 @@ from torch.nn.modules.module import (
     _global_forward_pre_hooks,
 )
 
-from continual.utils import num_from
-
 
 class TensorPlaceholder:
     shape: Tuple[int]
 
-    def __init__(self, shape: Tuple[int] = tuple()):
+    def __init__(self, shape=tuple()):
         self.shape = shape
 
     def size(self):
@@ -34,22 +32,44 @@ class PaddingMode(Enum):
     ZEROS = "zeros"
 
 
-class CallMode(Enum):
-    FORWARD = "forward"
-    FORWARD_STEPS = "forward_steps"
-    FORWARD_STEP = "forward_step"
+# class CallMode(Enum):
+#     FORWARD = "forward"
+#     FORWARD_STEPS = "forward_steps"
+#     FORWARD_STEP = "forward_step"
+
+CALL_MODES = {
+    "forward": torch.tensor(0),
+    "forward_steps": torch.tensor(1),
+    "forward_step": torch.tensor(2),
+}
+
+
+def _callmode(cm) -> torch.Tensor:
+    """_summary_
+
+    Args:
+        cm (Union[str, int, torch.Tensor]): Identifier for call mode
+
+    Returns:
+        torch.Tensor: validated call_mode
+    """
+    if isinstance(cm, str):
+        cm = CALL_MODES[cm.lower()]
+    elif isinstance(cm, int):
+        cm = torch.tensor(int)
+    return cm
 
 
 class _CallModeContext(object):
     """Context-manager state holder."""
 
     def __init__(self):
-        self.cur = CallMode.FORWARD
+        self.cur = _callmode("forward")
         self.prev = None
 
-    def __call__(self, value: CallMode) -> "_CallModeContext":
+    def __call__(self, value: Union[str, int, torch.Tensor]) -> "_CallModeContext":
         self.prev = self.cur
-        self.cur = CallMode(value)
+        self.cur = _callmode(value)
         return self
 
     def __enter__(self):
@@ -117,6 +137,7 @@ class CoModule(ABC):
         for prop in {"delay", "receptive_field"}:
             assert type(getattr(cls, prop, None)) in {
                 int,
+                torch.Tensor,
                 property,
             }, f"{cls} should implement a `{prop}` property to satisfy the CoModule interface."
 
@@ -156,13 +177,13 @@ class CoModule(ABC):
         ...  # pragma: no cover
 
     receptive_field: int = 1
-    stride: int = 1
-    padding: int = 0
+    stride: Tuple[int, ...] = (1,)
+    padding: Tuple[int, ...] = (0,)
     make_padding = torch.zeros_like
 
     @property
     def delay(self) -> int:
-        return self.receptive_field - 1 - num_from(self.padding)
+        return self.receptive_field - 1 - self.padding[0]
 
     def forward_step(
         self, input: Tensor, update_state=True
@@ -195,10 +216,26 @@ class CoModule(ABC):
         Returns:
             Tensor: Layer output
         """
+        return self._forward_steps_impl(input, pad_end, update_state)
+
+    def _forward_steps_impl(
+        self, input: Tensor, pad_end=False, update_state=True
+    ) -> Tensor:
+        """Forward computation for multiple steps with state initialisation
+
+        Args:
+            module (CoModule): Continual module.
+            input (Tensor): Layer input.
+            pad_end (bool): Whether results for temporal padding at sequence end should be included.
+            update_state (bool): Whether internal state should be updated during this operation.
+
+        Returns:
+            Tensor: Layer output
+        """
         outs = []
         tmp_state = self.get_state()
 
-        if not update_state and tmp_state:
+        if not update_state and tmp_state is not None:
             tmp_state = _clone_first(tmp_state)
 
         for t in range(input.shape[2]):
@@ -245,19 +282,39 @@ class CoModule(ABC):
         dummy = self.make_padding(torch.zeros(step_shape, dtype=torch.float))
         self.forward_steps(dummy)
 
-    _call_mode = CallMode.FORWARD
+    _call_mode = _callmode("forward")
 
     @property
-    def call_mode(self) -> CallMode:
+    def call_mode(self) -> torch.Tensor:
         return self._call_mode
 
     @call_mode.setter
     def call_mode(self, value):
-        self._call_mode = CallMode(value)
+        self._call_mode = _callmode(value)
         if hasattr(self, "__len__"):
             for m in self:
                 if hasattr(m, "call_mode"):
                     m.call_mode = self._call_mode
+
+    def _slow_forward(self, *input, **kwargs):
+        tracing_state = torch._C._get_tracing_state()
+        if not tracing_state or isinstance(self, torch._C.ScriptMethod):
+            return self(*input, **kwargs)
+        recording_scopes = torch.jit._trace._trace_module_map is not None
+        if recording_scopes:
+            # type ignore was added because at this point one knows that
+            # torch.jit._trace._trace_module_map is not Optional and has type Dict[Any, Any]
+            name = torch.jit._trace._trace_module_map[self] if self in torch.jit._trace._trace_module_map else None  # type: ignore[index, operator] # noqa: B950
+            if name:
+                tracing_state.push_scope(name)
+            else:
+                recording_scopes = False
+        try:
+            result = self(*input, **kwargs)
+        finally:
+            if recording_scopes:
+                tracing_state.pop_scope()
+        return result
 
     def _call_impl(self, *input, **kwargs):  # noqa: C901  # pragma: no cover
         """Modified version torch.nn.Module._call_impl
@@ -265,12 +322,15 @@ class CoModule(ABC):
         Returns:
             [type]: [description]
         """
-        _call_mode = call_mode.cur if call_mode.prev else self.call_mode
+        _call_mode = call_mode.cur if call_mode.prev is not None else self.call_mode
+        if isinstance(_call_mode, str):
+            print("hey")
         forward_call = {
-            (True, CallMode.FORWARD): self._slow_forward,
-            (False, CallMode.FORWARD): self.forward,
-            (False, CallMode.FORWARD_STEPS): self.forward_steps,
-            (False, CallMode.FORWARD_STEP): self.forward_step,
+            (True, _callmode("forward")): self._slow_forward,
+            (True, _callmode("forward_steps")): self._slow_forward,
+            (False, _callmode("forward")): self.forward,
+            (False, _callmode("forward_steps")): self.forward_steps,
+            (False, _callmode("forward_step")): self.forward_step,
         }[(bool(torch._C._get_tracing_state()), _call_mode)]
 
         # If we don't have any hooks, we want to skip the rest of the logic in

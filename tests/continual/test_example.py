@@ -12,7 +12,7 @@ def test_paper_example():
         co.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=1, padding=0),
     )
     assert net.receptive_field == 7
-    assert net.padding == 2
+    assert net.padding[0] == 2
     assert net.delay == 4
 
 
@@ -90,10 +90,10 @@ def test_mb_conv():
     last = mb_conv.forward_step(example[:, :, 6])
 
     assert torch.allclose(
-        output[:, :, : -mb_conv.padding - mb_conv.delay], firsts, atol=1e-7
+        output[:, :, : -mb_conv.padding[0] - mb_conv.delay], firsts, atol=1e-7
     )
     assert torch.allclose(
-        output[:, :, -mb_conv.padding - mb_conv.delay], last, atol=1e-7
+        output[:, :, -mb_conv.padding[0] - mb_conv.delay], last, atol=1e-7
     )
 
 
