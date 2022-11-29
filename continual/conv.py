@@ -1,4 +1,4 @@
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -19,7 +19,7 @@ from .module import CoModule, PaddingMode
 
 logger = getLogger(__name__)
 
-State = Tuple[Tensor, int, int]
+State = Tuple[Tensor, Optional[int], Optional[int]]
 
 # _forward_step_impl = None
 # from pathlib import Path
@@ -42,6 +42,9 @@ __all__ = ["Conv1d", "Conv2d", "Conv3d"]
 
 
 class _ConvCoNd(CoModule, _ConvNd):
+    state_index: Optional[int]
+    stride_index: Optional[int]
+
     def __init__(
         self,
         ConvClass: torch.nn.Module,
@@ -116,6 +119,11 @@ class _ConvCoNd(CoModule, _ConvNd):
         self._step_padding = (self.kernel_size[0] - 1, *self.padding[1:])
         self._step_stride = (1, *self.stride[1:])
 
+        self.register_buffer("state_buffer", torch.tensor([]), persistent=False)
+        # self.register_buffer("state_index", torch.tensor(0), persistent=False)
+        # self.register_buffer("stride_index", torch.tensor(0), persistent=False)
+        self.state_index: Optional[int] = None
+        self.stride_index: Optional[int] = None
         # init_state is called in `_forward_step`
 
     def init_state(
@@ -123,42 +131,40 @@ class _ConvCoNd(CoModule, _ConvNd):
         first_output: Tensor,
     ) -> State:
         padding = self.make_padding(first_output)
-        state_buffer = padding.repeat(
-            self.kernel_size[0] - 1, *[1 for _ in self.input_shape_desciption]
-        )
-        state_index = torch.tensor(0)
-        stride_index = torch.tensor(
-            self.stride[0] - len(state_buffer) - 1 + self.padding[0]
-        )
-        if not hasattr(self, "state_buffer"):
-            self.register_buffer("state_buffer", state_buffer, persistent=False)
-        return state_buffer, state_index, stride_index
+        repeat_shape = [self.kernel_size[0] - 1]
+        repeat_shape.extend((1,) * len(self.input_shape_desciption))
+        state_buffer = padding.repeat(repeat_shape)
+        state_index = 0
+        stride_index = self.stride[0] - len(state_buffer) - 1 + self.padding[0]
+
+        # if not hasattr(self, "state_buffer"):
+        #     self.register_buffer("state_buffer", state_buffer, persistent=False)
+        return (state_buffer, state_index, stride_index)
 
     def clean_state(self):
-        if hasattr(self, "state_buffer"):
-            del self.state_buffer
-        if hasattr(self, "state_index"):
-            del self.state_index
-        if hasattr(self, "stride_index"):
-            del self.stride_index
+        # if hasattr(self, "state_buffer"):
+        #     del self.state_buffer
+        # if hasattr(self, "state_index"):
+        #     del self.state_index
+        # if hasattr(self, "stride_index"):
+        #     del self.stride_index
 
-    def get_state(self):
-        if (
-            hasattr(self, "state_buffer")
-            and hasattr(self, "state_index")
-            and hasattr(self, "stride_index")
-        ):
-            if (
-                self.state_buffer is not None
-                and self.state_index is not None
-                and self.stride_index is not None
-            ):
-                return (self.state_buffer, self.state_index, self.stride_index)
+        self.state_buffer = torch.tensor([])
+        # self.state_index = torch.tensor(0)
+        self.state_index: Optional[int] = None
+        self.stride_index: Optional[int] = None
+
+    def get_state(self) -> Optional[State]:
+        if self.stride_index is not None:
+            return (self.state_buffer, self.state_index, self.stride_index)
+        return None
 
     def set_state(self, state: State):
         self.state_buffer, self.state_index, self.stride_index = state
 
-    def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
+    def _forward_step(
+        self, input: Tensor, prev_state: Optional[State]
+    ) -> Tuple[Optional[Tensor], State]:
         # assert (
         #     len(input.shape) == self._input_len - 1
         # ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}"
@@ -186,8 +192,8 @@ class _ConvCoNd(CoModule, _ConvNd):
         return self._forward_step_py(input, prev_state)
 
     def _forward_step_py(
-        self, input: Tensor, prev_state: State
-    ) -> Tuple[Tensor, State]:
+        self, input: Tensor, prev_state: Optional[State]
+    ) -> Tuple[Optional[Tensor], State]:
         # e.g. B, C -> B, C, 1
         x = input.unsqueeze(2).to(device=self.weight.device)
 
@@ -218,9 +224,13 @@ class _ConvCoNd(CoModule, _ConvNd):
         buffer, index, stride_index = (
             prev_state if prev_state is not None else self.init_state(x_rest)
         )
+        assert index is not None
+        assert stride_index is not None
 
         tot = len(buffer)
-        if stride_index == self.stride[0] - 1:
+        output_is_valid = stride_index == self.stride[0] - 1
+
+        if output_is_valid:
             x_out = x_out + (
                 torch.sum(
                     buffer[
@@ -242,9 +252,6 @@ class _ConvCoNd(CoModule, _ConvNd):
                     bias = bias.unsqueeze(-1)
                 x_out += bias
 
-        else:
-            x_out = None
-
         # Update next state
         if self.kernel_size[0] > 1:
             next_buffer = buffer.clone() if self.training else buffer
@@ -258,10 +265,14 @@ class _ConvCoNd(CoModule, _ConvNd):
         if next_stride_index > 0:
             next_stride_index = next_stride_index % self.stride[0]
 
-        return x_out, (next_buffer, next_index, next_stride_index)
+        if output_is_valid:
+            return x_out, (next_buffer, next_index, next_stride_index)
+        return None, (next_buffer, next_index, next_stride_index)
 
     @torch.jit.export
-    def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
+    def forward_steps(
+        self, input: Tensor, pad_end: bool = False, update_state: bool = True
+    ) -> Tensor:
         # assert (
         #     len(input.shape) == self._input_len
         # ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."

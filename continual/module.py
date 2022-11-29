@@ -2,7 +2,7 @@ import functools
 import itertools
 from abc import ABC
 from enum import Enum
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import torch
 import torch.utils.hooks as hooks
@@ -19,6 +19,7 @@ class PaddingMode(Enum):
     ZEROS = "zeros"
 
 
+# Not compatible with torch.jit:
 # class CallMode(Enum):
 #     FORWARD = "forward"
 #     FORWARD_STEPS = "forward_steps"
@@ -80,17 +81,14 @@ Example:
 """
 
 
-# First element must be a Tensor
-State = Union[
-    Tuple[Tensor, int],
-    Tuple[Tensor, int, int],
-]
+# First element is a value buffer, while others are indexes
+State = Tuple[Tensor, Optional[int], Optional[int]]
 
 
 def _clone_first(state: State) -> State:
-    if state is None:
-        return None
-    return (state[0].clone(), *state[1:])
+    # return (state[0].clone(), state[1], state[2])
+    return (state[0].clone(),) + state[1:]
+    # return (state[0].clone(),) + state[1:]
 
 
 class CoModule(ABC):
@@ -172,7 +170,9 @@ class CoModule(ABC):
     def delay(self) -> int:
         return self.receptive_field - 1 - self.padding[0]
 
-    def forward_step(self, input: Tensor, update_state=True) -> Optional[Tensor]:
+    def forward_step(
+        self, input: Tensor, update_state: bool = True
+    ) -> Optional[Tensor]:
         """Forward computation for a single step with state initialisation
 
         Args:
@@ -190,7 +190,9 @@ class CoModule(ABC):
             self.set_state(state)
         return output
 
-    def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
+    def forward_steps(
+        self, input: Tensor, pad_end: bool = False, update_state=True
+    ) -> Tensor:
         """Forward computation for multiple steps with state initialisation
 
         Args:
@@ -204,7 +206,7 @@ class CoModule(ABC):
         return self._forward_steps_impl(input, pad_end, update_state)
 
     def _forward_steps_impl(
-        self, input: Tensor, pad_end=False, update_state=True
+        self, input: Tensor, pad_end: bool = False, update_state: bool = True
     ) -> Tensor:
         """Forward computation for multiple steps with state initialisation
 
@@ -218,26 +220,29 @@ class CoModule(ABC):
             Tensor: Layer output
         """
         outs = []
-        tmp_state = self.get_state()
+        state: Optional[State] = self.get_state()
 
-        if not update_state and tmp_state is not None:
-            tmp_state = _clone_first(tmp_state)
+        if not update_state and state is not None:
+            state = _clone_first(state)
 
         for t in range(input.shape[2]):
-            o, tmp_state = self._forward_step(input[:, :, t], tmp_state)
+            o, state = self._forward_step(input[:, :, t], state)
             if isinstance(o, Tensor):
                 outs.append(o)
 
-        if update_state:
-            self.set_state(tmp_state)
+        if update_state and state is not None:
+            self.set_state(state)
 
         if pad_end:
             # Don't save state for the end-padding
-            tmp_state = _clone_first(self.get_state()) or tmp_state
+            opt_state = self.get_state()
+            if opt_state is not None:
+                state = _clone_first(opt_state)
+
             for t, i in enumerate(
                 [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
             ):
-                o, tmp_state = self._forward_step(i, tmp_state)
+                o, state = self._forward_step(i, state)
                 if isinstance(o, Tensor):
                     outs.append(o)
 
@@ -255,7 +260,7 @@ class CoModule(ABC):
         """
         ...  # pragma: no cover
 
-    def warm_up(self, step_shape: Sequence[int]):
+    def warm_up(self, step_shape: List[int]):
         """Warms up the model state with a dummy input.
         The initial `self.delay` steps will still produce inexact results.
 
