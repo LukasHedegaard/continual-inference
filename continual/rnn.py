@@ -4,7 +4,7 @@ import torch
 from torch import Tensor, nn
 from torch.nn.utils.rnn import PackedSequence
 
-from .module import CoModule, TensorPlaceholder
+from .module import CoModule
 
 State = Tensor
 LSTMState = Tuple[Tensor, Tensor]
@@ -104,9 +104,7 @@ class RNN(CoModule, nn.RNN):
         output = output.swapaxes(1, 2)  # B, T, C -> B, C, T
         return (output, hidden)
 
-    def forward_step(
-        self, input: Tensor, update_state=True
-    ) -> Union[Tensor, TensorPlaceholder]:
+    def forward_step(self, input: Tensor, update_state=True) -> Optional[Tensor]:
         input = input.unsqueeze(1)  # B, C -> B, T, C
         output, new_state = nn.RNN.forward(self, input, self.get_state())
         output = output.squeeze(1)  # B, T, C -> B, C
@@ -212,9 +210,7 @@ class GRU(CoModule, nn.GRU):
         output = output.swapaxes(1, 2)  # B, T, C -> B, C, T
         return (output, hidden)
 
-    def forward_step(
-        self, input: Tensor, update_state=True
-    ) -> Union[Tensor, TensorPlaceholder]:
+    def forward_step(self, input: Tensor, update_state=True) -> Optional[Tensor]:
         input = input.unsqueeze(1)  # B, C -> B, T, C
         output, new_state = nn.GRU.forward(self, input, self.get_state())
         output = output.squeeze(1)  # B, T, C -> B, C
@@ -327,9 +323,7 @@ class LSTM(CoModule, nn.LSTM):
         output = output.swapaxes(1, 2)  # B, T, C -> B, C, T
         return (output, hidden)
 
-    def forward_step(
-        self, input: Tensor, update_state=True
-    ) -> Union[Tensor, TensorPlaceholder]:
+    def forward_step(self, input: Tensor, update_state=True) -> Optional[Tensor]:
         input = input.unsqueeze(1)  # B, C -> B, T, C
         output, new_state = nn.LSTM.forward(self, input, self.get_state())
         output = output.squeeze(1)  # B, T, C -> B, C

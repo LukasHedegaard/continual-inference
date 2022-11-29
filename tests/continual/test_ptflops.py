@@ -20,6 +20,7 @@ def test_conv():
     assert params == co_params
 
     co_mod = co.Conv3d(3, 3, 3)  # Padding not necessary
+    co_mod.forward_steps(torch.randn(1, 3, T - 1, 3, 3))  # warm up
     with co.call_mode("forward_step"):
         co_step_macs, co_step_params = get_model_complexity_info(
             co_mod, (3, 3, 3), as_strings=False
@@ -99,6 +100,7 @@ def test_broadcast_reduce():
 
     # warm up
     seq.forward_steps(torch.randn((1, *input_res)))
+    br.forward_steps(torch.randn((1, *input_res)))
 
     # forward_step
     with co.call_mode("forward_step"):

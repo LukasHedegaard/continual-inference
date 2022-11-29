@@ -21,6 +21,9 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Change stride to tuple.
 - Change padding to tuple.
 
+## Removed
+- TensorPlaceholder in favour of `None`.
+
 
 ## [0.17.1]
 

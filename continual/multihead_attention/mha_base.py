@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch.nn.modules.activation import MultiheadAttention
 
-from continual.module import CoModule, TensorPlaceholder
+from continual.module import CoModule
 
 State = List[Tensor]
 
@@ -379,14 +379,14 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         prev_state: State = None,
         *args,
         **kwargs,
-    ) -> Tuple[Union[Tensor, TensorPlaceholder], State]:
+    ) -> Tuple[Optional[Tensor], State]:
         """Forward computation for a single step with state initialisation
 
         Args:
             query, key, value: step inputs of shape `(B, E)` where B is the batch size and E is the embedding dimension.
 
         Returns:
-            Tuple[Union[Tensor, TensorPlaceholder], State]: Step output and new state.
+            Tuple[Optional[Tensor], State]: Step output and new state.
         """
         if prev_state is None:
             prev_state = (
@@ -423,7 +423,7 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         new_state = (*new_state, stride_index)
 
         return (
-            TensorPlaceholder(o.shape) if stride_index < 0 else o,
+            None if stride_index < 0 else o,
             new_state,
         )
 
@@ -435,7 +435,7 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         update_state=True,
         *args,
         **kwargs,
-    ) -> Union[Tensor, TensorPlaceholder]:
+    ) -> Optional[Tensor]:
         """
         Args:
             query, key, value: step_inputs for mapping a query and a set of key-value pairs to an output.
@@ -465,7 +465,7 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
 
         o, tmp_state = self._forward_step(query, key, value, tmp_state)
 
-        if self.batch_first and not isinstance(o, TensorPlaceholder):
+        if o is not None and self.batch_first:
             o = o.transpose(1, 0)
 
         if update_state:
@@ -483,7 +483,7 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         update_state=True,
         *args,
         **kwargs,
-    ) -> Union[Tensor, TensorPlaceholder]:
+    ) -> Optional[Tensor]:
         """Forward computation for multiple steps with state initialisation
 
         Args:

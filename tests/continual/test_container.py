@@ -6,7 +6,6 @@ import torch
 from torch import nn
 
 import continual as co
-from continual.module import TensorPlaceholder
 
 torch.manual_seed(42)
 
@@ -148,7 +147,7 @@ def test_sequential_receptive_field():
     )
 
 
-def test_sequential_with_TensorPlaceholder():
+def test_sequential_with_None():
     sample = torch.arange(32, dtype=torch.float).reshape((1, 1, 32))
 
     seq = nn.Sequential(
@@ -346,7 +345,7 @@ def test_broadcast_reduce():
 
     # forward_step
     out_steps = [par.forward_step(input[:, :, i]) for i in range(input.shape[2])]
-    assert all(isinstance(o, TensorPlaceholder) for o in out_steps[: par.delay])
+    assert all(o is None for o in out_steps[: par.delay])
 
     out_steps = torch.stack(out_steps[par.delay :], dim=2)
     assert torch.allclose(out_steps, out_all[:, :, : -par.delay])

@@ -15,7 +15,7 @@ from torch.nn.modules.conv import (
 )
 
 from .logging import getLogger
-from .module import CoModule, PaddingMode, TensorPlaceholder
+from .module import CoModule, PaddingMode
 
 logger = getLogger(__name__)
 
@@ -181,7 +181,7 @@ class _ConvCoNd(CoModule, _ConvNd):
         #         *(prev_state or (None, None, None)),
         #     )
         #     if output is None:
-        #         output = TensorPlaceholder()
+        #         output = None
         #     return output, next_state
         return self._forward_step_py(input, prev_state)
 
@@ -243,7 +243,7 @@ class _ConvCoNd(CoModule, _ConvNd):
                 x_out += bias
 
         else:
-            x_out = TensorPlaceholder(x_out.shape)
+            x_out = None
 
         # Update next state
         if self.kernel_size[0] > 1:

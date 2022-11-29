@@ -1,7 +1,6 @@
 import torch
 
 from continual.delay import Delay
-from continual.module import TensorPlaceholder
 
 torch.manual_seed(42)
 
@@ -13,8 +12,8 @@ def test_delay_3d():
 
     ones = torch.ones_like(sample[:, :, 0])
 
-    assert isinstance(delay.forward_step(sample[:, :, 0]), TensorPlaceholder)
-    assert isinstance(delay.forward_step(sample[:, :, 1]), TensorPlaceholder)
+    assert delay.forward_step(sample[:, :, 0]) is None
+    assert delay.forward_step(sample[:, :, 1]) is None
 
     assert torch.equal(delay.forward_step(sample[:, :, 2]), sample[:, :, 0])
 
@@ -33,8 +32,8 @@ def test_delay_2d():
 
     ones = torch.ones_like(sample[:, :, 0])
 
-    assert isinstance(delay.forward_step(sample[:, :, 0]), TensorPlaceholder)
-    assert isinstance(delay.forward_step(sample[:, :, 1]), TensorPlaceholder)
+    assert delay.forward_step(sample[:, :, 0]) is None
+    assert delay.forward_step(sample[:, :, 1]) is None
 
     assert torch.equal(delay.forward_step(sample[:, :, 2]), sample[:, :, 0])
 

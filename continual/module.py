@@ -14,19 +14,6 @@ from torch.nn.modules.module import (
 )
 
 
-class TensorPlaceholder:
-    shape: Tuple[int]
-
-    def __init__(self, shape=tuple()):
-        self.shape = shape
-
-    def size(self):
-        return self.shape
-
-    def __len__(self):
-        return 0
-
-
 class PaddingMode(Enum):
     REPLICATE = "replicate"
     ZEROS = "zeros"
@@ -185,9 +172,7 @@ class CoModule(ABC):
     def delay(self) -> int:
         return self.receptive_field - 1 - self.padding[0]
 
-    def forward_step(
-        self, input: Tensor, update_state=True
-    ) -> Union[Tensor, TensorPlaceholder]:
+    def forward_step(self, input: Tensor, update_state=True) -> Optional[Tensor]:
         """Forward computation for a single step with state initialisation
 
         Args:
@@ -195,7 +180,7 @@ class CoModule(ABC):
             update_state (bool): Whether internal state should be updated during this operation.
 
         Returns:
-            Union[Tensor, TensorPlaceholder]: Step output. This will be a placeholder while the module initialises and every (stride - 1) : stride.
+            Optional[Tensor]: Step output. This will be a placeholder while the module initialises and every (stride - 1) : stride.
         """
         state = self.get_state()
         if not update_state and state:
@@ -272,8 +257,7 @@ class CoModule(ABC):
 
     def warm_up(self, step_shape: Sequence[int]):
         """Warms up the model state with a dummy input.
-        While this avoid the initial `self.delay` steps of `TensorPlaceholder` values,
-        the initial `self.delay` steps will still produce inexact results.
+        The initial `self.delay` steps will still produce inexact results.
 
         Args:
             step_shape (Sequence[int]): input shape with which to warm the model up, including batch size.
@@ -323,8 +307,6 @@ class CoModule(ABC):
             [type]: [description]
         """
         _call_mode = call_mode.cur if call_mode.prev is not None else self.call_mode
-        if isinstance(_call_mode, str):
-            print("hey")
         forward_call = {
             (True, _callmode("forward")): self._slow_forward,
             (True, _callmode("forward_steps")): self._slow_forward,

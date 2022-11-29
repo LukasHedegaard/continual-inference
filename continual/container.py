@@ -8,7 +8,7 @@ from torch import Tensor, nn
 
 from .delay import Delay
 from .logging import getLogger
-from .module import CoModule, PaddingMode, TensorPlaceholder, _callmode
+from .module import CoModule, PaddingMode, _callmode
 from .utils import (
     function_repr,
     load_state_dict,
@@ -87,10 +87,8 @@ def reduce_mul(inputs: Sequence[Tensor]) -> Tensor:
 def nonempty(fn: ReductionFunc) -> ReductionFunc:
     @wraps(fn)
     def wrapped(inputs: Sequence[Tensor]) -> Tensor:
-        if any(
-            inp.shape[0] == 0 or isinstance(inp, TensorPlaceholder) for inp in inputs
-        ):
-            return TensorPlaceholder(inputs[0].shape)  # pragma: no cover
+        if any(inp is None or inp.shape[0] == 0 for inp in inputs):
+            return None  # pragma: no cover
         return fn(inputs)
 
     return wrapped
@@ -354,7 +352,7 @@ class Reduce(CoModule, nn.Module):
     def forward_step(self, inputs: List[T], update_state=True) -> T:
         if all(isinstance(i, Tensor) for i in inputs):
             return self.reduce(inputs)
-        return TensorPlaceholder()  # pragma: no cover
+        return None  # pragma: no cover
 
     def forward_steps(self, inputs: List[T], pad_end=False, update_state=True) -> T:
         return self.reduce(inputs)
@@ -414,13 +412,13 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
                     input, update_state=update_state
                 )  # == module.forward_step
             if not type(input) in {Tensor, list}:
-                return TensorPlaceholder()
+                return None
         return input
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         for m in self:
             if not type(input) in {Tensor, list} or len(input) == 0:
-                return TensorPlaceholder()  # pragma: no cover
+                return None  # pragma: no cover
             # ptflops only works when __call__ is triggered
             with temporary_parameter(m, "call_mode", _callmode("forward_steps")):
                 # == m.forward_steps
@@ -573,13 +571,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         if all(isinstance(o, Tensor) for o in outs):
             return self.reduce(outs)
 
-        # Try to infer shape
-        shape = tuple()
-        for o in outs:
-            if isinstance(o, Tensor):  # pragma: no cover
-                shape = o.shape
-                break
-        return TensorPlaceholder(shape)
+        return None
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         outs = []

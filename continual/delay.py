@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import torch
 from torch import Tensor
 
-from .module import CoModule, PaddingMode, TensorPlaceholder
+from .module import CoModule, PaddingMode
 from .utils import temporary_parameter
 
 State = Tuple[Tensor, int]
@@ -84,7 +84,7 @@ class Delay(CoModule, torch.nn.Module):
         if index >= 0:
             output = buffer[index].clone()
         else:
-            output = TensorPlaceholder(buffer[0].shape)
+            output = None
 
         # Update state
         buffer[index % self.delay] = input
@@ -171,7 +171,7 @@ class DiscardFirstSteps(CoModule, torch.nn.Module):
         if index >= 0:
             return input, index
         else:
-            return TensorPlaceholder(input.shape), index + 1
+            return None, index + 1
 
     def forward(self, input: Tensor) -> Tensor:
         return input[:, :, -self._num_steps :].unsqueeze(2)

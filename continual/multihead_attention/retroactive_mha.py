@@ -1,12 +1,12 @@
 import math
 from functools import partial
 from logging import getLogger
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import torch
 from torch import Tensor
 
-from continual.module import TensorPlaceholder, _callmode
+from continual.module import _callmode
 
 from .mha_base import MultiheadAttentionBase, scaled_dot_prod_attn_flops
 
@@ -275,7 +275,7 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         update_state=True,
         *args,
         **kwargs,
-    ) -> Union[Tensor, TensorPlaceholder]:
+    ) -> Optional[Tensor]:
         """
         Args:
             query, key, value: step_inputs for mapping a query and a set of key-value pairs to an output.
@@ -311,7 +311,7 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         update_state=True,
         *args,
         **kwargs,
-    ) -> Union[Tensor, TensorPlaceholder]:
+    ) -> Optional[Tensor]:
         """Forward computation for multiple steps with state initialisation
 
         Args:

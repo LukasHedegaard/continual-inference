@@ -8,7 +8,7 @@ from torch import Tensor, nn
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from torch.nn.modules.utils import _ntuple, _pair, _single, _triple
 
-from .module import CoModule, PaddingMode, TensorPlaceholder
+from .module import CoModule, PaddingMode
 
 __all__ = [
     "AvgPool1d",
@@ -198,6 +198,7 @@ class _PoolNd(CoModule, nn.Module):
         if next_stride_index > 0:
             next_stride_index = next_stride_index % self.stride[0]
 
+        output = None
         if stride_index == self.stride[0] - 1:
             if self.dilation[0] == 1:
                 frame_selection = buffer
@@ -209,8 +210,6 @@ class _PoolNd(CoModule, nn.Module):
                     ),
                 )
             output = self._reshaped_temporal_pool_fn(frame_selection)
-        else:
-            output = TensorPlaceholder(pooled_frame.shape)
 
         return output, (next_buffer, next_index, next_stride_index)
 
