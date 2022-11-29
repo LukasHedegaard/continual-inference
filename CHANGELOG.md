@@ -10,7 +10,10 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [Unreleased]
 
 ### Fixed 
-- Fix assertion bug in co.Lambda
+- Fix assertion bug in co.Lambda.
+
+### Added
+- Add about info to package root.
 
 ## [0.17.1]
 

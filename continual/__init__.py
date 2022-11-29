@@ -41,3 +41,4 @@ from .transformer import (  # noqa: F401
     TransformerEncoderLayerFactory,
 )
 from .utils import flat_state_dict, load_state_dict, state_dict  # noqa: F401
+from .__about__ import __version__, __license__, __copyright__  # noqa: F401
