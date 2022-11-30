@@ -19,7 +19,8 @@ from .module import CoModule, PaddingMode
 
 logger = getLogger(__name__)
 
-State = Tuple[Tensor, Optional[int], Optional[int]]
+# State = Tuple[Tensor, Optional[int], Optional[int]]
+State = Tuple[Tensor, Tensor, Tensor]
 
 # _forward_step_impl = None
 # from pathlib import Path
@@ -42,8 +43,8 @@ __all__ = ["Conv1d", "Conv2d", "Conv3d"]
 
 
 class _ConvCoNd(CoModule, _ConvNd):
-    state_index: Optional[int]
-    stride_index: Optional[int]
+    # state_index: Optional[int]
+    # stride_index: Optional[int]
 
     def __init__(
         self,
@@ -120,10 +121,10 @@ class _ConvCoNd(CoModule, _ConvNd):
         self._step_stride = (1, *self.stride[1:])
 
         self.register_buffer("state_buffer", torch.tensor([]), persistent=False)
-        # self.register_buffer("state_index", torch.tensor(0), persistent=False)
-        # self.register_buffer("stride_index", torch.tensor(0), persistent=False)
-        self.state_index: Optional[int] = None
-        self.stride_index: Optional[int] = None
+        self.register_buffer("state_index", torch.tensor(0), persistent=False)
+        self.register_buffer("stride_index", torch.tensor(0), persistent=False)
+        # self.state_index: Optional[int] = None
+        # self.stride_index: Optional[int] = None
         # init_state is called in `_forward_step`
 
     def init_state(
@@ -134,8 +135,10 @@ class _ConvCoNd(CoModule, _ConvNd):
         repeat_shape = [self.kernel_size[0] - 1]
         repeat_shape.extend((1,) * len(self.input_shape_desciption))
         state_buffer = padding.repeat(repeat_shape)
-        state_index = 0
-        stride_index = self.stride[0] - len(state_buffer) - 1 + self.padding[0]
+        state_index = torch.tensor(0)
+        stride_index = torch.tensor(
+            self.stride[0] - len(state_buffer) - 1 + self.padding[0]
+        )
 
         # if not hasattr(self, "state_buffer"):
         #     self.register_buffer("state_buffer", state_buffer, persistent=False)
@@ -150,18 +153,20 @@ class _ConvCoNd(CoModule, _ConvNd):
         #     del self.stride_index
 
         self.state_buffer = torch.tensor([])
-        # self.state_index = torch.tensor(0)
-        self.state_index: Optional[int] = None
-        self.stride_index: Optional[int] = None
+        self.state_index = torch.tensor(0)
+        self.stride_index = torch.tensor(0)
+        # self.state_index: Optional[int] = None
+        # self.stride_index: Optional[int] = None
 
     def get_state(self) -> Optional[State]:
-        if self.stride_index is not None:
+        if len(self.state_buffer) > 0:
             return (self.state_buffer, self.state_index, self.stride_index)
         return None
 
     def set_state(self, state: State):
         self.state_buffer, self.state_index, self.stride_index = state
 
+    @torch.jit.export
     def _forward_step(
         self, input: Tensor, prev_state: Optional[State]
     ) -> Tuple[Optional[Tensor], State]:
@@ -227,7 +232,7 @@ class _ConvCoNd(CoModule, _ConvNd):
         assert index is not None
         assert stride_index is not None
 
-        tot = len(buffer)
+        tot = self.kernel_size[0] - 1
         output_is_valid = stride_index == self.stride[0] - 1
 
         if output_is_valid:
@@ -242,9 +247,6 @@ class _ConvCoNd(CoModule, _ConvNd):
                     dim=0,
                 )
             )
-            # x_out = x_out.clone()
-            # for i in range(tot):
-            #     x_out += buffer[(i + index) % tot, :, :, tot - i - 1]
 
             if self.bias is not None:
                 bias = self.bias.unsqueeze(0)
@@ -269,10 +271,9 @@ class _ConvCoNd(CoModule, _ConvNd):
             return x_out, (next_buffer, next_index, next_stride_index)
         return None, (next_buffer, next_index, next_stride_index)
 
-    @torch.jit.export
     def forward_steps(
         self, input: Tensor, pad_end: bool = False, update_state: bool = True
-    ) -> Tensor:
+    ) -> Optional[Tensor]:
         # assert (
         #     len(input.shape) == self._input_len
         # ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."

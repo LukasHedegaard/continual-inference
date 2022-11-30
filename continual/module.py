@@ -13,6 +13,10 @@ from torch.nn.modules.module import (
     _global_forward_pre_hooks,
 )
 
+# First element is a value buffer, while others are indexes
+# State = Tuple[Tensor, Optional[int], Optional[int]]
+State = Tuple[Tensor, Tensor, Tensor]
+
 
 class PaddingMode(Enum):
     REPLICATE = "replicate"
@@ -79,10 +83,6 @@ Example:
     >>> with co.call_mode("forward_step"):
     >>>     forward_step_output = module(forward_step_input)
 """
-
-
-# First element is a value buffer, while others are indexes
-State = Tuple[Tensor, Optional[int], Optional[int]]
 
 
 def _clone_first(state: State) -> State:
@@ -192,7 +192,7 @@ class CoModule(ABC):
 
     def forward_steps(
         self, input: Tensor, pad_end: bool = False, update_state=True
-    ) -> Tensor:
+    ) -> Optional[Tensor]:
         """Forward computation for multiple steps with state initialisation
 
         Args:
@@ -207,7 +207,7 @@ class CoModule(ABC):
 
     def _forward_steps_impl(
         self, input: Tensor, pad_end: bool = False, update_state: bool = True
-    ) -> Tensor:
+    ) -> Optional[Tensor]:
         """Forward computation for multiple steps with state initialisation
 
         Args:
@@ -247,7 +247,7 @@ class CoModule(ABC):
                     outs.append(o)
 
         if len(outs) == 0:
-            return torch.tensor([])  # pragma: no cover
+            return None  # pragma: no cover
 
         return torch.stack(outs, dim=2)
 
