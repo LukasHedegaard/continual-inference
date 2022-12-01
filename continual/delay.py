@@ -18,8 +18,13 @@ class Delay(CoModule, torch.nn.Module):
     This corresponds to the equvalent computations when delay is used to align continual computations.
     """
 
-    _state_shape = 2
-    _dynamic_state_inds = [True, False]
+    @property
+    def _state_shape(self):
+        return 2 if self.delay > 0 else 0
+
+    @property
+    def _dynamic_state_inds(self):
+        return [True, False] if self.delay > 0 else []
 
     def __init__(
         self,
@@ -71,6 +76,9 @@ class Delay(CoModule, torch.nn.Module):
         self.state_buffer, self.state_index = state
 
     def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
+        if self._delay == 0:
+            return input, prev_state
+
         if prev_state is None:
             buffer, index = self.init_state(input)
         else:
