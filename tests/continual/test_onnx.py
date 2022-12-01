@@ -189,13 +189,74 @@ def test_sequential_mixed(tmp_path):
         nn.ReLU(),
         co.Conv1d(hi_channels, out_channels, kernel_size),
     )
-    net.call_mode = "forward_step"
     net.eval()
     with torch.no_grad():
         net[0].weight.fill_(1.0)
         net[0].bias.fill_(1.0)
         net[3].weight.fill_(1.0)
         net[3].bias.fill_(1.0)
+
+    firsts = torch.arange(
+        batch_size * in_channels * receptive_field, dtype=torch.float
+    ).reshape(batch_size, in_channels, receptive_field)
+    last = torch.ones(batch_size, in_channels)
+
+    # Baseline
+    state0 = None
+    with torch.no_grad():
+        for i in range(receptive_field):
+            _, state0 = net._forward_step(firsts[:, :, i], state0)
+
+    # Export to ONNX
+    flat_state = [s.clone() for s in flatten(state0)]
+    co.onnx.export(
+        net,
+        # Since a CoModule may choose to modify parts of its state rather than to
+        # clone and update, we need to pass a clone to ensure fair comparison later
+        (last, *[s.clone() for s in flat_state]),
+        model_path,
+        input_names=["input"],
+        output_names=["output"],
+        do_constant_folding=True,
+        verbose=True,
+        opset_version=11,
+    )
+
+    ort_session = ort.InferenceSession(str(model_path))
+
+    # Run for whole input
+    inputs = {
+        "input": last.numpy(),
+        **{
+            k: v.detach().numpy()
+            for k, v in zip(OnnxWrapper(net).state_input_names, flat_state)
+        },
+    }
+    onnx_output, *onnx_state = ort_session.run(None, inputs)
+
+    net.eval()
+    target, target_state = net._forward_step(last, state0)
+
+    for os, ts in zip(onnx_state, flatten(target_state)):
+        assert torch.allclose(torch.tensor(os), ts)
+    assert torch.allclose(torch.tensor(onnx_output), target)
+
+
+def xtest_residual(tmp_path):
+    batch_size = 1
+    in_channels = 3
+    out_channels = 3
+    kernel_size = 5
+    receptive_field = 5
+    model_path = tmp_path / "residual.onnx"
+
+    conv = (co.Conv1d(in_channels, out_channels, kernel_size),)
+    with torch.no_grad():
+        conv.weight.fill_(1.0)
+        conv.bias.fill_(1.0)
+
+    net = co.Residual(conv)
+    net.eval()
 
     firsts = torch.arange(
         batch_size * in_channels * receptive_field, dtype=torch.float
@@ -242,7 +303,7 @@ def test_sequential_mixed(tmp_path):
     assert torch.allclose(torch.tensor(onnx_output), target)
 
 
-def xtest_residual(tmp_path):
+def xtest_advanced_routing(tmp_path):
     pass
 
 

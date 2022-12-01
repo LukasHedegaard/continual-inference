@@ -16,6 +16,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Add about info to package root.
 - purely functional `_forward_step` function to all modules.
 - `_state_shape` and `_dynamic_state_inds` properties to modules.
+- `co.onnx.export` function mirroring `torch.onnx.export`.
 
 ### Changed
 - Change call_mode internally from enum to tensor.
