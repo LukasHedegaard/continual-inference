@@ -287,26 +287,6 @@ class CoModule(ABC):
                 if hasattr(m, "call_mode"):
                     m.call_mode = self._call_mode
 
-    def _slow_forward(self, *input, **kwargs):
-        tracing_state = torch._C._get_tracing_state()
-        if not tracing_state or isinstance(self, torch._C.ScriptMethod):
-            return self(*input, **kwargs)
-        recording_scopes = torch.jit._trace._trace_module_map is not None
-        if recording_scopes:
-            # type ignore was added because at this point one knows that
-            # torch.jit._trace._trace_module_map is not Optional and has type Dict[Any, Any]
-            name = torch.jit._trace._trace_module_map[self] if self in torch.jit._trace._trace_module_map else None  # type: ignore[index, operator] # noqa: B950
-            if name:
-                tracing_state.push_scope(name)
-            else:
-                recording_scopes = False
-        try:
-            result = self(*input, **kwargs)
-        finally:
-            if recording_scopes:
-                tracing_state.pop_scope()
-        return result
-
     def _call_impl(self, *input, **kwargs):  # noqa: C901  # pragma: no cover
         """Modified version torch.nn.Module._call_impl
 
@@ -316,7 +296,6 @@ class CoModule(ABC):
         _call_mode = call_mode.cur if call_mode.prev is not None else self.call_mode
         forward_call = {
             (True, _callmode("forward")): self._slow_forward,
-            (True, _callmode("forward_steps")): self._slow_forward,
             (False, _callmode("forward")): self.forward,
             (False, _callmode("forward_steps")): self.forward_steps,
             (False, _callmode("forward_step")): self.forward_step,
