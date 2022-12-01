@@ -136,9 +136,6 @@ class _ConvCoNd(CoModule, _ConvNd):
         stride_index = torch.tensor(
             self.stride[0] - len(state_buffer) - 1 + self.padding[0]
         )
-
-        # if not hasattr(self, "state_buffer"):
-        #     self.register_buffer("state_buffer", state_buffer, persistent=False)
         return (state_buffer, state_index, stride_index)
 
     def clean_state(self):
