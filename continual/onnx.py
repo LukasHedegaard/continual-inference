@@ -15,8 +15,6 @@ def export(
     training=torch.onnx.TrainingMode.EVAL,
     input_names=None,
     output_names=None,
-    aten=False,
-    export_raw_ir=False,
     operator_export_type=None,
     opset_version=None,
     _retain_param_name=True,
@@ -109,11 +107,6 @@ def export(
             input nodes of the graph, in order
         output_names(list of strings, default empty list): names to assign to the
             output nodes of the graph, in order
-        aten (bool, default False): [DEPRECATED. use operator_export_type] export the
-            model in aten mode. If using aten mode, all the ops original exported
-            by the functions in symbolic_opset<version>.py are exported as ATen ops.
-        export_raw_ir (bool, default False): [DEPRECATED. use operator_export_type]
-            export the internal IR directly instead of converting it to ONNX ops.
         operator_export_type (enum, default OperatorExportTypes.ONNX):
             OperatorExportTypes.ONNX: All ops are exported as regular ONNX ops
             (with ONNX namespace).
@@ -280,8 +273,6 @@ def export(
         training=training,
         input_names=input_names + omodel.state_input_names,
         output_names=output_names + omodel.state_output_names,
-        aten=aten,
-        export_raw_ir=export_raw_ir,
         operator_export_type=operator_export_type,
         opset_version=opset_version,
         _retain_param_name=_retain_param_name,
