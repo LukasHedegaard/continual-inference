@@ -123,9 +123,6 @@ class _ConvCoNd(CoModule, _ConvNd):
         self.register_buffer("state_buffer", torch.tensor([]), persistent=False)
         self.register_buffer("state_index", torch.tensor(0), persistent=False)
         self.register_buffer("stride_index", torch.tensor(0), persistent=False)
-        # self.state_index: Optional[int] = None
-        # self.stride_index: Optional[int] = None
-        # init_state is called in `_forward_step`
 
     def init_state(
         self,
@@ -145,18 +142,9 @@ class _ConvCoNd(CoModule, _ConvNd):
         return (state_buffer, state_index, stride_index)
 
     def clean_state(self):
-        # if hasattr(self, "state_buffer"):
-        #     del self.state_buffer
-        # if hasattr(self, "state_index"):
-        #     del self.state_index
-        # if hasattr(self, "stride_index"):
-        #     del self.stride_index
-
         self.state_buffer = torch.tensor([])
         self.state_index = torch.tensor(0)
         self.stride_index = torch.tensor(0)
-        # self.state_index: Optional[int] = None
-        # self.stride_index: Optional[int] = None
 
     def get_state(self) -> Optional[State]:
         if len(self.state_buffer) > 0:
@@ -226,9 +214,11 @@ class _ConvCoNd(CoModule, _ConvNd):
         x_out, x_rest = x[:, :, 0], x[:, :, 1:]
 
         # Prepare previous state
-        buffer, index, stride_index = (
-            prev_state if prev_state is not None else self.init_state(x_rest)
-        )
+        if prev_state is None:
+            buffer, index, stride_index = self.init_state(x_rest)
+        else:
+            buffer, index, stride_index = prev_state
+
         assert index is not None
         assert stride_index is not None
 
