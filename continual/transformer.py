@@ -71,9 +71,7 @@ class RetroactiveUnity(Delay):
     ) -> DelayState:
         padding = self.make_padding(first_output)
         state_buffer = torch.stack([padding for _ in range(self.delay + 1)], dim=0)
-        state_index = -self.delay
-        if not hasattr(self, "state_buffer"):
-            self.register_buffer("state_buffer", state_buffer, persistent=False)
+        state_index = torch.tensor(-self.delay)
         return state_buffer, state_index
 
     def _forward_step(
@@ -93,7 +91,7 @@ class RetroactiveUnity(Delay):
         # Get output
         output = None
         if index >= 0:
-            output = buffer.clone().roll(shifts=-index - 1, dims=0)
+            output = buffer.clone().roll(shifts=int(-index - 1), dims=0)
             idx = (
                 self.time_dim + len(output.shape)
                 if self.time_dim < 0
