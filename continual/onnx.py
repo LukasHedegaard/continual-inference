@@ -1,206 +1,207 @@
-from typing import Dict, List
+import io
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import torch
+import torch._C._onnx as _C_onnx
 
 from continual import CoModule
 from continual.utils import flatten
 
 
 def export(
-    model,
-    args,
-    f,
-    export_params=True,
-    verbose=False,
-    training=torch.onnx.TrainingMode.EVAL,
-    input_names=None,
-    output_names=None,
-    operator_export_type=None,
-    opset_version=None,
-    do_constant_folding=True,
-    strip_doc_string=True,
-    keep_initializers_as_inputs=None,
-    custom_opsets=None,
-    enable_onnx_checker=True,
-    use_external_data_format=False,
+    model: Union[torch.nn.Module, torch.jit.ScriptModule, torch.jit.ScriptFunction],
+    args: Union[Tuple[Any, ...], torch.Tensor],
+    f: Union[str, io.BytesIO],
+    export_params: bool = True,
+    verbose: bool = False,
+    training: _C_onnx.TrainingMode = _C_onnx.TrainingMode.EVAL,
+    input_names: Optional[Sequence[str]] = None,
+    output_names: Optional[Sequence[str]] = None,
+    operator_export_type: _C_onnx.OperatorExportTypes = _C_onnx.OperatorExportTypes.ONNX,
+    opset_version: Optional[int] = None,
+    do_constant_folding: bool = True,
+    # dynamic_axes: Optional[  # Handled automatically
+    #     Union[Mapping[str, Mapping[int, str]], Mapping[str, Sequence[int]]]
+    # ] = None,
+    keep_initializers_as_inputs: Optional[bool] = None,
+    custom_opsets: Optional[Mapping[str, int]] = None,
+    # export_modules_as_functions: Union[bool, Collection[Type[torch.nn.Module]]] = False,
 ):
-    r"""
-    Export a model into ONNX format.  This exporter runs your model
-    once in order to get a trace of its execution to be exported;
-    at the moment, it supports a limited set of dynamic models (e.g., RNNs.)
-
+    r"""Exports a model into ONNX format.
+    If ``model`` is not a :class:`torch.jit.ScriptModule` nor a
+    :class:`torch.jit.ScriptFunction`, this runs
+    ``model`` once in order to convert it to a TorchScript graph to be exported
+    (the equivalent of :func:`torch.jit.trace`). Thus this has the same limited support
+    for dynamic control flow as :func:`torch.jit.trace`.
     Args:
-        model (co.CoModule): the model to be exported.
-        args (tuple of arguments or torch.Tensor, a dictionary consisting of named arguments (optional)):
-            a dictionary to specify the input to the corresponding named parameter:
-            - KEY: str, named parameter
-            - VALUE: corresponding input
+        model (:class:`torch.nn.Module`, :class:`torch.jit.ScriptModule` or :class:`torch.jit.ScriptFunction`):
+            the model to be exported.
+        args (tuple or torch.Tensor):
             args can be structured either as:
-
-            1. ONLY A TUPLE OF ARGUMENTS or torch.Tensor::
-
-                "args = (x, y, z)"
-
-            The inputs to the model, e.g., such that ``model(*args)`` is a valid invocation
-            of the model. Any non-Tensor arguments will be hard-coded into the exported model;
-            any Tensor arguments will become inputs of the exported model, in the order they
-            occur in args. If args is a Tensor, this is equivalent to having
-            called it with a 1-ary tuple of that Tensor.
-
-            2. A TUPLE OF ARGUEMENTS WITH A DICTIONARY OF NAMED PARAMETERS::
-
-                "args = (x,
-                        {
-                        'y': input_y,
-                        'z': input_z
-                        })"
-
-            The inputs to the model are structured as a tuple consisting of
-            non-keyword arguments and the last value of this tuple being a dictionary
-            consisting of named parameters and the corresponding inputs as key-value pairs.
-            If certain named argument is not present in the dictionary, it is assigned
-            the default value, or None if default value is not provided.
-
-            Cases in which an dictionary input is the last input of the args tuple
-            would cause a conflict when a dictionary of named parameters is used.
-            The model below provides such an example.
-
-                class Model(torch.nn.Module):
-                    def forward(self, k, x):
-                        ...
-                        return x
-
-                m = Model()
-                k = torch.randn(2, 3)
-                x = {torch.tensor(1.): torch.randn(2, 3)}
-
-                In the previous iteration, the call to export API would look like
-
-                    torch.onnx.export(model, (k, x), 'test.onnx')
-
-                This would work as intended. However, the export function
-                would now assume that the `x` input is intended to represent the optional
-                dictionary consisting of named arguments. In order to prevent this from being
-                an issue a constraint is placed to provide an empty dictionary as the last
-                input in the tuple args in such cases. The new call would look like this.
-
-                    torch.onnx.export(model, (k, x, {}), 'test.onnx')
-
-        f: a file-like object (has to implement fileno that returns a file descriptor)
-            or a string containing a file name.  A binary Protobuf will be written
+            1. ONLY A TUPLE OF ARGUMENTS::
+                args = (x, y, z)
+            The tuple should contain model inputs such that ``model(*args)`` is a valid
+            invocation of the model. Any non-Tensor arguments will be hard-coded into the
+            exported model; any Tensor arguments will become inputs of the exported model,
+            in the order they occur in the tuple.
+            2. A TENSOR::
+                args = torch.Tensor([1])
+            This is equivalent to a 1-ary tuple of that Tensor.
+            3. A TUPLE OF ARGUMENTS ENDING WITH A DICTIONARY OF NAMED ARGUMENTS::
+                args = (
+                    x,
+                    {
+                        "y": input_y,
+                        "z": input_z
+                    }
+                )
+            All but the last element of the tuple will be passed as non-keyword arguments,
+            and named arguments will be set from the last element. If a named argument is
+            not present in the dictionary, it is assigned the default value, or None if a
+            default value is not provided.
+            .. note::
+                If a dictionary is the last element of the args tuple, it will be
+                interpreted as containing named arguments. In order to pass a dict as the
+                last non-keyword arg, provide an empty dict as the last element of the args
+                tuple. For example, instead of::
+                    torch.onnx.export(
+                        model,
+                        (
+                            x,
+                            # WRONG: will be interpreted as named arguments
+                            {y: z}
+                        ),
+                        "test.onnx.pb"
+                    )
+                Write::
+                    torch.onnx.export(
+                        model,
+                        (
+                            x,
+                            {y: z},
+                            {}
+                        ),
+                        "test.onnx.pb"
+                    )
+        f: a file-like object (such that ``f.fileno()`` returns a file descriptor)
+            or a string containing a file name.  A binary protocol buffer will be written
             to this file.
-        export_params (bool, default True): if specified, all parameters will
-            be exported.  Set this to False if you want to export an untrained model.
+        export_params (bool, default True): if True, all parameters will
+            be exported. Set this to False if you want to export an untrained model.
             In this case, the exported model will first take all of its parameters
-            as arguments, the ordering as specified by ``model.state_dict().values()``
-        verbose (bool, default False): if specified, we will print out a debug
-            description of the trace being exported.
+            as arguments, with the ordering as specified by ``model.state_dict().values()``
+        verbose (bool, default False): if True, prints a description of the
+            model being exported to stdout. In addition, the final ONNX graph will include the
+            field ``doc_string``` from the exported model which mentions the source code locations
+            for ``model``. If True, ONNX exporter logging will be turned on.
         training (enum, default TrainingMode.EVAL):
-            TrainingMode.EVAL: export the model in inference mode.
-            TrainingMode.PRESERVE: export the model in inference mode if model.training is
-            False and to a training friendly mode if model.training is True.
-            TrainingMode.TRAINING: export the model in a training friendly mode.
-        input_names(list of strings, default empty list): names to assign to the
-            input nodes of the graph, in order
-        output_names(list of strings, default empty list): names to assign to the
-            output nodes of the graph, in order
+            * ``TrainingMode.EVAL``: export the model in inference mode.
+            * ``TrainingMode.PRESERVE``: export the model in inference mode if model.training is
+                False and in training mode if model.training is True.
+            * ``TrainingMode.TRAINING``: export the model in training mode. Disables optimizations
+                which might interfere with training.
+        input_names (list of str, default empty list): names to assign to the
+            input nodes of the graph, in order.
+        output_names (list of str, default empty list): names to assign to the
+            output nodes of the graph, in order.
         operator_export_type (enum, default OperatorExportTypes.ONNX):
-            OperatorExportTypes.ONNX: All ops are exported as regular ONNX ops
-            (with ONNX namespace).
-            OperatorExportTypes.ONNX_ATEN: All ops are exported as ATen ops
-            (with aten namespace).
-            OperatorExportTypes.ONNX_ATEN_FALLBACK: If an ATen op is not supported
-            in ONNX or its symbolic is missing, fall back on ATen op. Registered ops
-            are exported to ONNX regularly.
-            Example graph::
-
-                graph(%0 : Float)::
-                  %3 : int = prim::Constant[value=0]()
-                  %4 : Float = aten::triu(%0, %3) # missing op
-                  %5 : Float = aten::mul(%4, %0) # registered op
-                  return (%5)
-
-            is exported as::
-
-                graph(%0 : Float)::
-                  %1 : Long() = onnx::Constant[value={0}]()
-                  %2 : Float = aten::ATen[operator="triu"](%0, %1)  # missing op
-                  %3 : Float = onnx::Mul(%2, %0) # registered op
-                  return (%3)
-
-            In the above example, aten::triu is not supported in ONNX, hence
-            exporter falls back on this op.
-            OperatorExportTypes.RAW: Export raw ir.
-            OperatorExportTypes.ONNX_FALLTHROUGH: If an op is not supported
-            in ONNX, fall through and export the operator as is, as a custom
-            ONNX op. Using this mode, the op can be exported and implemented by
-            the user for their runtime backend.
-            Example graph::
-
-                graph(%x.1 : Long(1, strides=[1]))::
-                  %1 : None = prim::Constant()
-                  %2 : Tensor = aten::sum(%x.1, %1)
-                  %y.1 : Tensor[] = prim::ListConstruct(%2)
-                  return (%y.1)
-
-            is exported as::
-
-                graph(%x.1 : Long(1, strides=[1]))::
-                  %1 : Tensor = onnx::ReduceSum[keepdims=0](%x.1)
-                  %y.1 : Long() = prim::ListConstruct(%1)
-                  return (%y.1)
-
-            In the above example, prim::ListConstruct is not supported, hence
-            exporter falls through.
-
-        opset_version (int, default is 9): by default we export the model to the
-            opset version of the onnx submodule. Since ONNX's latest opset may
-            evolve before next stable release, by default we export to one stable
-            opset version. Right now, supported stable opset version is 9.
-            The opset_version must be _onnx_main_opset or in _onnx_stable_opsets
-            which are defined in torch/onnx/symbolic_helper.py
-        do_constant_folding (bool, default False): If True, the constant-folding
-            optimization is applied to the model during export. Constant-folding
-            optimization will replace some of the ops that have all constant
-            inputs, with pre-computed constant nodes.
-        strip_doc_string (bool, default True): if True, strips the field
-            "doc_string" from the exported model, which information about the stack
-            trace.
+            * ``OperatorExportTypes.ONNX``: Export all ops as regular ONNX ops
+                (in the default opset domain).
+            * ``OperatorExportTypes.ONNX_FALLTHROUGH``: Try to convert all ops
+                to standard ONNX ops in the default opset domain. If unable to do so
+                (e.g. because support has not been added to convert a particular torch op to ONNX),
+                fall back to exporting the op into a custom opset domain without conversion. Applies
+                to `custom ops <https://pytorch.org/tutorials/advanced/torch_script_custom_ops.html>`_
+                as well as ATen ops. For the exported model to be usable, the runtime must support
+                these non-standard ops.
+            * ``OperatorExportTypes.ONNX_ATEN``: All ATen ops (in the TorchScript namespace "aten")
+                are exported as ATen ops (in opset domain "org.pytorch.aten").
+                `ATen <https://pytorch.org/cppdocs/#aten>`_ is PyTorch's built-in tensor library, so
+                this instructs the runtime to use PyTorch's implementation of these ops.
+                .. warning::
+                    Models exported this way are probably runnable only by Caffe2.
+                    This may be useful if the numeric differences in implementations of operators are
+                    causing large differences in behavior between PyTorch and Caffe2 (which is more
+                    common on untrained models).
+            * ``OperatorExportTypes.ONNX_ATEN_FALLBACK``: Try to export each ATen op
+                (in the TorchScript namespace "aten") as a regular ONNX op. If we are unable to do so
+                (e.g. because support has not been added to convert a particular torch op to ONNX),
+                fall back to exporting an ATen op. See documentation on OperatorExportTypes.ONNX_ATEN for
+                context.
+                For example::
+                    graph(%0 : Float):
+                    %3 : int = prim::Constant[value=0]()
+                    # conversion unsupported
+                    %4 : Float = aten::triu(%0, %3)
+                    # conversion supported
+                    %5 : Float = aten::mul(%4, %0)
+                    return (%5)
+                Assuming ``aten::triu`` is not supported in ONNX, this will be exported as::
+                    graph(%0 : Float):
+                    %1 : Long() = onnx::Constant[value={0}]()
+                    # not converted
+                    %2 : Float = aten::ATen[operator="triu"](%0, %1)
+                    # converted
+                    %3 : Float = onnx::Mul(%2, %0)
+                    return (%3)
+                If PyTorch was built with Caffe2 (i.e. with ``BUILD_CAFFE2=1``), then
+                Caffe2-specific behavior will be enabled, including special support
+                for ops are produced by the modules described in
+                `Quantization <https://pytorch.org/docs/stable/quantization.html>`_.
+                .. warning::
+                    Models exported this way are probably runnable only by Caffe2.
+        opset_version (int, default 14): The version of the
+            `default (ai.onnx) opset <https://github.com/onnx/onnx/blob/master/docs/Operators.md>`_
+            to target. Must be >= 7 and <= 16.
+        do_constant_folding (bool, default True): Apply the constant-folding optimization.
+            Constant-folding will replace some of the ops that have all constant inputs
+            with pre-computed constant nodes.
         keep_initializers_as_inputs (bool, default None): If True, all the
             initializers (typically corresponding to parameters) in the
             exported graph will also be added as inputs to the graph. If False,
             then initializers are not added as inputs to the graph, and only
             the non-parameter inputs are added as inputs.
-
-            This may allow for better optimizations (such as constant folding
-            etc.) by backends/runtimes that execute these graphs. If
-            unspecified (default None), then the behavior is chosen
-            automatically as follows. If operator_export_type is
-            OperatorExportTypes.ONNX, the behavior is equivalent to setting
-            this argument to False. For other values of operator_export_type,
-            the behavior is equivalent to setting this argument to True. Note
-            that for ONNX opset version < 9, initializers MUST be part of graph
-            inputs. Therefore, if opset_version argument is set to a 8 or
-            lower, this argument will be ignored.
-        custom_opsets (dict<string, int>, default empty dict): A dictionary to indicate
-            custom opset domain and version at export. If model contains a custom opset,
-            it is optional to specify the domain and opset version in the dictionary:
-            - KEY: opset domain name
-            - VALUE: opset version
-            If the custom opset is not provided in this dictionary, opset version is set
-            to 1 by default.
-        enable_onnx_checker (bool, default True): If True the onnx model checker will be run
-            as part of the export, to ensure the exported model is a valid ONNX model.
-        use_external_data_format (bool, default False): If True, then the model is exported
-            in ONNX external data format, in which case some of the model parameters are stored
-            in external binary files and not in the ONNX model file itself. See link for format
-            details:
-            https://github.com/onnx/onnx/blob/8b3f7e2e7a0f2aba0e629e23d89f07c7fc0e6a5e/onnx/onnx.proto#L423
-            Also, in this case,  argument 'f' must be a string specifying the location of the model.
-            The external binary files will be stored in the same location specified by the model
-            location 'f'. If False, then the model is stored in regular format, i.e. model and
-            parameters are all in one file. This argument is ignored for all export types other
-            than ONNX.
+            This may allow for better optimizations (e.g. constant folding) by
+            backends/runtimes.
+            If ``opset_version < 9``, initializers MUST be part of graph
+            inputs and this argument will be ignored and the behavior will be
+            equivalent to setting this argument to True.
+            If None, then the behavior is chosen automatically as follows:
+            * If ``operator_export_type=OperatorExportTypes.ONNX``, the behavior is equivalent
+                to setting this argument to False.
+            * Else, the behavior is equivalent to setting this argument to True.
+        custom_opsets (dict[str, int], default empty dict): A dict with schema:
+            * KEY (str): opset domain name
+            * VALUE (int): opset version
+            If a custom opset is referenced by ``model`` but not mentioned in this dictionary,
+            the opset version is set to 1. Only custom opset domain name and version should be
+            indicated through this argument.
+        export_modules_as_functions (bool or set of type of nn.Module, default False): Flag to enable
+            exporting all ``nn.Module`` forward calls as local functions in ONNX. Or a set to indicate the
+            particular types of modules to export as local functions in ONNX.
+            This feature requires ``opset_version`` >= 15, otherwise the export will fail. This is because
+            ``opset_version`` < 15 implies IR version < 8, which means no local function support.
+            Module variables will be exported as function attributes. There are two categories of function
+            attributes.
+            1. Annotated attributes: class variables that have type annotations via
+            `PEP 526-style <https://www.python.org/dev/peps/pep-0526/#class-and-instance-variable-annotations>`_
+            will be exported as attributes.
+            Annotated attributes are not used inside the subgraph of ONNX local function because
+            they are not created by PyTorch JIT tracing, but they may be used by consumers
+            to determine whether or not to replace the function with a particular fused kernel.
+            2. Inferred attributes: variables that are used by operators inside the module. Attribute names
+            will have prefix "inferred::". This is to differentiate from predefined attributes retrieved from
+            python module annotations. Inferred attributes are used inside the subgraph of ONNX local function.
+            * ``False`` (default): export ``nn.Module`` forward calls as fine grained nodes.
+            * ``True``: export all ``nn.Module`` forward calls as local function nodes.
+            * Set of type of nn.Module: export ``nn.Module`` forward calls as local function nodes,
+                only if the type of the ``nn.Module`` is found in the set.
+    Raises:
+        :class:`torch.onnx.errors.CheckerError`: If the ONNX checker detects an invalid ONNX graph.
+        :class:`torch.onnx.errors.UnsupportedOperatorError`: If the ONNX graph cannot be exported because it
+            uses an operator that is not supported by the exporter.
+        :class:`torch.onnx.errors.OnnxExporterError`: Other errors that can occur during export.
+            All errors are subclasses of :class:`errors.OnnxExporterError`.
     """
     assert isinstance(
         model, CoModule
@@ -218,7 +219,6 @@ def export(
         operator_export_type=operator_export_type,
         opset_version=opset_version,
         do_constant_folding=do_constant_folding,
-        strip_doc_string=strip_doc_string,
         dynamic_axes={
             **{i: {0: "batch"} for i in input_names},
             **{o: {0: "batch"} for o in output_names},
@@ -226,8 +226,6 @@ def export(
         },
         keep_initializers_as_inputs=keep_initializers_as_inputs,
         custom_opsets=custom_opsets,
-        enable_onnx_checker=enable_onnx_checker,
-        use_external_data_format=use_external_data_format,
     )
 
 
