@@ -29,6 +29,7 @@ __all__ = [
 ]
 
 T = TypeVar("T")
+S = TypeVar("S")
 
 State = List[Optional[Tensor]]
 
@@ -135,6 +136,9 @@ def co_add_module(self, name: str, module: Optional["nn.Module"]) -> None:
 class Broadcast(CoModule, nn.Module):
     """Broadcast a single input to multiple streams"""
 
+    _state_shape = 0
+    _dynamic_state_inds = []
+
     def __init__(
         self,
         num_streams: int = None,
@@ -147,6 +151,9 @@ class Broadcast(CoModule, nn.Module):
             self.num_streams, int
         ), "Unknown number of target streams in Broadcast."
         return [input for _ in range(self.num_streams)]
+
+    def _forward_step(self, input: T, prev_state=None):
+        return self.forward(input), prev_state
 
     def forward_step(self, input: T, update_state=True) -> List[T]:
         return self.forward(input)
@@ -229,6 +236,25 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
     def add_module(self, name: str, module: Optional["nn.Module"]) -> None:
         co_add_module(self, name, module)
 
+    @property
+    def _state_shape(self):
+        return [m._state_shape for m in self]
+
+    @property
+    def _dynamic_state_inds(self):
+        return [m._dynamic_state_inds for m in self]
+
+    def _forward_step(
+        self, inputs: List[T], prev_state: Optional[List[Optional[S]]] = None
+    ):
+        prev_state = prev_state or [None for _ in range(len(self))]
+        outs, next_state = [], []
+        for i, module in enumerate(self):
+            out, n_state = module._forward_step(inputs[i], prev_state[i])
+            outs.append(out)
+            next_state.append(n_state)
+        return outs, next_state
+
     def forward_step(self, inputs: List[T], update_state=True) -> List[T]:
         outs = []
         for i, m in enumerate(self):
@@ -277,6 +303,9 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
 class ParallelDispatch(CoModule, nn.Module):
     """Parallel dispatch of many input streams to many output streams"""
 
+    _state_shape = 0
+    _dynamic_state_inds = []
+
     def __init__(
         self,
         dispatch_mapping: Sequence[Union[int, Sequence[int]]],
@@ -319,6 +348,9 @@ class ParallelDispatch(CoModule, nn.Module):
 
         return dispatch(self.dispatch_mapping)
 
+    def _forward_step(self, input: List[T], prev_state=None):
+        return self.forward_step(input), prev_state
+
     def forward_step(
         self, input: List[T], update_state=True
     ) -> List[Union[T, List[T]]]:
@@ -332,6 +364,9 @@ class ParallelDispatch(CoModule, nn.Module):
 
 class Reduce(CoModule, nn.Module):
     """Reduce multiple input streams to a single output"""
+
+    _state_shape = 0
+    _dynamic_state_inds = []
 
     def __init__(
         self,
@@ -351,10 +386,13 @@ class Reduce(CoModule, nn.Module):
     def forward(self, inputs: List[T]) -> T:
         return self.reduce(inputs)
 
-    def forward_step(self, inputs: List[T], update_state=True) -> T:
+    def _forward_step(self, inputs: List[T], prev_state=None):
         if all(isinstance(i, Tensor) for i in inputs):
-            return self.reduce(inputs)
-        return None  # pragma: no cover
+            return self.reduce(inputs), prev_state
+        return None, prev_state  # pragma: no cover
+
+    def forward_step(self, inputs: List[T], update_state=True) -> T:
+        return self._forward_step(inputs)[0]
 
     def forward_steps(self, inputs: List[T], pad_end=False, update_state=True) -> T:
         return self.reduce(inputs)
@@ -591,7 +629,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def _dynamic_state_inds(self):
         return [m._dynamic_state_inds for m in self]
 
-    def _forward_step(self, input: torch.Tensor, prev_state: List[State]):
+    def _forward_step(self, input: torch.Tensor, prev_state: List[State] = None):
         prev_state = prev_state or [None for _ in range(len(self))]
         next_state = prev_state.copy()
         outs = []

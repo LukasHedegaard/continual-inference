@@ -6,6 +6,9 @@ from .module import CoModule
 
 
 class Linear(CoModule, nn.Linear):
+    _state_shape = 0
+    _dynamic_state_inds = []
+
     def __init__(
         self,
         in_features: int,
@@ -69,6 +72,9 @@ class Linear(CoModule, nn.Linear):
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
         return self.forward(input)
+
+    def _forward_step(self, input: Tensor, prev_state=None) -> Tensor:
+        return self.forward(input), prev_state
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         return self.forward(input)

@@ -313,7 +313,7 @@ def test_residual(tmp_path):
     assert torch.allclose(torch.tensor(onnx_output), target)
 
 
-def xtest_advanced_routing(tmp_path):
+def test_advanced_routing(tmp_path):
     batch_size = 1
     in_channels = 3
     out_channels = 4
@@ -332,6 +332,7 @@ def xtest_advanced_routing(tmp_path):
             ),
         ),
         co.Reduce("sum"),
+        co.Linear(out_channels, out_channels),
     )
     net.eval()
 

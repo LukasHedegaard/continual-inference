@@ -100,8 +100,8 @@ class CoModule(ABC):
     stride: Tuple[int, ...] = (1,)
     padding: Tuple[int, ...] = (0,)
     make_padding = torch.zeros_like
-    _state_shape = 3
-    _dynamic_state_inds = [True, False, False]
+    _state_shape: int = 0
+    _dynamic_state_inds: List[bool] = []
     _call_mode = _callmode("forward")
 
     def __init_subclass__(cls) -> None:

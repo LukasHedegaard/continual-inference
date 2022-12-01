@@ -22,6 +22,9 @@ class Lambda(CoModule, nn.Module):
         takes_time (bool, optional): If True, `fn` recieves all steps, if False, it received one step and no time dimension. Defaults to False.
     """
 
+    _state_shape = 0
+    _dynamic_state_inds = []
+
     def __init__(
         self,
         fn: Callable[[Tensor], Tensor] = None,
@@ -97,15 +100,19 @@ class Lambda(CoModule, nn.Module):
         )
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
+        return self._forward_step(input)[0]
+
+    def _forward_step(self, input: Tensor, prev_state=None) -> Tensor:
         if self.forward_step_only_fn is not None:
-            return self.forward_step_only_fn(input)
+            return self.forward_step_only_fn(input), prev_state
 
         if self.takes_time:
             input = input.unsqueeze(dim=2)
         output = self.fn(input)
         if self.takes_time:
             output = output.squeeze(dim=2)
-        return output
+
+        return output, prev_state
 
 
 def _multiply(x: Tensor, factor: Union[float, int, Tensor]):
