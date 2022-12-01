@@ -63,7 +63,12 @@ def test_conv_forward_step(tmp_path):
         model_path,
         input_names=["input", *[f"i{i}" for i in range(3)]],
         output_names=["output", *[f"o{i}" for i in range(3)]],
-        dynamic_axes={"input": [0], "output": [0], "i0": [0], "o0": [0]},
+        dynamic_axes={
+            "input": {0: "batch"},
+            "output": {0: "batch"},
+            "i0": {0: "batch"},
+            "o0": {0: "batch"},
+        },
         do_constant_folding=False,
         verbose=True,
         opset_version=11,
@@ -152,7 +157,11 @@ def test_sequential_pure(tmp_path):
         model_path,
         input_names=["input", *o_net.state_input_names],
         output_names=["output", *o_net.state_output_names],
-        dynamic_axes={"input": [0], "output": [0], **o_net.state_dynamic_axes},
+        dynamic_axes={
+            "input": {0: "batch"},
+            "output": {0: "batch"},
+            **o_net.state_dynamic_axes,
+        },
         do_constant_folding=False,
         verbose=True,
         opset_version=11,
@@ -305,7 +314,71 @@ def test_residual(tmp_path):
 
 
 def xtest_advanced_routing(tmp_path):
-    pass
+    batch_size = 1
+    in_channels = 3
+    out_channels = 4
+    kernel_size = 3
+    receptive_field = kernel_size
+    model_path = tmp_path / "advanced_routing.onnx"
+
+    net = co.Sequential(
+        co.Broadcast(2),
+        co.ParallelDispatch([1, 0]),  # Swap positions
+        co.Parallel(
+            co.Conv1d(in_channels, out_channels, kernel_size),
+            co.Sequential(
+                co.Add(1),
+                co.Conv1d(in_channels, out_channels, kernel_size),
+            ),
+        ),
+        co.Reduce("sum"),
+    )
+    net.eval()
+
+    firsts = torch.arange(
+        batch_size * in_channels * receptive_field, dtype=torch.float
+    ).reshape(batch_size, in_channels, receptive_field)
+    last = torch.ones(batch_size, in_channels)
+
+    # Baseline
+    state0 = None
+    with torch.no_grad():
+        for i in range(receptive_field):
+            _, state0 = net._forward_step(firsts[:, :, i], state0)
+
+    # Export to ONNX
+    flat_state = [s.clone() for s in flatten(state0)]
+    co.onnx.export(
+        net,
+        # Since a CoModule may choose to modify parts of its state rather than to
+        # clone and update, we need to pass a clone to ensure fair comparison later
+        (last, *[s.clone() for s in flat_state]),
+        model_path,
+        input_names=["input"],
+        output_names=["output"],
+        do_constant_folding=True,
+        verbose=True,
+        opset_version=11,
+    )
+
+    ort_session = ort.InferenceSession(str(model_path))
+
+    # Run for whole input
+    inputs = {
+        "input": last.numpy(),
+        **{
+            k: v.detach().numpy()
+            for k, v in zip(OnnxWrapper(net).state_input_names, flat_state)
+        },
+    }
+    onnx_output, *onnx_state = ort_session.run(None, inputs)
+
+    net.eval()
+    target, target_state = net._forward_step(last, state0)
+
+    for os, ts in zip(onnx_state, flatten(target_state)):
+        assert torch.allclose(torch.tensor(os), ts)
+    assert torch.allclose(torch.tensor(onnx_output), target)
 
 
 def xtest_trans(tmp_path):

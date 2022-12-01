@@ -228,8 +228,8 @@ def export(
         example_outputs=example_outputs,
         strip_doc_string=strip_doc_string,
         dynamic_axes={
-            **{i: [0] for i in input_names},
-            **{o: [0] for o in output_names},
+            **{i: {0: "batch"} for i in input_names},
+            **{o: {0: "batch"} for o in output_names},
             **omodel.state_dynamic_axes,
         },
         keep_initializers_as_inputs=keep_initializers_as_inputs,
@@ -284,6 +284,6 @@ class OnnxWrapper(torch.nn.Module):
     @property
     def state_dynamic_axes(self) -> Dict[str, List[int]]:
         isdyn = flatten(self.model._dynamic_state_inds)
-        ins = {sn: [0] for sn, i in zip(self.state_input_names, isdyn) if i}
+        ins = {sn: {0: "batch"} for sn, i in zip(self.state_input_names, isdyn) if i}
         outs = {self._i2o_name(k): v for k, v in ins.items()}
         return {**ins, **outs}
