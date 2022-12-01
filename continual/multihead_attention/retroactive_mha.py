@@ -265,6 +265,48 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         self.V_mem = torch.tensor([])
         self.stride_index = torch.tensor(0)
 
+    def _forward_step(
+        self,
+        query: Tensor,
+        key: Tensor = None,
+        value: Tensor = None,
+        prev_state: Optional[State] = None,
+    ) -> Tuple[Optional[Tensor], State]:
+        """
+        Args:
+            query, key, value: step_inputs for mapping a query and a set of key-value pairs to an output.
+                See "Attention Is All You Need" for more details.
+
+        Shapes for inputs:
+            - query: :math:`(N, E)` where L is the target sequence length, N is the batch size, E is
+              the embedding dimension.
+            - key: :math:`(N, E)`, where S is the source sequence length, N is the batch size, E is
+              the embedding dimension.
+            - value: :math:`(N, E)` where S is the source sequence length, N is the batch size, E is
+              the embedding dimension.
+
+        Shapes for outputs:
+            - attn_output: :math:`(L, N, E)` where L is the target sequence length, N is the batch size,
+              E is the embedding dimension. :math:`(N, L, E)` if ``batch_first`` is ``True``.
+              :math:`(N, E, L)` if ``batch_first`` and ``embed_dim_second ``True``.
+        """
+        if key is None:
+            key = query
+        if value is None:
+            value = query
+
+        o, next_state = MultiheadAttentionBase._forward_step(
+            self, query, key, value, prev_state
+        )
+
+        if o is not None:
+            if self.batch_first:
+                o = o.transpose(1, 0)
+            if self.embed_dim_second:
+                o = o.transpose(1, 2)
+
+        return o, next_state
+
     def forward_step(
         self,
         query: Tensor,

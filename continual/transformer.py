@@ -115,6 +115,9 @@ class RetroactiveLambda(Lambda):
     def forward_step(self, input: Tensor, *args, **kwargs) -> Tensor:
         return self.forward(input)
 
+    def _forward_step(self, input: Tensor, prev_state=None, *args, **kwargs) -> Tensor:
+        return self.forward(input), prev_state
+
     def forward_steps(self, input: Tensor, *args, **kwargs) -> Tensor:
         return torch.stack(
             [self.forward(input[:, :, t]) for t in range(input.shape[2])], dim=2

@@ -463,7 +463,9 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         if not update_state and tmp_state:
             backup_state = _clone_state(tmp_state)
 
-        o, tmp_state = self._forward_step(query, key, value, tmp_state)
+        o, tmp_state = MultiheadAttentionBase._forward_step(
+            self, query, key, value, tmp_state
+        )
 
         if o is not None and self.batch_first:
             o = o.transpose(1, 0)
@@ -520,7 +522,9 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
         assert T == value.shape[0]
         outs = []
         for t in range(T):
-            o, tmp_state = self._forward_step(query[t], key[t], value[t], tmp_state)
+            o, tmp_state = MultiheadAttentionBase._forward_step(
+                self, query[t], key[t], value[t], tmp_state
+            )
 
             if isinstance(o, Tensor):
                 if self.batch_first:

@@ -250,7 +250,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
         prev_state = prev_state or [None for _ in range(len(self))]
         outs, next_state = [], []
         for i, module in enumerate(self):
-            out, n_state = module._forward_step(inputs[i], prev_state[i])
+            out, n_state = module._forward_step(inputs[i], prev_state=prev_state[i])
             outs.append(out)
             next_state.append(n_state)
         return outs, next_state
@@ -459,7 +459,7 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         prev_state = prev_state or [None for _ in range(len(self))]
         next_state = prev_state.copy()
         for i, module in enumerate(self):
-            input, n_state = module._forward_step(input, prev_state[i])
+            input, n_state = module._forward_step(input, prev_state=prev_state[i])
             next_state[i] = n_state
             if input is None:
                 return None, next_state
@@ -634,7 +634,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
         next_state = prev_state.copy()
         outs = []
         for i, module in enumerate(self):
-            out, n_state = module._forward_step(input, prev_state[i])
+            out, n_state = module._forward_step(input, prev_state=prev_state[i])
             next_state[i] = n_state
             outs.append(out)
         if all(isinstance(o, Tensor) for o in outs):

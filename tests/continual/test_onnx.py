@@ -382,5 +382,134 @@ def test_advanced_routing(tmp_path):
     assert torch.allclose(torch.tensor(onnx_output), target)
 
 
-def xtest_trans(tmp_path):
-    pass
+def test_trans_enc_b1(tmp_path):
+    B = 1
+    T = 10  # temporal sequence length
+    E = 4  # embedding dimension
+    H = 2  # num heads
+
+    model_path = tmp_path / "transformer_encoder.onnx"
+
+    net = co.TransformerEncoder(
+        co.TransformerEncoderLayerFactory(
+            d_model=E,
+            nhead=H,
+            dim_feedforward=E * 2,
+            dropout=0.0,
+            sequence_len=T,
+        ),
+        num_layers=1,
+    )
+
+    net.eval()
+
+    firsts = torch.arange(B * E * T, dtype=torch.float).reshape(B, E, T)
+    last = torch.ones(B, E)
+
+    # Baseline
+    state0 = None
+    with torch.no_grad():
+        for i in range(T - 1):
+            _, state0 = net._forward_step(firsts[:, :, i], state0)
+        o, state0 = net._forward_step(firsts[:, :, -1], state0)
+    assert o is not None
+
+    # Export to ONNX
+    flat_state = [s.clone() for s in flatten(state0)]
+    co.onnx.export(
+        net,
+        # Since a CoModule may choose to modify parts of its state rather than to
+        # clone and update, we need to pass a clone to ensure fair comparison later
+        (last, *[s.clone() for s in flat_state]),
+        model_path,
+        input_names=["input"],
+        output_names=["output"],
+        do_constant_folding=True,
+        verbose=True,
+        opset_version=14,
+    )
+
+    ort_session = ort.InferenceSession(str(model_path))
+
+    # Run for whole input
+    inputs = {
+        "input": last.numpy(),
+        **{
+            k: v.detach().numpy()
+            for k, v in zip(OnnxWrapper(net).state_input_names, flat_state)
+        },
+    }
+    onnx_output, *onnx_state = ort_session.run(None, inputs)
+
+    net.eval()
+    target, target_state = net._forward_step(last, state0)
+
+    for os, ts in zip(onnx_state, flatten(target_state)):
+        assert torch.allclose(torch.tensor(os), ts)
+    assert torch.allclose(torch.tensor(onnx_output), target)
+
+
+def xtest_trans_enc_b2(tmp_path):
+    B = 1
+    T = 10  # temporal sequence length
+    E = 4  # embedding dimension
+    H = 2  # num heads
+
+    model_path = tmp_path / "transformer_encoder.onnx"
+
+    net = co.TransformerEncoder(
+        co.TransformerEncoderLayerFactory(
+            d_model=E,
+            nhead=H,
+            dim_feedforward=E * 2,
+            dropout=0.0,
+            sequence_len=T,
+        ),
+        num_layers=2,
+    )
+
+    net.eval()
+
+    firsts = torch.arange(B * E * T, dtype=torch.float).reshape(B, E, T)
+    last = torch.ones(B, E)
+
+    # Baseline
+    state0 = None
+    with torch.no_grad():
+        for i in range(T - 1):
+            _, state0 = net._forward_step(firsts[:, :, i], state0)
+        o, state0 = net._forward_step(firsts[:, :, -1], state0)
+
+    # Export to ONNX
+    flat_state = [s.clone() for s in flatten(state0)]
+    co.onnx.export(
+        net,
+        # Since a CoModule may choose to modify parts of its state rather than to
+        # clone and update, we need to pass a clone to ensure fair comparison later
+        (last, *[s.clone() for s in flat_state]),
+        model_path,
+        input_names=["input"],
+        output_names=["output"],
+        do_constant_folding=True,
+        verbose=True,
+        opset_version=14,
+    )
+
+    ort_session = ort.InferenceSession(str(model_path))
+
+    # Run for whole input
+    inputs = {
+        "input": last.numpy(),
+        **{
+            k: v.detach().numpy()
+            for k, v in zip(OnnxWrapper(net).state_input_names, flat_state)
+        },
+    }
+    onnx_output, *onnx_state = ort_session.run(None, inputs)
+
+    net.eval()
+    target, target_state = net._forward_step(last, state0)
+
+    for os, ts in zip(onnx_state, flatten(target_state)):
+        assert torch.allclose(torch.tensor(os), ts)
+    assert torch.allclose(torch.tensor(onnx_output), target)
