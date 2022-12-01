@@ -583,6 +583,26 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def add_module(self, name: str, module: Optional["nn.Module"]) -> None:
         co_add_module(self, name, module)
 
+    @property
+    def _state_shape(self):
+        return [m._state_shape for m in self]
+
+    @property
+    def _dynamic_state_inds(self):
+        return [m._dynamic_state_inds for m in self]
+
+    def _forward_step(self, input: torch.Tensor, prev_state: List[State]):
+        prev_state = prev_state or [None for _ in range(len(self))]
+        next_state = prev_state.copy()
+        outs = []
+        for i, module in enumerate(self):
+            out, n_state = module._forward_step(input, prev_state[i])
+            next_state[i] = n_state
+            outs.append(out)
+        if all(isinstance(o, Tensor) for o in outs):
+            return self.reduce(outs), next_state
+        return None, next_state
+
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
         outs = []
         for m in self:

@@ -106,8 +106,8 @@ def test_conv_forward_step(tmp_path):
         ort_session.run(None, inputs)
     onnx_time = timer() - start
 
-    assert reg_time > 2 * onnx_time
-    assert ts_time > 2 * onnx_time
+    assert reg_time > onnx_time
+    assert ts_time > onnx_time
 
 
 def test_sequential_pure(tmp_path):
@@ -242,7 +242,7 @@ def test_sequential_mixed(tmp_path):
     assert torch.allclose(torch.tensor(onnx_output), target)
 
 
-def xtest_residual(tmp_path):
+def test_residual(tmp_path):
     batch_size = 1
     in_channels = 3
     out_channels = 3
@@ -250,7 +250,7 @@ def xtest_residual(tmp_path):
     receptive_field = 5
     model_path = tmp_path / "residual.onnx"
 
-    conv = (co.Conv1d(in_channels, out_channels, kernel_size),)
+    conv = co.Conv1d(in_channels, out_channels, kernel_size)
     with torch.no_grad():
         conv.weight.fill_(1.0)
         conv.bias.fill_(1.0)
@@ -270,17 +270,15 @@ def xtest_residual(tmp_path):
             _, state0 = net._forward_step(firsts[:, :, i], state0)
 
     # Export to ONNX
-    o_net = OnnxWrapper(net)
     flat_state = [s.clone() for s in flatten(state0)]
-    onnx.export(
-        o_net,
+    co.onnx.export(
+        net,
         # Since a CoModule may choose to modify parts of its state rather than to
         # clone and update, we need to pass a clone to ensure fair comparison later
         (last, *[s.clone() for s in flat_state]),
         model_path,
-        input_names=["input", *o_net.state_input_names],
-        output_names=["output", *o_net.state_output_names],
-        dynamic_axes={"input": [0], "output": [0], **o_net.state_dynamic_axes},
+        input_names=["input"],
+        output_names=["output"],
         do_constant_folding=True,
         verbose=True,
         opset_version=11,
@@ -291,7 +289,10 @@ def xtest_residual(tmp_path):
     # Run for whole input
     inputs = {
         "input": last.numpy(),
-        **{k: v.detach().numpy() for k, v in zip(o_net.state_input_names, flat_state)},
+        **{
+            k: v.detach().numpy()
+            for k, v in zip(OnnxWrapper(net).state_input_names, flat_state)
+        },
     }
     onnx_output, *onnx_state = ort_session.run(None, inputs)
 
