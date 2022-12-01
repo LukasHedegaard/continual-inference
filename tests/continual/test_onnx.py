@@ -5,9 +5,11 @@ from timeit import default_timer as timer
 import onnxruntime as ort
 import pytest
 import torch
-from torch import onnx
+from torch import nn, onnx
 
 import continual as co
+from continual.onnx import OnnxWrapper
+from continual.utils import flatten
 
 
 @pytest.fixture
@@ -16,23 +18,6 @@ def tmp_path():
     p.mkdir(exist_ok=True)
     yield p
     shutil.rmtree(p)
-
-
-class CollapseArgs(torch.nn.Module):
-    """Collapses input args and flattens output args.
-    This is necessary as the ``dynamic_axes`` arg for
-    :py:meth:`torch.onnx.export` doesn't accept nested Tuples.
-    Args:
-        model: A :py:class:`DeepSpeech1`.
-    """
-
-    def __init__(self, model: co.Conv1d):
-        super().__init__()
-        self.model = model
-
-    def forward(self, x: torch.Tensor, *states: torch.Tensor):
-        out, next_states = self.model._forward_step(x, states)
-        return out, *next_states
 
 
 def test_conv_forward_step(tmp_path):
@@ -44,7 +29,7 @@ def test_conv_forward_step(tmp_path):
 
     net = co.Conv1d(in_channels, out_channels, receptive_field)
     net.call_mode = "forward_step"
-    net.train()  # For testing purposes, we force the network to clone its buffer
+    net.train()
     with torch.no_grad():
         net.weight.fill_(1.0)
         net.bias.fill_(1.0)
@@ -73,7 +58,7 @@ def test_conv_forward_step(tmp_path):
 
     # Export to ONNX
     onnx.export(
-        CollapseArgs(net),
+        OnnxWrapper(net),
         (last, *[s.clone() for s in state0]),
         model_path,
         input_names=["input", *[f"i{i}" for i in range(3)]],
@@ -125,17 +110,141 @@ def test_conv_forward_step(tmp_path):
     assert ts_time > 2 * onnx_time
 
 
-def xtest_sequential_pure():
+def test_sequential_pure(tmp_path):
+    batch_size = 1
+    in_channels = 3
+    hi_channels = 6
+    out_channels = 4
+    kernel_size = 3
+    receptive_field = 5
+    model_path = tmp_path / "seq_conv.onnx"
+
+    net = co.Sequential(
+        co.Conv1d(in_channels, hi_channels, kernel_size),
+        co.Conv1d(hi_channels, out_channels, kernel_size),
+    )
+    net.eval()
+    with torch.no_grad():
+        net[0].weight.fill_(1.0)
+        net[0].bias.fill_(1.0)
+        net[1].weight.fill_(1.0)
+        net[1].bias.fill_(1.0)
+
+    firsts = torch.arange(
+        batch_size * in_channels * receptive_field, dtype=torch.float
+    ).reshape(batch_size, in_channels, receptive_field)
+    last = torch.ones(batch_size, in_channels)
+
+    # Baseline
+    state0 = None
+    with torch.no_grad():
+        for i in range(receptive_field):
+            _, state0 = net._forward_step(firsts[:, :, i], state0)
+
+    # Export to ONNX
+    o_net = OnnxWrapper(net)
+    flat_state = [s.clone() for s in flatten(state0)]
+    onnx.export(
+        o_net,
+        # Since a CoModule may choose to modify parts of its state rather than to
+        # clone and modify, we need to pass a clone to ensure fair comparison later
+        (last, *[s.clone() for s in flat_state]),
+        model_path,
+        input_names=["input", *o_net.state_input_names],
+        output_names=["output", *o_net.state_output_names],
+        dynamic_axes={"input": [0], "output": [0], **o_net.state_dynamic_axes},
+        do_constant_folding=False,
+        verbose=True,
+        opset_version=11,
+    )
+
+    ort_session = ort.InferenceSession(str(model_path))
+
+    # Run for whole input
+    inputs = {
+        "input": last.numpy(),
+        **{k: v.detach().numpy() for k, v in zip(o_net.state_input_names, flat_state)},
+    }
+    onnx_output, *onnx_state = ort_session.run(None, inputs)
+
+    target, target_state = net._forward_step(last, state0)
+
+    for os, ts in zip(onnx_state, flatten(target_state)):
+        assert torch.allclose(torch.tensor(os), ts)
+    assert torch.allclose(torch.tensor(onnx_output), target)
+
+
+def test_sequential_mixed(tmp_path):
+    batch_size = 1
+    in_channels = 3
+    hi_channels = 6
+    out_channels = 4
+    kernel_size = 3
+    receptive_field = 5
+    model_path = tmp_path / "seq_conv_mixed.onnx"
+
+    net = co.Sequential(
+        co.Conv1d(in_channels, hi_channels, kernel_size),
+        nn.BatchNorm1d(hi_channels),
+        nn.ReLU(),
+        co.Conv1d(hi_channels, out_channels, kernel_size),
+    )
+    net.call_mode = "forward_step"
+    net.eval()
+    with torch.no_grad():
+        net[0].weight.fill_(1.0)
+        net[0].bias.fill_(1.0)
+        net[3].weight.fill_(1.0)
+        net[3].bias.fill_(1.0)
+
+    firsts = torch.arange(
+        batch_size * in_channels * receptive_field, dtype=torch.float
+    ).reshape(batch_size, in_channels, receptive_field)
+    last = torch.ones(batch_size, in_channels)
+
+    # Baseline
+    state0 = None
+    with torch.no_grad():
+        for i in range(receptive_field):
+            _, state0 = net._forward_step(firsts[:, :, i], state0)
+
+    # Export to ONNX
+    o_net = OnnxWrapper(net)
+    flat_state = [s.clone() for s in flatten(state0)]
+    onnx.export(
+        o_net,
+        # Since a CoModule may choose to modify parts of its state rather than to
+        # clone and update, we need to pass a clone to ensure fair comparison later
+        (last, *[s.clone() for s in flat_state]),
+        model_path,
+        input_names=["input", *o_net.state_input_names],
+        output_names=["output", *o_net.state_output_names],
+        dynamic_axes={"input": [0], "output": [0], **o_net.state_dynamic_axes},
+        do_constant_folding=True,
+        verbose=True,
+        opset_version=11,
+    )
+
+    ort_session = ort.InferenceSession(str(model_path))
+
+    # Run for whole input
+    inputs = {
+        "input": last.numpy(),
+        **{k: v.detach().numpy() for k, v in zip(o_net.state_input_names, flat_state)},
+    }
+    onnx_output, *onnx_state = ort_session.run(None, inputs)
+
+    net.eval()
+    target, target_state = net._forward_step(last, state0)
+
+    for os, ts in zip(onnx_state, flatten(target_state)):
+        assert torch.allclose(torch.tensor(os), ts)
+    assert torch.allclose(torch.tensor(onnx_output), target)
+
+
+def xtest_residual(tmp_path):
     pass
 
 
-def xtest_sequential_mixed():
-    pass
-
-
-def xtest_residual():
-    pass
-
-
-def xtest_trans():
+def xtest_trans(tmp_path):
     pass

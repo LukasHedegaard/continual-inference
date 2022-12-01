@@ -96,6 +96,14 @@ class CoModule(ABC):
     Deriving from this class enforces that neccessary class methods are implemented
     """
 
+    receptive_field: int = 1
+    stride: Tuple[int, ...] = (1,)
+    padding: Tuple[int, ...] = (0,)
+    make_padding = torch.zeros_like
+    _state_shape = 3
+    _dynamic_state_inds = [True, False, False]
+    _call_mode = _callmode("forward")
+
     def __init_subclass__(cls) -> None:
         CoModule._validate_class(cls)
 
@@ -126,11 +134,12 @@ class CoModule(ABC):
                 property,
             }, f"{cls} should implement a `{prop}` property to satisfy the CoModule interface."
 
-        for prop in {"stride", "padding"}:
+        for prop in {"stride", "padding", "_state_shape", "_dynamic_state_inds"}:
             assert type(getattr(cls, prop, None)) in {
                 int,
                 property,
                 tuple,
+                list,
             }, f"{cls} should implement a `{prop}` property to satisfy the CoModule interface."
 
     @staticmethod
@@ -160,11 +169,6 @@ class CoModule(ABC):
     def clean_state(self):
         """Clean model state"""
         ...  # pragma: no cover
-
-    receptive_field: int = 1
-    stride: Tuple[int, ...] = (1,)
-    padding: Tuple[int, ...] = (0,)
-    make_padding = torch.zeros_like
 
     @property
     def delay(self) -> int:
@@ -270,8 +274,6 @@ class CoModule(ABC):
         step_shape = (*step_shape[:2], self.delay, *step_shape[2:])
         dummy = self.make_padding(torch.zeros(step_shape, dtype=torch.float))
         self.forward_steps(dummy)
-
-    _call_mode = _callmode("forward")
 
     @property
     def call_mode(self) -> torch.Tensor:

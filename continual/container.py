@@ -30,6 +30,8 @@ __all__ = [
 
 T = TypeVar("T")
 
+State = List[Optional[Tensor]]
+
 
 class Reduction(Enum):
     """Types of parallel tensor reduce operation.
@@ -414,6 +416,24 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
             if not type(input) in {Tensor, list}:
                 return None
         return input
+
+    def _forward_step(self, input: torch.Tensor, prev_state: List[State]):
+        prev_state = prev_state or [None for _ in range(len(self))]
+        next_state = prev_state.copy()
+        for i, module in enumerate(self):
+            input, n_state = module._forward_step(input, prev_state[i])
+            next_state[i] = n_state
+            if input is None:
+                return None, next_state
+        return input, next_state
+
+    @property
+    def _state_shape(self):
+        return [m._state_shape for m in self]
+
+    @property
+    def _dynamic_state_inds(self):
+        return [m._dynamic_state_inds for m in self]
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         for m in self:

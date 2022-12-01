@@ -43,8 +43,8 @@ __all__ = ["Conv1d", "Conv2d", "Conv3d"]
 
 
 class _ConvCoNd(CoModule, _ConvNd):
-    # state_index: Optional[int]
-    # stride_index: Optional[int]
+    _state_shape = 3
+    _dynamic_state_inds = [True, False, False]
 
     def __init__(
         self,

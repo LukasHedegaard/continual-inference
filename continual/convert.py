@@ -46,6 +46,13 @@ def forward_stepping(module: nn.Module, dim: int = 2):
         dim (int, optional): The dimension to unsqueeze during `forward_step`. Defaults to 2.
     """
 
+    def _forward_step(func: Callable[[Tensor], Tensor]):
+        @wraps(func)
+        def call(x: Tensor, prev_state=None) -> Tensor:
+            return func(x.unsqueeze(dim)).squeeze(dim), prev_state
+
+        return call
+
     def forward_step(func: Callable[[Tensor], Tensor]):
         @wraps(func)
         def call(x: Tensor, update_state=True) -> Tensor:
@@ -72,6 +79,7 @@ def forward_stepping(module: nn.Module, dim: int = 2):
     orig_forward = module.forward
     module.forward_steps = forward_steps(module.forward)
     module.forward_step = forward_step(module.forward)
+    module._forward_step = _forward_step(module.forward)
     module.delay = 0
     module.receptive_field = 1
     module.stride = tuple(getattr(module, "stride", [1]))
@@ -80,6 +88,8 @@ def forward_stepping(module: nn.Module, dim: int = 2):
     module.get_state = dummy
     module.set_state = dummy
     module.clean_state = dummy
+    module._state_shape = 0
+    module._dynamic_state_inds = []
 
     # Call mode
     module.call_mode = _callmode("forward")
