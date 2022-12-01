@@ -267,7 +267,7 @@ class OnnxWrapper(torch.nn.Module):
         shaped_state, _ = _shape_list(states, self.model._state_shape)
 
         out, next_states = self.model._forward_step(x, shaped_state)
-        return out, *flatten(next_states, remove_none=False)
+        return (out, *flatten(next_states, remove_none=False))
 
     @staticmethod
     def _i2o_name(i_name: str) -> str:
