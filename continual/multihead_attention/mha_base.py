@@ -395,7 +395,7 @@ class MultiheadAttentionBase(CoModule, MultiheadAttention):
                     dtype=query.dtype,
                     device=query.device,
                 ),
-                -self.sequence_len,
+                torch.tensor(-self.sequence_len),
             )
 
         o, new_state = multi_head_attention_forward_step(

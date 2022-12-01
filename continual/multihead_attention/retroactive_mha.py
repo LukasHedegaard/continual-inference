@@ -18,6 +18,7 @@ State = Tuple[
     Tensor,  # Q_mem, (B, Nt-1, E)
     Tensor,  # K_T_mem, (B, E, Ns)
     Tensor,  # V_mem, (B, Ns, E)
+    Tensor,  # state_index
 ]
 
 
@@ -172,6 +173,10 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
     number of features.
     """
 
+    _state_shape = 6
+    #                     d_mem, AV_mem, Q_mem, K_T_mem, V_mem ,state_index
+    _dynamic_state_inds = [True, True, True, True, True, True, False]
+
     def __init__(
         self,
         embed_dim,
@@ -213,6 +218,12 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
             forward_returns_attn_mask,
             embed_dim_second,
         )
+        self.register_buffer("d_mem", torch.tensor([]), persistent=False)
+        self.register_buffer("AV_mem", torch.tensor([]), persistent=False)
+        self.register_buffer("Q_mem", torch.tensor([]), persistent=False)
+        self.register_buffer("K_T_mem", torch.tensor([]), persistent=False)
+        self.register_buffer("V_mem", torch.tensor([]), persistent=False)
+        self.register_buffer("stride_index", torch.tensor(0), persistent=False)
 
     def get_state(self) -> Optional[State]:
         """Get model state
@@ -220,14 +231,7 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         Returns:
             Optional[State]: A State tuple if the model has been initialised and otherwise None.
         """
-        if (
-            getattr(self, "d_mem", None) is not None
-            and getattr(self, "AV_mem", None) is not None
-            and getattr(self, "Q_mem", None) is not None
-            and getattr(self, "K_T_mem", None) is not None
-            and getattr(self, "V_mem", None) is not None
-            and getattr(self, "stride_index", None) is not None
-        ):
+        if len(self.d_mem) > 0:
             return (
                 self.d_mem,
                 self.AV_mem,
@@ -254,18 +258,12 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
 
     def clean_state(self):
         """Clean model state"""
-        if hasattr(self, "d_mem"):
-            del self.d_mem
-        if hasattr(self, "AV_mem"):
-            del self.AV_mem
-        if hasattr(self, "Q_mem"):
-            del self.Q_mem
-        if hasattr(self, "K_T_mem"):
-            del self.K_T_mem
-        if hasattr(self, "V_mem"):
-            del self.V_mem
-        if hasattr(self, "stride_index"):
-            del self.stride_index
+        self.d_mem = torch.tensor([])
+        self.AV_mem = torch.tensor([])
+        self.Q_mem = torch.tensor([])
+        self.K_T_mem = torch.tensor([])
+        self.V_mem = torch.tensor([])
+        self.stride_index = torch.tensor(0)
 
     def forward_step(
         self,
