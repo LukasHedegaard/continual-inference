@@ -17,11 +17,9 @@ def export(
     output_names=None,
     operator_export_type=None,
     opset_version=None,
-    _retain_param_name=True,
     do_constant_folding=True,
     example_outputs=None,
     strip_doc_string=True,
-    dynamic_axes=None,
     keep_initializers_as_inputs=None,
     custom_opsets=None,
     enable_onnx_checker=True,
@@ -33,7 +31,7 @@ def export(
     at the moment, it supports a limited set of dynamic models (e.g., RNNs.)
 
     Args:
-        model (torch.nn.Module): the model to be exported.
+        model (co.CoModule): the model to be exported.
         args (tuple of arguments or torch.Tensor, a dictionary consisting of named arguments (optional)):
             a dictionary to specify the input to the corresponding named parameter:
             - KEY: str, named parameter
@@ -175,52 +173,6 @@ def export(
         strip_doc_string (bool, default True): if True, strips the field
             "doc_string" from the exported model, which information about the stack
             trace.
-        dynamic_axes (dict<string, dict<int, string>> or dict<string, list(int)>, default empty dict):
-            a dictionary to specify dynamic axes of input/output, such that:
-            - KEY:  input and/or output names
-            - VALUE: index of dynamic axes for given key and potentially the name to be used for
-            exported dynamic axes. In general the value is defined according to one of the following
-            ways or a combination of both:
-            (1). A list of integers specifying the dynamic axes of provided input. In this scenario
-            automated names will be generated and applied to dynamic axes of provided input/output
-            during export.
-            OR (2). An inner dictionary that specifies a mapping FROM the index of dynamic axis in
-            corresponding input/output TO the name that is desired to be applied on such axis of
-            such input/output during export.
-
-            Example. if we have the following shape for inputs and outputs:
-
-            .. code-block:: none
-
-                shape(input_1) = ('b', 3, 'w', 'h')
-                and shape(input_2) = ('b', 4)
-                and shape(output)  = ('b', 'd', 5)
-
-            Then `dynamic axes` can be defined either as:
-
-            1. ONLY INDICES::
-
-                ``dynamic_axes = {'input_1':[0, 2, 3],
-                                  'input_2':[0],
-                                  'output':[0, 1]}``
-                where automatic names will be generated for exported dynamic axes
-
-            2. INDICES WITH CORRESPONDING NAMES::
-
-                ``dynamic_axes = {'input_1':{0:'batch',
-                                             1:'width',
-                                             2:'height'},
-                                  'input_2':{0:'batch'},
-                                  'output':{0:'batch',
-                                            1:'detections'}}``
-                where provided names will be applied to exported dynamic axes
-
-            3. MIXED MODE OF (1) and (2)::
-
-                ``dynamic_axes = {'input_1':[0, 2, 3],
-                                  'input_2':{0:'batch'},
-                                  'output':[0,1]}``
-
         keep_initializers_as_inputs (bool, default None): If True, all the
             initializers (typically corresponding to parameters) in the
             exported graph will also be added as inputs to the graph. If False,
@@ -260,9 +212,6 @@ def export(
     assert isinstance(
         model, CoModule
     ), f"The passed model of type {type(model)} should be a CoModule"
-    assert (
-        dynamic_axes is None
-    ), "A dynamic axis for dimension zero is automatically added to `input_names` and `output_names` and should not be be passed here."
     omodel = OnnxWrapper(model)
     torch.onnx.export(
         model=omodel,
@@ -275,7 +224,6 @@ def export(
         output_names=output_names + omodel.state_output_names,
         operator_export_type=operator_export_type,
         opset_version=opset_version,
-        _retain_param_name=_retain_param_name,
         do_constant_folding=do_constant_folding,
         example_outputs=example_outputs,
         strip_doc_string=strip_doc_string,
