@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+
 import numpy as np
 import torch
 from torch import Tensor, nn
@@ -85,7 +87,13 @@ class CyclicPositionalEncoding(nn.Module):
         return self.pattern[input]
 
 
+State = Tuple[Tensor]
+
+
 class RecyclingPositionalEncoding(co.CoModule, nn.Module):
+    _state_shape = 1
+    _dynamic_state_inds = [False]
+
     def __init__(
         self,
         embed_dim: int,
@@ -97,14 +105,14 @@ class RecyclingPositionalEncoding(co.CoModule, nn.Module):
         self.pe = {True: nn.Embedding, False: CyclicPositionalEncoding}[learned](
             num_embeds, embed_dim
         )
-        self.index = 0
+        self.register_buffer("state_index", torch.tensor(0), persistent=False)
         self.forward_update_index_steps = forward_update_index_steps
 
     def forward(self, input: Tensor, update_index_steps: int = None) -> Tensor:
         T = input.shape[2]
         assert T <= self.pe.num_embeddings
         position_ids = (
-            torch.arange(T, device=input.device).unsqueeze(0) + self.index
+            torch.arange(T, device=input.device).unsqueeze(0) + self.state_index
         ) % self.pe.num_embeddings
 
         index_update = (
@@ -112,7 +120,7 @@ class RecyclingPositionalEncoding(co.CoModule, nn.Module):
             if update_index_steps is None
             else update_index_steps
         )
-        self.index = (self.index + index_update) % self.pe.num_embeddings
+        self.state_index = (self.state_index + index_update) % self.pe.num_embeddings
 
         position_embeddings = self.pe(position_ids).transpose(1, 2)
         return input + position_embeddings
@@ -123,12 +131,29 @@ class RecyclingPositionalEncoding(co.CoModule, nn.Module):
         )
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
-        output = input + self.pe(torch.tensor([self.index]))
+        output = input + self.pe(self.state_index.unsqueeze(0))
 
         if update_state:
-            self.index = (self.index + 1) % self.pe.num_embeddings
+            self.state_index = (self.state_index + 1) % self.pe.num_embeddings
         return output
+
+    def _forward_step(
+        self, input: Tensor, prev_state: Optional[State] = None
+    ) -> Tuple[Tensor, State]:
+        if prev_state is None:
+            state_index = self.init_state()[0]
+        else:
+            state_index = prev_state[0]
+        output = input + self.pe(state_index.unsqueeze(0))
+
+        state_index = (state_index + 1) % self.pe.num_embeddings
+        return output, (state_index,)
+
+    def init_state(self) -> State:
+        """Initalize model state"""
+        self.state_index = torch.tensor(0)
+        return (self.state_index,)
 
     def clean_state(self):
         """Clean model state"""
-        self.index = 0
+        self.state_index = torch.tensor(0)

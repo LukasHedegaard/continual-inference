@@ -88,7 +88,7 @@ def test_trans_enc_b2():
 
     o_step = enc.forward_step(query[:, :, -1], update_state=False)
 
-    assert torch.allclose(o[:, :, -1], o_step)
+    assert torch.allclose(o[:, :, -1], o_step, atol=1e-7)
 
     # Same result with forward_steps
     o_step2 = enc.forward_steps(query[:, :, -1].unsqueeze(-1))

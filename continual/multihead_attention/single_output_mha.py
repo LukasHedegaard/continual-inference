@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from continual.module import CallMode, TensorPlaceholder
+from continual.module import _callmode
 
 from .mha_base import MultiheadAttentionBase, scaled_dot_prod_attn_flops
 
@@ -17,6 +17,7 @@ State = Tuple[
     Tensor,  # Q_mem, (B, Nt-1, E)
     Tensor,  # K_T_mem, (B, E, Ns)
     Tensor,  # V_mem, (B, Ns, E)
+    Tensor,  # stride_index
 ]
 
 
@@ -136,6 +137,10 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
     number of features.
     """
 
+    _state_shape = 4
+    #                      Q_mem, K_T_mem, V_mem, stride_index
+    _dynamic_state_inds = [True, True, True, False]
+
     def __init__(
         self,
         embed_dim,
@@ -183,6 +188,10 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         assert query_index < sequence_len
         self.query_index = query_index
         self.single_output_forward = single_output_forward
+        self.register_buffer("Q_mem", torch.tensor([]), persistent=False)
+        self.register_buffer("K_T_mem", torch.tensor([]), persistent=False)
+        self.register_buffer("V_mem", torch.tensor([]), persistent=False)
+        self.register_buffer("stride_index", torch.tensor(0), persistent=False)
 
     def get_state(self) -> Optional[State]:
         """Get model state
@@ -190,18 +199,14 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         Returns:
             Optional[State]: A State tuple if the model has been initialised and otherwise None.
         """
-        if (
-            getattr(self, "Q_mem", None) is not None
-            and getattr(self, "K_T_mem", None) is not None
-            and getattr(self, "V_mem", None) is not None
-            and getattr(self, "stride_index", None) is not None
-        ):
+        if len(self.V_mem) > 0:
             return (
                 self.Q_mem,
                 self.K_T_mem,
                 self.V_mem,
                 self.stride_index,
             )
+        return None
 
     def set_state(self, state: State):
         """Set model state
@@ -218,14 +223,10 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
 
     def clean_state(self):
         """Clean model state"""
-        if hasattr(self, "Q_mem"):
-            del self.Q_mem
-        if hasattr(self, "K_T_mem"):
-            del self.K_T_mem
-        if hasattr(self, "V_mem"):
-            del self.V_mem
-        if hasattr(self, "stride_index"):
-            del self.stride_index
+        self.Q_mem = torch.tensor([])
+        self.K_T_mem = torch.tensor([])
+        self.V_mem = torch.tensor([])
+        self.stride_index = torch.tensor(0)
 
     @property
     def delay(self) -> int:
@@ -269,6 +270,44 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
 
         return o
 
+    def _forward_step(
+        self,
+        query: Tensor,
+        key: Tensor = None,
+        value: Tensor = None,
+        prev_state: Optional[State] = None,
+    ) -> Tuple[Optional[Tensor], State]:
+        """
+        Args:
+            query, key, value: step_inputs for mapping a query and a set of key-value pairs to an output.
+                See "Attention Is All You Need" for more details.
+
+        Shapes for inputs:
+            - query: :math:`(N, E)` where L is the target sequence length, N is the batch size, E is
+              the embedding dimension.
+            - key: :math:`(N, E)`, where S is the source sequence length, N is the batch size, E is
+              the embedding dimension.
+            - value: :math:`(N, E)` where S is the source sequence length, N is the batch size, E is
+              the embedding dimension.
+
+        Shapes for outputs:
+            - attn_output: :math:`(L, N, E)` where L is the target sequence length, N is the batch size,
+              E is the embedding dimension. :math:`(N, L, E)` if ``batch_first`` is ``True``.
+        """
+        if key is None:
+            key = query
+        if value is None:
+            value = query
+
+        o, next_state = MultiheadAttentionBase._forward_step(
+            self, query, key, value, prev_state
+        )
+
+        if o is not None:
+            o = o.squeeze(0)
+
+        return o, next_state
+
     def forward_step(
         self,
         query: Tensor,
@@ -277,7 +316,7 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         update_state=True,
         *args,
         **kwargs,
-    ) -> Union[Tensor, TensorPlaceholder]:
+    ) -> Optional[Tensor]:
         """
         Args:
             query, key, value: step_inputs for mapping a query and a set of key-value pairs to an output.
@@ -307,7 +346,7 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         update_state=True,
         *args,
         **kwargs,
-    ) -> Union[Tensor, TensorPlaceholder]:
+    ) -> Optional[Tensor]:
         """Forward computation for multiple steps with state initialisation
 
         Args:
@@ -335,8 +374,10 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
 
         # Linear projection
         steps_taken = {
-            CallMode.FORWARD: 1 if self.single_output_forward else self.sequence_len,
-            CallMode.FORWARD_STEP: 1,
+            _callmode("forward"): 1
+            if self.single_output_forward
+            else self.sequence_len,
+            _callmode("forward_step"): 1,
         }[self.call_mode]
 
         f += (
@@ -356,10 +397,10 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
 
         # Multi-head Scaled Dot-Product Attention
         f += self.num_heads * {
-            CallMode.FORWARD: single_output_scaled_dot_prod_attn_flops
+            _callmode("forward"): single_output_scaled_dot_prod_attn_flops
             if self.single_output_forward
             else scaled_dot_prod_attn_flops,
-            CallMode.FORWARD_STEP: single_output_scaled_dot_prod_attn_flops,
+            _callmode("forward_step"): single_output_scaled_dot_prod_attn_flops,
         }[self.call_mode](
             self.sequence_len,
             self.embed_dim // self.num_heads,

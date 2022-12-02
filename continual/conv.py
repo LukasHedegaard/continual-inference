@@ -1,4 +1,4 @@
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -15,13 +15,14 @@ from torch.nn.modules.conv import (
 )
 
 from .logging import getLogger
-from .module import CoModule, PaddingMode, TensorPlaceholder
+from .module import CoModule, PaddingMode
 
 logger = getLogger(__name__)
 
-State = Tuple[Tensor, int, int]
+# State = Tuple[Tensor, Optional[int], Optional[int]]
+State = Tuple[Tensor, Tensor, Tensor]
 
-_forward_step_impl = None
+# _forward_step_impl = None
 # from pathlib import Path
 # try:
 #     from torch.utils.cpp_extension import load as load_cpp
@@ -38,10 +39,13 @@ _forward_step_impl = None
 #     logger.warning(e)
 
 
-__all__ = ["Conv1d", "Conv2d", "Conv3d", "_forward_step_impl"]
+__all__ = ["Conv1d", "Conv2d", "Conv3d"]
 
 
 class _ConvCoNd(CoModule, _ConvNd):
+    _state_shape = 3
+    _dynamic_state_inds = [True, False, False]
+
     def __init__(
         self,
         ConvClass: torch.nn.Module,
@@ -116,74 +120,70 @@ class _ConvCoNd(CoModule, _ConvNd):
         self._step_padding = (self.kernel_size[0] - 1, *self.padding[1:])
         self._step_stride = (1, *self.stride[1:])
 
-        # init_state is called in `_forward_step`
+        self.register_buffer("state_buffer", torch.tensor([]), persistent=False)
+        self.register_buffer("state_index", torch.tensor(0), persistent=False)
+        self.register_buffer("stride_index", torch.tensor(0), persistent=False)
 
     def init_state(
         self,
         first_output: Tensor,
     ) -> State:
         padding = self.make_padding(first_output)
-        state_buffer = padding.repeat(
-            self.kernel_size[0] - 1, *[1 for _ in self.input_shape_desciption]
+        repeat_shape = [self.kernel_size[0] - 1]
+        repeat_shape.extend((1,) * len(self.input_shape_desciption))
+        state_buffer = padding.repeat(repeat_shape)
+        state_index = torch.tensor(0)
+        stride_index = torch.tensor(
+            self.stride[0] - len(state_buffer) - 1 + self.padding[0]
         )
-        state_index = 0
-        stride_index = self.stride[0] - len(state_buffer) - 1 + self.padding[0]
-        if not hasattr(self, "state_buffer"):
-            self.register_buffer("state_buffer", state_buffer, persistent=False)
-        return state_buffer, state_index, stride_index
+        return (state_buffer, state_index, stride_index)
 
     def clean_state(self):
-        if hasattr(self, "state_buffer"):
-            del self.state_buffer
-        if hasattr(self, "state_index"):
-            del self.state_index
-        if hasattr(self, "stride_index"):
-            del self.stride_index
+        self.state_buffer = torch.tensor([])
+        self.state_index = torch.tensor(0)
+        self.stride_index = torch.tensor(0)
 
-    def get_state(self):
-        if (
-            hasattr(self, "state_buffer")
-            and self.state_buffer is not None
-            and hasattr(self, "state_index")
-            and self.state_index is not None
-            and hasattr(self, "stride_index")
-            and self.stride_index is not None
-        ):
+    def get_state(self) -> Optional[State]:
+        if len(self.state_buffer) > 0:
             return (self.state_buffer, self.state_index, self.stride_index)
+        return None
 
     def set_state(self, state: State):
         self.state_buffer, self.state_index, self.stride_index = state
 
-    def _forward_step(self, input: Tensor, prev_state: State) -> Tuple[Tensor, State]:
-        assert (
-            len(input.shape) == self._input_len - 1
-        ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}"
+    @torch.jit.export
+    def _forward_step(
+        self, input: Tensor, prev_state: Optional[State]
+    ) -> Tuple[Optional[Tensor], State]:
+        # assert (
+        #     len(input.shape) == self._input_len - 1
+        # ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}"
 
-        if (
-            _forward_step_impl is not None
-            and not self.training
-            and self.padding_mode == "zeros"
-        ):
-            # Call C++ impl
-            output, next_state = _forward_step_impl(
-                input,
-                self.weight,
-                self.bias,
-                self.stride,
-                self.padding,
-                self._step_padding,
-                self.dilation,
-                self.groups,
-                *(prev_state or (None, None, None)),
-            )
-            if output is None:
-                output = TensorPlaceholder()
-            return output, next_state
+        # if (
+        #     _forward_step_impl is not None
+        #     and not self.training
+        #     and self.padding_mode == "zeros"
+        # ):
+        #     # Call C++ impl
+        #     output, next_state = _forward_step_impl(
+        #         input,
+        #         self.weight,
+        #         self.bias,
+        #         self.stride,
+        #         self.padding,
+        #         self._step_padding,
+        #         self.dilation,
+        #         self.groups,
+        #         *(prev_state or (None, None, None)),
+        #     )
+        #     if output is None:
+        #         output = None
+        #     return output, next_state
         return self._forward_step_py(input, prev_state)
 
     def _forward_step_py(
-        self, input: Tensor, prev_state: State
-    ) -> Tuple[Tensor, State]:
+        self, input: Tensor, prev_state: Optional[State]
+    ) -> Tuple[Optional[Tensor], State]:
         # e.g. B, C -> B, C, 1
         x = input.unsqueeze(2).to(device=self.weight.device)
 
@@ -211,10 +211,18 @@ class _ConvCoNd(CoModule, _ConvNd):
         x_out, x_rest = x[:, :, 0], x[:, :, 1:]
 
         # Prepare previous state
-        buffer, index, stride_index = prev_state or self.init_state(x_rest)
+        if prev_state is None:
+            buffer, index, stride_index = self.init_state(x_rest)
+        else:
+            buffer, index, stride_index = prev_state
 
-        tot = len(buffer)
-        if stride_index == self.stride[0] - 1:
+        assert index is not None
+        assert stride_index is not None
+
+        tot = self.kernel_size[0] - 1
+        output_is_valid = stride_index == self.stride[0] - 1
+
+        if output_is_valid:
             x_out = x_out + (
                 torch.sum(
                     buffer[
@@ -226,16 +234,12 @@ class _ConvCoNd(CoModule, _ConvNd):
                     dim=0,
                 )
             )
-            # x_out = x_out.clone()
-            # for i in range(tot):
-            #     x_out += buffer[(i + index) % tot, :, :, tot - i - 1]
 
             if self.bias is not None:
-                x_out += self.bias[
-                    (None, slice(None), *(None for _ in range(self._input_len - 3)))
-                ]
-        else:
-            x_out = TensorPlaceholder(x_out.shape)
+                bias = self.bias.unsqueeze(0)
+                for _ in range(self._input_len - 3):
+                    bias = bias.unsqueeze(-1)
+                x_out += bias
 
         # Update next state
         if self.kernel_size[0] > 1:
@@ -250,14 +254,17 @@ class _ConvCoNd(CoModule, _ConvNd):
         if next_stride_index > 0:
             next_stride_index = next_stride_index % self.stride[0]
 
-        return x_out, (next_buffer, next_index, next_stride_index)
+        if output_is_valid:
+            return x_out, (next_buffer, next_index, next_stride_index)
+        return None, (next_buffer, next_index, next_stride_index)
 
-    def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
-        assert (
-            len(input.shape) == self._input_len
-        ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."
-
-        return CoModule.forward_steps(self, input, pad_end, update_state)
+    def forward_steps(
+        self, input: Tensor, pad_end: bool = False, update_state: bool = True
+    ) -> Optional[Tensor]:
+        # assert (
+        #     len(input.shape) == self._input_len
+        # ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."
+        return self._forward_steps_impl(input, pad_end, update_state)
 
     def forward(self, input: Tensor) -> Tensor:
         """Performs a full forward computation exactly as the regular layer would.
@@ -272,7 +279,29 @@ class _ConvCoNd(CoModule, _ConvNd):
         assert (
             len(input.shape) == self._input_len
         ), f"A tensor of shape {self.input_shape_desciption} should be passed as input but got {input.shape}."
-        output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
+        # output = self._ConvClass._conv_forward(self, input, self.weight, self.bias)
+        if self.padding_mode == "zeros":
+            output = self._conv_func(
+                input=input,
+                weight=self.weight,
+                bias=self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                groups=self.groups,
+            )
+        else:
+            output = self._conv_func(
+                input=F.pad(
+                    input, self._reversed_padding_repeated_twice, mode=self.padding_mode
+                ),
+                weight=self.weight,
+                bias=self.bias,
+                stride=self.stride,
+                padding=(0,) * len(self.padding),
+                dilation=self.dilation,
+                groups=self.groups,
+            )
 
         return output
 

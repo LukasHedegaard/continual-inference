@@ -8,6 +8,9 @@ from .module import CoModule
 class Reshape(CoModule, nn.Module):
     """Reshape of non-temporal dimensions"""
 
+    _state_shape = 0
+    _dynamic_state_inds = []
+
     @overload
     def __init__(self, shape: Sequence[int], contiguous=False):
         ...  # pragma: no cover
@@ -46,7 +49,10 @@ class Reshape(CoModule, nn.Module):
         return self.forward(input)
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
+        return self._forward_step(input, None)[0]
+
+    def _forward_step(self, input: Tensor, prev_state=None) -> Tensor:
         x = input.reshape(self.shape)
         if self.contiguous:
             x = x.contiguous()
-        return x
+        return x, prev_state

@@ -1,7 +1,6 @@
 import torch
 
 from continual.delay import Delay
-from continual.module import TensorPlaceholder
 
 torch.manual_seed(42)
 
@@ -13,8 +12,8 @@ def test_delay_3d():
 
     ones = torch.ones_like(sample[:, :, 0])
 
-    assert isinstance(delay.forward_step(sample[:, :, 0]), TensorPlaceholder)
-    assert isinstance(delay.forward_step(sample[:, :, 1]), TensorPlaceholder)
+    assert delay.forward_step(sample[:, :, 0]) is None
+    assert delay.forward_step(sample[:, :, 1]) is None
 
     assert torch.equal(delay.forward_step(sample[:, :, 2]), sample[:, :, 0])
 
@@ -33,8 +32,8 @@ def test_delay_2d():
 
     ones = torch.ones_like(sample[:, :, 0])
 
-    assert isinstance(delay.forward_step(sample[:, :, 0]), TensorPlaceholder)
-    assert isinstance(delay.forward_step(sample[:, :, 1]), TensorPlaceholder)
+    assert delay.forward_step(sample[:, :, 0]) is None
+    assert delay.forward_step(sample[:, :, 1]) is None
 
     assert torch.equal(delay.forward_step(sample[:, :, 2]), sample[:, :, 0])
 
@@ -62,13 +61,13 @@ def test_state():
     zeros = torch.zeros_like(sample[:, :, 0])
 
     # State stays clean
-    assert getattr(delay, "state_buffer", None) is None
-    assert getattr(delay, "state_index", None) is None
+    assert len(getattr(delay, "state_buffer", torch.tensor([]))) == 0
+    assert getattr(delay, "state_index", torch.tensor(0)) == 0
 
     delay.forward(sample)
 
-    assert getattr(delay, "state_buffer", None) is None
-    assert getattr(delay, "state_index", None) is None
+    assert len(getattr(delay, "state_buffer", torch.tensor([]))) == 0
+    assert getattr(delay, "state_index", torch.tensor(0)) == 0
 
     # State is populated
     delay.forward_step(sample[:, :, 0])
@@ -79,8 +78,8 @@ def test_state():
 
     # State can be cleaned
     delay.clean_state()
-    assert getattr(delay, "state_buffer", None) is None
-    assert getattr(delay, "state_index", None) is None
+    assert len(getattr(delay, "state_buffer", torch.tensor([]))) == 0
+    assert getattr(delay, "state_index", torch.tensor(0)) == 0
 
     assert torch.equal(delay.forward_steps(sample, pad_end=True), sample)
     # state has not been flushed

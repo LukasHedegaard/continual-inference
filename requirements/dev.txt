@@ -7,3 +7,4 @@ pytest-cov
 ptflops>=0.6.8
 numpy
 pytorch_lightning
+onnxruntime~=1.13

@@ -1,3 +1,4 @@
+from .__about__ import __copyright__, __license__, __version__  # noqa: F401
 from .closure import Add, Constant, Lambda, Multiply, One, Unity, Zero  # noqa: F401
 from .container import (  # noqa: F401
     Broadcast,
@@ -13,7 +14,7 @@ from .conv import Conv1d, Conv2d, Conv3d  # noqa: F401
 from .convert import continual, forward_stepping  # noqa: F401
 from .delay import Delay  # noqa: F401
 from .linear import Linear  # noqa: F401
-from .module import CoModule, PaddingMode, TensorPlaceholder, call_mode  # noqa: F401
+from .module import CoModule, PaddingMode, call_mode  # noqa: F401
 from .multihead_attention import (  # noqa: F401
     RetroactiveMultiheadAttention,
     SingleOutputMultiheadAttention,

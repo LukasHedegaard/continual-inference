@@ -7,7 +7,6 @@ import torch
 from torch import Tensor, nn
 
 from continual.delay import State as DelayState
-from continual.module import TensorPlaceholder
 
 from .closure import Lambda, Unity
 from .container import BroadcastReduce, Residual, Sequential
@@ -38,7 +37,7 @@ class MhaType(Enum):
 class SelectOrDelay(Delay):
     """Select a temporal index during forward, or delay correspondingly during forward_step(s)"""
 
-    def forward(self, x: Tensor) -> Union[Tensor, TensorPlaceholder]:
+    def forward(self, x: Tensor) -> Optional[Tensor]:
         assert len(x.shape) >= 3  # N, C, T
         return x[:, :, -1 - self._delay].unsqueeze(2)
 
@@ -72,9 +71,7 @@ class RetroactiveUnity(Delay):
     ) -> DelayState:
         padding = self.make_padding(first_output)
         state_buffer = torch.stack([padding for _ in range(self.delay + 1)], dim=0)
-        state_index = -self.delay
-        if not hasattr(self, "state_buffer"):
-            self.register_buffer("state_buffer", state_buffer, persistent=False)
+        state_index = torch.tensor(-self.delay)
         return state_buffer, state_index
 
     def _forward_step(
@@ -92,8 +89,9 @@ class RetroactiveUnity(Delay):
             new_index = new_index % self.delay
 
         # Get output
+        output = None
         if index >= 0:
-            output = buffer.clone().roll(shifts=-index - 1, dims=0)
+            output = buffer.clone().roll(shifts=int(-index - 1), dims=0)
             idx = (
                 self.time_dim + len(output.shape)
                 if self.time_dim < 0
@@ -102,8 +100,6 @@ class RetroactiveUnity(Delay):
             output = output.permute(
                 list(range(1, idx + 1)) + [0] + list(range(idx + 1, len(output.shape)))
             )
-        else:
-            output = TensorPlaceholder(buffer[0].shape)
 
         return output, (buffer, new_index)
 
@@ -118,6 +114,9 @@ class RetroactiveLambda(Lambda):
 
     def forward_step(self, input: Tensor, *args, **kwargs) -> Tensor:
         return self.forward(input)
+
+    def _forward_step(self, input: Tensor, prev_state=None, *args, **kwargs) -> Tensor:
+        return self.forward(input), prev_state
 
     def forward_steps(self, input: Tensor, *args, **kwargs) -> Tensor:
         return torch.stack(

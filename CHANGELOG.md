@@ -7,10 +7,27 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 
-## [Unreleased]
+## [1.0.0]
+
+### Added
+- ONNX compatibility to all library modules!
+- `co.onnx.export` function mirroring `torch.onnx.export`.
+- purely functional `_forward_step` function to all modules.
+- `_state_shape` and `_dynamic_state_inds` properties to modules.
+- Add about info to package root.
+
+### Changed
+- Change call_mode internally from enum to tensor.
+- Change internal state_indexes to tensors.
+- Change stride to tuple.
+- Change padding to tuple.
 
 ### Fixed 
-- Fix assertion bug in co.Lambda
+- Fix assertion bug in co.Lambda.
+
+## Removed
+- TensorPlaceholder in favour of `None`.
+
 
 ## [0.17.1]
 
