@@ -316,7 +316,7 @@ def test_residual(tmp_path):
 def test_advanced_routing(tmp_path):
     batch_size = 1
     in_channels = 3
-    out_channels = 4
+    out_channels = 3
     kernel_size = 3
     receptive_field = kernel_size
     model_path = tmp_path / "advanced_routing.onnx"
@@ -325,7 +325,7 @@ def test_advanced_routing(tmp_path):
         co.Broadcast(2),
         co.ParallelDispatch([1, 0]),  # Swap positions
         co.Parallel(
-            co.Conv1d(in_channels, out_channels, kernel_size),
+            co.AvgPool1d(kernel_size, stride=1),
             co.Sequential(
                 co.Add(1),
                 co.Conv1d(in_channels, out_channels, kernel_size),
@@ -341,7 +341,7 @@ def test_advanced_routing(tmp_path):
     ).reshape(batch_size, in_channels, receptive_field)
     last = torch.ones(batch_size, in_channels)
 
-    # Baseline
+    # Prep state
     state0 = None
     with torch.no_grad():
         for i in range(receptive_field):
@@ -403,7 +403,7 @@ def test_trans_enc_b1(tmp_path):
 
     net.eval()
 
-    firsts = torch.arange(B * E * T, dtype=torch.float).reshape(B, E, T)
+    firsts = torch.rand(B, E, T)
     last = torch.ones(B, E)
 
     # Baseline
@@ -412,7 +412,10 @@ def test_trans_enc_b1(tmp_path):
         for i in range(T - 1):
             _, state0 = net._forward_step(firsts[:, :, i], state0)
         o, state0 = net._forward_step(firsts[:, :, -1], state0)
-    assert o is not None
+
+    # Check agains baseline
+    o_baseline = net.forward(firsts)
+    assert torch.allclose(o, o_baseline[:, :, -1])
 
     # Export to ONNX
     flat_state = [s.clone() for s in flatten(state0)]
@@ -448,8 +451,27 @@ def test_trans_enc_b1(tmp_path):
         assert torch.allclose(torch.tensor(os), ts)
     assert torch.allclose(torch.tensor(onnx_output), target)
 
+    # Check timing
+    num_runs = 100
 
-def xtest_trans_enc_b2(tmp_path):
+    # Regular
+    net.eval()
+    start = timer()
+    with torch.no_grad():
+        for _ in range(num_runs):
+            net._forward_step(last, state0)
+    reg_time = timer() - start
+
+    # ONNX
+    start = timer()
+    for _ in range(num_runs):
+        ort_session.run(None, inputs)
+    onnx_time = timer() - start
+
+    assert reg_time > onnx_time
+
+
+def test_trans_enc_b2(tmp_path):
     B = 1
     T = 10  # temporal sequence length
     E = 4  # embedding dimension
@@ -470,7 +492,7 @@ def xtest_trans_enc_b2(tmp_path):
 
     net.eval()
 
-    firsts = torch.arange(B * E * T, dtype=torch.float).reshape(B, E, T)
+    firsts = torch.rand(B, E, T)
     last = torch.ones(B, E)
 
     # Baseline
@@ -479,6 +501,10 @@ def xtest_trans_enc_b2(tmp_path):
         for i in range(T - 1):
             _, state0 = net._forward_step(firsts[:, :, i], state0)
         o, state0 = net._forward_step(firsts[:, :, -1], state0)
+
+    # Check against baseline
+    o_baseline = net.forward(firsts)
+    assert torch.allclose(o.squeeze(-1), o_baseline[:, :, -1])
 
     # Export to ONNX
     flat_state = [s.clone() for s in flatten(state0)]

@@ -26,7 +26,7 @@ __all__ = [
 T = TypeVar("T")
 U = TypeVar("U")
 
-State = Tuple[Tensor, int]
+State = Tuple[Tensor, Tensor, Tensor]
 
 
 def unity(x: Tensor) -> Tensor:
@@ -53,6 +53,9 @@ class _PoolNd(CoModule, nn.Module):
     In this case, we could keep a "running sum" from which we would
     subtract the oldest frame and add the newest frame at each step.
     """
+
+    _state_shape = 3
+    _dynamic_state_inds = [True, False, False]
 
     def __init__(
         self,
@@ -139,6 +142,10 @@ class _PoolNd(CoModule, nn.Module):
                 )
             )
 
+        self.register_buffer("state_buffer", torch.tensor([]), persistent=False)
+        self.register_buffer("state_index", torch.tensor(0), persistent=False)
+        self.register_buffer("stride_index", torch.tensor(0), persistent=False)
+
     def init_state(
         self,
         first_output: Tensor,
@@ -153,27 +160,15 @@ class _PoolNd(CoModule, nn.Module):
         state_index = torch.tensor(0)
         stride_index = torch.tensor(self.stride[0] - buf_len + self.padding[0])
 
-        if not hasattr(self, "state_buffer"):
-            self.register_buffer("state_buffer", state_buffer, persistent=False)
         return state_buffer, state_index, stride_index
 
     def clean_state(self):
-        if hasattr(self, "state_buffer"):
-            del self.state_buffer
-        if hasattr(self, "state_index"):
-            del self.state_index
-        if hasattr(self, "stride_index"):
-            del self.stride_index
+        self.state_buffer = torch.tensor([])
+        self.state_index = torch.tensor(0)
+        self.stride_index = torch.tensor(0)
 
     def get_state(self):
-        if (
-            hasattr(self, "state_buffer")
-            and self.state_buffer is not None
-            and hasattr(self, "state_index")
-            and self.state_index is not None
-            and hasattr(self, "stride_index")
-            and self.stride_index is not None
-        ):
+        if len(self.state_buffer) > 0:
             return (self.state_buffer, self.state_index, self.stride_index)
 
     def set_state(self, state: State):
@@ -182,7 +177,7 @@ class _PoolNd(CoModule, nn.Module):
     def _forward_step(
         self,
         input: Tensor,
-        prev_state: State,
+        prev_state: Optional[State] = None,
     ) -> Tuple[Tensor, State]:
         assert (
             len(input.shape) == self.num_input_dims + 1
