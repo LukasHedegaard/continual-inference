@@ -1,10 +1,11 @@
-from collections import OrderedDict
+from collections import OrderedDict, abc
 from contextlib import contextmanager
 from functools import partial, reduce
 from inspect import getsource
 from numbers import Number
-from typing import Tuple, Union
+from typing import Any, List, Sequence, Tuple, Union
 
+import torch
 from torch import Tensor, nn
 
 from .logging import getLogger
@@ -159,7 +160,26 @@ def load_state_dict(
     return nn.Module.load_state_dict(module, state_dict, strict)
 
 
-def num_from(tuple_or_num: Union[Number, Tuple[Number, ...]], dim=0) -> Number:
+def num_from(
+    tuple_or_num: Union[
+        torch.Tensor,
+        int,
+        Tuple[int],
+        Tuple[int, int],
+        Tuple[int, int, int],
+        Tuple[int, int, int, int],
+    ],
+    dim: int = 0,
+):
+    """Extract number from dimension or leave as is
+
+    Args:
+        tuple_or_num (Union[Number, Tuple[Number, ...]]): _description_
+        dim (int, optional): _description_. Defaults to 0.
+
+    Returns:
+        Number: Number found along dimension
+    """
     if isinstance(tuple_or_num, Number):
         return tuple_or_num
 
@@ -196,3 +216,20 @@ def function_repr(fn):
         s = s[:i]
         s = s.rstrip()
     return s
+
+
+def flatten(lst: Union[Sequence[Any], Any], remove_none=True) -> List[Any]:
+    lst = _flatten(lst)
+    if remove_none:
+        lst = [i for i in lst if i is not None]
+    return lst
+
+
+def _flatten(lst: Union[Sequence[Any], Any]) -> List[Any]:
+    if isinstance(lst, abc.Sequence):
+        if len(lst) == 0:
+            return []
+        first, rest = lst[0], lst[1:]
+        return _flatten(first) + _flatten(rest)
+    else:
+        return [lst]

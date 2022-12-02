@@ -4,13 +4,16 @@ import torch
 from torch import Tensor, nn
 from torch.nn.utils.rnn import PackedSequence
 
-from .module import CoModule, TensorPlaceholder
+from .module import CoModule
 
-State = Tensor
+State = Tuple[Tensor]
 LSTMState = Tuple[Tensor, Tensor]
 
 
 class RNN(CoModule, nn.RNN):
+    _state_shape = 1
+    _dynamic_state_inds = [True]
+
     def __init__(
         self,
         input_size: int,
@@ -81,10 +84,12 @@ class RNN(CoModule, nn.RNN):
 
     def get_state(self) -> Optional[State]:
         if hasattr(self, "_hidden_state"):
-            return self._hidden_state
+            return (self._hidden_state,)
 
     def set_state(self, state: State):
-        self._hidden_state = state
+        if isinstance(state, Tensor):
+            state = (state,)
+        self._hidden_state = state[0]
 
     def forward(
         self, input: Union[Tensor, PackedSequence], hx: Optional[Tensor] = None
@@ -104,24 +109,33 @@ class RNN(CoModule, nn.RNN):
         output = output.swapaxes(1, 2)  # B, T, C -> B, C, T
         return (output, hidden)
 
-    def forward_step(
-        self, input: Tensor, update_state=True
-    ) -> Union[Tensor, TensorPlaceholder]:
-        input = input.unsqueeze(1)  # B, C -> B, T, C
-        output, new_state = nn.RNN.forward(self, input, self.get_state())
-        output = output.squeeze(1)  # B, T, C -> B, C
+    def forward_step(self, input: Tensor, update_state=True) -> Optional[Tensor]:
+        output, next_state = self._forward_step(input, self.get_state())
         if update_state:
-            self.set_state(new_state)
+            self.set_state(next_state)
         return output
 
+    def _forward_step(
+        self, input: Tensor, prev_state: Optional[State] = None
+    ) -> Tuple[Tensor, State]:
+        input = input.unsqueeze(1)  # B, C -> B, T, C
+        hidden_state = (prev_state or (None,))[0]
+        output, new_state = nn.RNN.forward(self, input, hidden_state)
+        output = output.squeeze(1)  # B, T, C -> B, C
+        return output, (new_state,)
+
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
-        output, new_state = self.forward(input, self.get_state())
+        hidden_state = (self.get_state() or (None,))[0]
+        output, new_state = self.forward(input, hidden_state)
         if update_state:
-            self.set_state(new_state)
+            self.set_state((new_state,))
         return output
 
 
 class GRU(CoModule, nn.GRU):
+    _state_shape = 1
+    _dynamic_state_inds = [True]
+
     def __init__(
         self,
         input_size: int,
@@ -189,10 +203,12 @@ class GRU(CoModule, nn.GRU):
 
     def get_state(self) -> Optional[State]:
         if hasattr(self, "_hidden_state"):
-            return self._hidden_state
+            return (self._hidden_state,)
 
     def set_state(self, state: State):
-        self._hidden_state = state
+        if isinstance(state, Tensor):
+            state = (state,)
+        self._hidden_state = state[0]
 
     def forward(
         self, input: Union[Tensor, PackedSequence], hx: Optional[Tensor] = None
@@ -212,24 +228,33 @@ class GRU(CoModule, nn.GRU):
         output = output.swapaxes(1, 2)  # B, T, C -> B, C, T
         return (output, hidden)
 
-    def forward_step(
-        self, input: Tensor, update_state=True
-    ) -> Union[Tensor, TensorPlaceholder]:
-        input = input.unsqueeze(1)  # B, C -> B, T, C
-        output, new_state = nn.GRU.forward(self, input, self.get_state())
-        output = output.squeeze(1)  # B, T, C -> B, C
+    def forward_step(self, input: Tensor, update_state=True) -> Optional[Tensor]:
+        output, next_state = self._forward_step(input, self.get_state())
         if update_state:
-            self.set_state(new_state)
+            self.set_state(next_state)
         return output
 
+    def _forward_step(
+        self, input: Tensor, prev_state: Optional[State] = None
+    ) -> Tuple[Tensor, State]:
+        input = input.unsqueeze(1)  # B, C -> B, T, C
+        hidden_state = (prev_state or (None,))[0]
+        output, new_state = nn.GRU.forward(self, input, hidden_state)
+        output = output.squeeze(1)  # B, T, C -> B, C
+        return output, (new_state,)
+
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
-        output, new_state = self.forward(input, self.get_state())
+        hidden_state = (self.get_state() or (None,))[0]
+        output, new_state = self.forward(input, hidden_state)
         if update_state:
             self.set_state(new_state)
         return output
 
 
 class LSTM(CoModule, nn.LSTM):
+    _state_shape = 2
+    _dynamic_state_inds = [True, True]
+
     def __init__(
         self,
         input_size: int,
@@ -311,7 +336,7 @@ class LSTM(CoModule, nn.LSTM):
         self,
         input: Union[Tensor, PackedSequence],
         hx: Optional[Tuple[Tensor, Tensor]] = None,
-    ) -> Tuple[Union[Tensor, PackedSequence], Tensor]:
+    ) -> Tuple[Union[Tensor, PackedSequence], LSTMState]:
         """forward function.
         NB: input format is (B, C, T)
 
@@ -327,15 +352,19 @@ class LSTM(CoModule, nn.LSTM):
         output = output.swapaxes(1, 2)  # B, T, C -> B, C, T
         return (output, hidden)
 
-    def forward_step(
-        self, input: Tensor, update_state=True
-    ) -> Union[Tensor, TensorPlaceholder]:
-        input = input.unsqueeze(1)  # B, C -> B, T, C
-        output, new_state = nn.LSTM.forward(self, input, self.get_state())
-        output = output.squeeze(1)  # B, T, C -> B, C
+    def forward_step(self, input: Tensor, update_state=True) -> Optional[Tensor]:
+        output, next_state = self._forward_step(input, self.get_state())
         if update_state:
-            self.set_state(new_state)
+            self.set_state(next_state)
         return output
+
+    def _forward_step(
+        self, input: Tensor, prev_state: Optional[State] = None
+    ) -> Tuple[Tensor, LSTMState]:
+        input = input.unsqueeze(1)  # B, C -> B, T, C
+        output, new_state = nn.LSTM.forward(self, input, prev_state)
+        output = output.squeeze(1)  # B, T, C -> B, C
+        return output, new_state
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True):
         output, new_state = self.forward(input, self.get_state())

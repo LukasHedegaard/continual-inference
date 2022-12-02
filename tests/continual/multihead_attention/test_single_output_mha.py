@@ -2,7 +2,6 @@ import torch
 from ptflops import get_model_complexity_info
 from torch.nn.modules.activation import MultiheadAttention
 
-from continual.module import TensorPlaceholder
 from continual.multihead_attention.single_output_mha import (
     SingleOutputMultiheadAttention,
 )
@@ -56,7 +55,7 @@ def test_multi_head_attention_default_query_index():
     # Initialise, then use forward_step
     comha.clean_state()
     attn_output_dummy = comha.forward_steps(query[:-1], key[:-1], value[:-1])
-    assert isinstance(attn_output_dummy, TensorPlaceholder)
+    assert attn_output_dummy is None
     attn_output4 = comha.forward_step(query[-1], key[-1], value[-1])
     assert torch.allclose(attn_output[query_index], attn_output4)
 
@@ -126,7 +125,7 @@ def test_multi_head_attention_nondefault_query_index():
     # Initialise, then use forward_step
     comha.clean_state()
     attn_output_dummy = comha.forward_steps(query[:-1], key[:-1], value[:-1])
-    assert isinstance(attn_output_dummy, TensorPlaceholder)
+    assert attn_output_dummy is None
     attn_output4 = comha.forward_step(query[-1], key[-1], value[-1])
     assert torch.allclose(attn_output[query_index], attn_output4)
 

@@ -37,7 +37,7 @@ def test_rnn():
     # Check that state initialisation is the same
     con.clean_state()
     con.forward_steps(sample)
-    assert torch.allclose(con.get_state(), hidden)
+    assert torch.allclose(con.get_state()[0], hidden)
 
 
 def test_gru():
@@ -73,10 +73,10 @@ def test_gru():
     # Check that state initialisation is the same
     con.clean_state()
     con.forward_steps(sample)
-    assert torch.allclose(con.get_state(), hidden)
+    assert torch.allclose(con.get_state()[0], hidden)
 
 
-def test_LSTM():
+def test_lstm():
     C = 2
     T = 10
     sample = torch.normal(mean=torch.zeros(C * T)).reshape((1, C, T))

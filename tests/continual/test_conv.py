@@ -3,7 +3,6 @@ import torch
 from torch import nn
 
 import continual as co
-from continual.module import TensorPlaceholder
 
 torch.manual_seed(42)
 
@@ -28,7 +27,7 @@ def test_cpp_impl_1d():
     for i in range(sample.shape[2]):
         output.append(co_conv.forward_step(sample[:, :, i]))
 
-    assert all(isinstance(output[i], TensorPlaceholder) for i in range(co_conv.delay))
+    assert all(output[i] is None for i in range(co_conv.delay))
 
     outputs = torch.stack(output[co_conv.delay :], dim=2)
     assert torch.allclose(outputs, target)
@@ -42,9 +41,7 @@ def test_cpp_impl_1d():
     for i in range(sample.shape[2]):
         output_cpp.append(co_conv.forward_step(sample[:, :, i]))
 
-    assert all(
-        isinstance(output_cpp[i], TensorPlaceholder) for i in range(co_conv.delay)
-    )
+    assert all(output_cpp[i] is None for i in range(co_conv.delay))
     outputs_cpp = torch.stack(output_cpp[co_conv.delay :], dim=2)
     assert torch.allclose(outputs_cpp, target)
 
@@ -71,7 +68,7 @@ def test_cpp_impl_2d():
     for i in range(sample.shape[2]):
         output.append(co_conv.forward_step(sample[:, :, i]))
 
-    assert all(isinstance(output[i], TensorPlaceholder) for i in range(co_conv.delay))
+    assert all(output[i] is None for i in range(co_conv.delay))
 
     output = torch.stack(output[co_conv.delay :], dim=2)
     assert torch.allclose(output, target)
@@ -85,9 +82,7 @@ def test_cpp_impl_2d():
     for i in range(sample.shape[2]):
         output_cpp.append(co_conv.forward_step(sample[:, :, i]))
 
-    assert all(
-        isinstance(output_cpp[i], TensorPlaceholder) for i in range(co_conv.delay)
-    )
+    assert all(output_cpp[i] is None for i in range(co_conv.delay))
     output_cpp = torch.stack(output_cpp[co_conv.delay :], dim=2)
     assert torch.allclose(output_cpp, target)
 
@@ -111,7 +106,7 @@ def test_Conv1d():
         output.append(co_conv.forward_step(sample[:, :, i]))
 
     # First outputs are invalid
-    assert all(isinstance(output[i], TensorPlaceholder) for i in range(co_conv.delay))
+    assert all(output[i] is None for i in range(co_conv.delay))
 
     # The rest match
     output = torch.stack(output[co_conv.delay :], dim=2)
@@ -221,7 +216,7 @@ def test_Conv2d_stride():
                 target[:, :, t // stride], output[t + (T - 1)], atol=1e-7
             )
         else:
-            assert type(output[t + (T - 1)]) is TensorPlaceholder
+            assert output[t + (T - 1)] is None
 
     # Whole time-series
     co_conv.clean_state()
