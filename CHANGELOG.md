@@ -7,7 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 
-## [0.18.0]
+## [1.0.0]
 
 ### Added
 - ONNX compatibility to all library modules!
