@@ -144,7 +144,7 @@ This can speed up online inference greatly - for example, a Continual X3D model 
 
 > 💡  The longer the length of the temporal sequence, the larger the savings.
 
-For more information, we refer to the [paper on Continual Convolutions](https://arxiv.org/abs/2106.00050).
+For more information, we refer to the [paper describing this library](https://arxiv.org/abs/2204.03418).
 
 
 ## Forward modes
@@ -300,7 +300,7 @@ In addition, we support interoperability with a wide range of modules from `torc
     - `nn.AlphaDropout`
     - `nn.FeatureAlphaDropout`
 
-## Advanced examples
+## Advanced module examples
 
 ### Residual module
 Explicit:
@@ -403,10 +403,28 @@ inception_module = co.BroadcastReduce(
 )
 ```
 
+## Model Zoo
+### Continual 3D CNNs
+- [_Co_ X3D](https://github.com/LukasHedegaard/co3d/tree/main/models/cox3d)
+- [_Co_ Slow](https://github.com/LukasHedegaard/co3d/tree/main/models/coslow)
+- [_Co_ I3D](https://github.com/LukasHedegaard/co3d/tree/main/models/coi3d)
+
+### Continual ST-GCNs
+- [_Co_ STGCN](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cost_gcn_mod/cost_gcn_mod.py)
+- [_Co_ AGCN](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/coa_gcn_mod/coa_gcn_mod.py)
+- [_Co_ STr](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cos_tr_mod/cos_tr_mod.py)
+
+### Continual Transformers
+- [_Continual_ One-block Transformer Encoder](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L8)
+- [_Continual_ Two-block Transformer Encoder](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L59)
+
+
+
 
 ## Compatibility
 The library modules are built to integrate seamlessly with other PyTorch projects.
 Specifically, extra care was taken to ensure out-of-the-box compatibility with:
+- [onnx](https://github.com/onnx/onnx)
 - [pytorch-lightning](https://github.com/PyTorchLightning/pytorch-lightning)
 - [ptflops](https://github.com/sovrasov/flops-counter.pytorch)
 - [ride](https://github.com/LukasHedegaard/ride)
