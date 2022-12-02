@@ -175,7 +175,7 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
 
     _state_shape = 6
     #                     d_mem, AV_mem, Q_mem, K_T_mem, V_mem ,state_index
-    _dynamic_state_inds = [True, True, True, True, True, True, False]
+    _dynamic_state_inds = [True, True, True, True, True, False]
 
     def __init__(
         self,
