@@ -389,7 +389,7 @@ def test_trans_enc_b1(tmp_path):
     E = 4  # embedding dimension
     H = 2  # num heads
 
-    model_path = tmp_path / "transformer_encoder.onnx"
+    model_path = tmp_path / "transformer_encoder_b1.onnx"
 
     net = co.TransformerEncoder(
         co.TransformerEncoderLayerFactory(
@@ -478,7 +478,7 @@ def test_trans_enc_b2(tmp_path):
     E = 4  # embedding dimension
     H = 2  # num heads
 
-    model_path = tmp_path / "transformer_encoder.onnx"
+    model_path = tmp_path / "transformer_encoder_b2.onnx"
 
     net = co.TransformerEncoder(
         co.TransformerEncoderLayerFactory(
@@ -520,6 +520,66 @@ def test_trans_enc_b2(tmp_path):
         do_constant_folding=True,
         verbose=True,
         opset_version=14,
+    )
+
+    ort_session = ort.InferenceSession(str(model_path))
+
+    # Run for whole input
+    inputs = {
+        "input": last.numpy(),
+        **{
+            k: v.detach().numpy()
+            for k, v in zip(OnnxWrapper(net).state_input_names, flat_state)
+        },
+    }
+    onnx_output, *onnx_state = ort_session.run(None, inputs)
+
+    net.eval()
+    target, target_state = net._forward_step(last, state0)
+
+    for os, ts in zip(onnx_state, flatten(target_state)):
+        assert torch.allclose(torch.tensor(os), ts)
+    assert torch.allclose(torch.tensor(onnx_output), target)
+
+
+def test_rnn_mix(tmp_path):
+    batch_size = 1
+    in_channels = 3
+    hidden_channels = 3
+    receptive_field = 1
+    model_path = tmp_path / "rnn_mix.onnx"
+
+    net = co.Sequential(
+        co.RNN(in_channels, hidden_channels),
+        co.GRU(in_channels, hidden_channels),
+        co.LSTM(in_channels, hidden_channels),
+    )
+    net.eval()
+
+    firsts = torch.arange(
+        batch_size * in_channels * receptive_field, dtype=torch.float
+    ).reshape(batch_size, in_channels, receptive_field)
+    last = torch.ones(batch_size, in_channels)
+
+    # Prep state
+    state0 = None
+    with torch.no_grad():
+        for i in range(receptive_field):
+            _, state0 = net._forward_step(firsts[:, :, i], state0)
+
+    # Export to ONNX
+    flat_state = [s.clone() for s in flatten(state0)]
+    co.onnx.export(
+        net,
+        # Since a CoModule may choose to modify parts of its state rather than to
+        # clone and update, we need to pass a clone to ensure fair comparison later
+        (last, *[s.clone() for s in flat_state]),
+        model_path,
+        input_names=["input"],
+        output_names=["output"],
+        do_constant_folding=True,
+        verbose=True,
+        opset_version=11,
     )
 
     ort_session = ort.InferenceSession(str(model_path))
