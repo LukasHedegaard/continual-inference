@@ -41,7 +41,7 @@ pip install continual-inference
 ```
 
 ## News
-- 2022-12-02: ONNX compatibility for all modules is available from v0.18.0. See [test_onnx.py](tests/continual/test_onnx.py) for examples.
+- 2022-12-02: ONNX compatibility for all modules is available from v1.0.0. See [test_onnx.py](tests/continual/test_onnx.py) for examples.
 - 2022-08-18: The library paper ["Continual Inference: A Library for Efficient Online Inference with Deep Neural Networks in PyTorch"](https://arxiv.org/abs/2204.03418) was accepted at the ECCV 2022 workhop on Computational Aspects of Deep Learning. 🎉
 
 ## Simple example
