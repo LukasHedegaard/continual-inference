@@ -67,7 +67,7 @@ assert conv.receptive_field == 3
 assert conv.delay == 2
 ```
 
-See the "Advanced Examples" section for additional examples..
+See the "Advanced Examples" section for additional examples.
 
 ## Continual Inference Networks (CINs)
 Continual Inference Networks are a neural network subset, which can make new predictions efficiently _for each new time-step_.
