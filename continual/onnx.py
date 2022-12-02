@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 import torch
 import torch._C._onnx as _C_onnx
 
-from continual import CoModule
+from continual.module import CoModule
 from continual.utils import flatten
 
 
