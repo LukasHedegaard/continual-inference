@@ -190,7 +190,7 @@ class CoModule(ABC):
         if not update_state and state:
             state = _clone_first(state)
         output, state = self._forward_step(input, state)
-        if update_state:
+        if update_state and state:
             self.set_state(state)
         return output
 

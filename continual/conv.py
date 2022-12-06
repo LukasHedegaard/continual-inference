@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
@@ -43,9 +43,6 @@ __all__ = ["Conv1d", "Conv2d", "Conv3d"]
 
 
 class _ConvCoNd(CoModule, _ConvNd):
-    _state_shape = 3
-    _dynamic_state_inds = [True, False, False]
-
     def __init__(
         self,
         ConvClass: torch.nn.Module,
@@ -68,14 +65,16 @@ class _ConvCoNd(CoModule, _ConvNd):
         assert issubclass(
             ConvClass, _ConvNd
         ), "The ConvClass should be a subclass of `_ConvNd`"
+
+        kernel_size = size_fn(kernel_size)
+        padding = size_fn(padding)
+        stride = size_fn(stride)
+
         self._ConvClass = ConvClass
         self._conv_func = conv_func
         self.input_shape_desciption = input_shape_desciption
         self._input_len = len(self.input_shape_desciption)
 
-        kernel_size = size_fn(kernel_size)
-        padding = size_fn(padding)
-        stride = size_fn(stride)
         if stride[0] > 1:
             logger.warning(
                 f"Temporal stride of {stride[0]} will result in skipped outputs every {stride[0]-1} / {stride[0]} steps"
@@ -124,6 +123,24 @@ class _ConvCoNd(CoModule, _ConvNd):
         self.register_buffer("state_index", torch.tensor(0), persistent=False)
         self.register_buffer("stride_index", torch.tensor(0), persistent=False)
 
+    @property
+    def _stateless(self) -> bool:
+        return self.kernel_size[0] == 1 and self.padding[0] == 0 and self.stride[0] == 1
+
+    @property
+    def _state_shape(self) -> int:
+        if self._stateless:
+            return 0
+        else:
+            return 3
+
+    @property
+    def _dynamic_state_inds(self) -> List[bool]:
+        if self._stateless:
+            return []
+        else:
+            return [True, False, False]
+
     def init_state(
         self,
         first_output: Tensor,
@@ -154,7 +171,7 @@ class _ConvCoNd(CoModule, _ConvNd):
     @torch.jit.export
     def _forward_step(
         self, input: Tensor, prev_state: Optional[State]
-    ) -> Tuple[Optional[Tensor], State]:
+    ) -> Tuple[Optional[Tensor], Optional[State]]:
         # assert (
         #     len(input.shape) == self._input_len - 1
         # ), f"A tensor of shape {(*self.input_shape_desciption[:2], *self.input_shape_desciption[3:])} should be passed as input but got {input.shape}"
@@ -183,9 +200,12 @@ class _ConvCoNd(CoModule, _ConvNd):
 
     def _forward_step_py(
         self, input: Tensor, prev_state: Optional[State]
-    ) -> Tuple[Optional[Tensor], State]:
+    ) -> Tuple[Optional[Tensor], Optional[State]]:
         # e.g. B, C -> B, C, 1
         x = input.unsqueeze(2).to(device=self.weight.device)
+
+        if self._stateless:
+            return self.forward(x).squeeze(2), prev_state
 
         if self.padding_mode == "zeros":
             x = self._conv_func(

@@ -1,4 +1,5 @@
 import shutil
+from collections import OrderedDict
 from pathlib import Path
 from timeit import default_timer as timer
 
@@ -121,12 +122,13 @@ def test_sequential_pure(tmp_path):
     hi_channels = 6
     out_channels = 4
     kernel_size = 3
-    receptive_field = 5
+    receptive_field = 3
     model_path = tmp_path / "seq_conv.onnx"
 
     net = co.Sequential(
         co.Conv1d(in_channels, hi_channels, kernel_size),
-        co.Conv1d(hi_channels, out_channels, kernel_size),
+        co.Conv1d(hi_channels, out_channels, kernel_size=1),
+        # co.forward_stepping(nn.Conv1d(hi_channels, out_channels, kernel_size=1)),
     )
     net.eval()
     with torch.no_grad():
@@ -506,6 +508,100 @@ def test_trans_enc_b2(tmp_path):
     # Check against baseline
     o_baseline = net.forward(firsts)
     assert torch.allclose(o.squeeze(-1), o_baseline[:, :, -1])
+
+    # Export to ONNX
+    flat_state = [s.clone() for s in flatten(state0)]
+    co.onnx.export(
+        net,
+        # Since a CoModule may choose to modify parts of its state rather than to
+        # clone and update, we need to pass a clone to ensure fair comparison later
+        (last, *[s.clone() for s in flat_state]),
+        model_path,
+        input_names=["input"],
+        output_names=["output"],
+        do_constant_folding=True,
+        verbose=True,
+        opset_version=14,
+    )
+
+    ort_session = ort.InferenceSession(str(model_path))
+
+    # Run for whole input
+    inputs = {
+        "input": last.numpy(),
+        **{
+            k: v.detach().numpy()
+            for k, v in zip(OnnxWrapper(net).state_input_names, flat_state)
+        },
+    }
+    onnx_output, *onnx_state = ort_session.run(None, inputs)
+
+    net.eval()
+    target, target_state = net._forward_step(last, state0)
+
+    for os, ts in zip(onnx_state, flatten(target_state)):
+        assert torch.allclose(torch.tensor(os), ts)
+    assert torch.allclose(torch.tensor(onnx_output), target)
+
+
+def test_trans_enc_full(tmp_path):
+    B = 1
+    T = 10  # temporal sequence length
+    E = 4  # embedding dimension
+    H = 2  # num heads
+
+    model_path = tmp_path / "transformer_encoder_full.onnx"
+
+    pos_enc = co.RecyclingPositionalEncoding(
+        embed_dim=E,
+        num_embeds=T * 2 - 1,
+        learned=False,
+    )
+    trans_enc = co.TransformerEncoder(
+        co.TransformerEncoderLayerFactory(
+            d_model=E,
+            nhead=H,
+            dim_feedforward=E * 2,
+            dropout=0.0,
+            sequence_len=T,
+        ),
+        num_layers=2,
+    )
+    lin = co.Linear(E, E, channel_dim=-1)
+
+    net = co.Sequential(
+        OrderedDict(
+            [
+                ("pos_enc", pos_enc),
+                ("trans_enc", trans_enc),
+                (
+                    "select",
+                    co.Lambda(
+                        fn=lambda x: x[:, :, -1],
+                        forward_step_only_fn=lambda x: x,
+                        takes_time=True,
+                    ),
+                ),
+                ("lin", lin),
+            ]
+        )
+    )
+
+    net.eval()
+
+    firsts = torch.rand(B, E, T)
+    last = torch.ones(B, E)
+
+    # Baseline
+    state0 = None
+    with torch.no_grad():
+        for i in range(T - 1):
+            _, state0 = net._forward_step(firsts[:, :, i], state0)
+        o, state0 = net._forward_step(firsts[:, :, -1], state0)
+
+    # Check against baseline
+    o_baseline = net.forward(firsts)
+    assert torch.allclose(o, o_baseline)
 
     # Export to ONNX
     flat_state = [s.clone() for s in flatten(state0)]
