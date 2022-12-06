@@ -8,6 +8,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [1.0.1]
 
+### Fixed
+- `co.Conv` onnx export for kernel_size=1.
+
+
+## [1.0.1]
+
 ### Added
 - Ability to access onnx from root, i.e. `co.onnx`.
 

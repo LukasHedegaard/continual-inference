@@ -122,12 +122,13 @@ def test_sequential_pure(tmp_path):
     hi_channels = 6
     out_channels = 4
     kernel_size = 3
-    receptive_field = 5
+    receptive_field = 3
     model_path = tmp_path / "seq_conv.onnx"
 
     net = co.Sequential(
         co.Conv1d(in_channels, hi_channels, kernel_size),
-        co.Conv1d(hi_channels, out_channels, kernel_size),
+        co.Conv1d(hi_channels, out_channels, kernel_size=1),
+        # co.forward_stepping(nn.Conv1d(hi_channels, out_channels, kernel_size=1)),
     )
     net.eval()
     with torch.no_grad():
