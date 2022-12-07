@@ -324,6 +324,8 @@ def test_advanced_routing(tmp_path):
     model_path = tmp_path / "advanced_routing.onnx"
 
     net = co.Sequential(
+        co.Conditional(lambda a, b: True, co.Add(1), co.Add(-1)),
+        co.Conditional(lambda a, b: False, co.Add(1), co.Add(-1)),
         co.RecyclingPositionalEncoding(3, 3),
         co.Broadcast(2),
         co.ParallelDispatch([1, 0]),  # Swap positions
