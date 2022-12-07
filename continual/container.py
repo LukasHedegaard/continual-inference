@@ -788,10 +788,20 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
 
     def forward_step(self, input: Tensor, update_state=True) -> Tensor:
         if self.predicate(self, input):
-            return self._modules["0"].forward_step(input)
+            return self._modules["0"].forward_step(input, update_state)
         elif "1" in self._modules:
-            return self._modules["1"].forward_step(input)
+            return self._modules["1"].forward_step(input, update_state)
         return input
+
+    def _forward_step(
+        self, input: Tensor, prev_state: Optional[State] = None
+    ) -> Tuple[Tensor, Optional[State]]:
+        prev_state = prev_state or [None, None]
+        if self.predicate(self, input):
+            return self._modules["0"]._forward_step(input, prev_state[0])
+        elif "1" in self._modules:
+            return self._modules["1"]._forward_step(input, prev_state[1])
+        return input, prev_state
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
         if self.predicate(self, input):
@@ -799,6 +809,14 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
         elif "1" in self._modules:
             return self._modules["1"].forward_steps(input)
         return input
+
+    @property
+    def _state_shape(self):
+        return [self._modules[str(i)]._state_shape for i in range(2)]
+
+    @property
+    def _dynamic_state_inds(self):
+        return [self._modules[str(i)]._dynamic_state_inds for i in range(2)]
 
     @property
     def delay(self) -> int:
