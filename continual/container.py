@@ -812,11 +812,11 @@ class Conditional(FlattenableStateDict, CoModule, nn.Module):
 
     @property
     def _state_shape(self):
-        return [self._modules[str(i)]._state_shape for i in range(2)]
+        return [m._state_shape for m in self._modules.values()]
 
     @property
     def _dynamic_state_inds(self):
-        return [self._modules[str(i)]._dynamic_state_inds for i in range(2)]
+        return [m._dynamic_state_inds for m in self._modules.values()]
 
     @property
     def delay(self) -> int:

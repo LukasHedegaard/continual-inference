@@ -175,6 +175,9 @@ def register(TorchNnModule: Type[nn.Module], CoClass: Type[CoModule]):
 
 
 def continual(module: nn.Module) -> CoModule:
+    if isinstance(module, CoModule):
+        return module
+
     if type(module) in NAIVE_MAPPING:
         return forward_stepping(module)
 
