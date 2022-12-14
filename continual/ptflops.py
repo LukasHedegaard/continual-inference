@@ -32,6 +32,8 @@ from .pooling import (  # noqa: F401
 
 logger = getLogger(__name__)
 
+__all__ = []
+
 
 # Register modules in `ptflops`
 def _register_ptflops():

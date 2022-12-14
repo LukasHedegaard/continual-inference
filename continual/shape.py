@@ -4,6 +4,8 @@ from torch import Tensor, nn
 
 from .module import CoModule
 
+__all__ = ["Reshape"]
+
 
 class Reshape(CoModule, nn.Module):
     """Reshape of non-temporal dimensions"""

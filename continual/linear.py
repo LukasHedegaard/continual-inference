@@ -4,6 +4,8 @@ from torch.nn.functional import linear
 
 from .module import CoModule
 
+__all__ = ["Linear"]
+
 
 class Linear(CoModule, nn.Linear):
     _state_shape = 0

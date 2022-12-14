@@ -19,7 +19,6 @@ from .module import CoModule, PaddingMode
 
 logger = getLogger(__name__)
 
-# State = Tuple[Tensor, Optional[int], Optional[int]]
 State = Tuple[Tensor, Tensor, Tensor]
 
 # _forward_step_impl = None

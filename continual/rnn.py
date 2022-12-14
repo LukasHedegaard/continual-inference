@@ -6,6 +6,8 @@ from torch.nn.utils.rnn import PackedSequence
 
 from .module import CoModule
 
+__all__ = ["RNN", "LSTM", "GRU"]
+
 State = Tuple[Tensor]
 LSTMState = Tuple[Tensor, Tensor]
 

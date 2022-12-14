@@ -13,8 +13,9 @@ from torch.nn.modules.module import (
     _global_forward_pre_hooks,
 )
 
+__all__ = ["CoModule", "call_mode"]
+
 # First element is a value buffer, while others are indexes
-# State = Tuple[Tensor, Optional[int], Optional[int]]
 State = Tuple[Tensor, Tensor, Tensor]
 
 

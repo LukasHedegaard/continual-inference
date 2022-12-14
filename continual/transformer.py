@@ -17,7 +17,12 @@ from .multihead_attention import (
     SingleOutputMultiheadAttention,
 )
 
-__all__ = ["TransformerEncoder", "TransformerEncoderLayerFactory"]
+__all__ = [
+    "TransformerEncoder",
+    "TransformerEncoderLayerFactory",
+    "SingleOutputTransformerEncoderLayer",
+    "RetroactiveTransformerEncoderLayer",
+]
 
 
 class MhaType(Enum):

@@ -7,6 +7,16 @@ from torch import Tensor, nn
 from .module import CoModule
 from .utils import function_repr
 
+__all__ = [
+    "Lambda",
+    "Multiply",
+    "Add",
+    "Unity",
+    "Constant",
+    "Zero",
+    "One",
+]
+
 
 class Lambda(CoModule, nn.Module):
     """Module wrapper for stateless functions.

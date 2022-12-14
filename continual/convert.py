@@ -29,6 +29,11 @@ from .transformer import TransformerEncoder
 
 logger = getLogger(__name__)
 
+__all__ = [
+    "continual",
+    "forward_stepping",
+]
+
 
 def forward_stepping(module: nn.Module, dim: int = 2):
     """Enhances torch.nn.Module with `forward_step` and `forward_steps`

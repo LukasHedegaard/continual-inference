@@ -3,6 +3,8 @@
 import logging
 from functools import wraps
 
+__all__ = ["getLogger"]
+
 
 def _process_rank():
     try:

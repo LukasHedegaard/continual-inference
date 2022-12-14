@@ -25,7 +25,9 @@ __all__ = [
     "Residual",
     "Broadcast",
     "Parallel",
+    "ParallelDispatch",
     "Reduce",
+    "Conditional",
 ]
 
 T = TypeVar("T")
