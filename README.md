@@ -42,7 +42,8 @@ __A Python library for Continual Inference Networks in PyTorch__
   <sup>*</sup>
 </div>
 
-###### \*We match PyTorch interfaces exactly. This reduces the codefactor to "A-" due to method arguments named "input".
+<small>\*We match PyTorch interfaces exactly. This reduces the codefactor to "A-" due to method arguments named "input".</small>
+
 
 ## Continual Inference Networks ensure efficient stream processing
 Many of our favorite Deep Neural Network architectures (e.g., [CNNs](https://arxiv.org/abs/2106.00050) and [Transformers](https://arxiv.org/abs/2201.06268)) were built with offline-processing for offline processing. Rather than processing inputs one sequence element at a time, they require the whole (spatio-)temporal sequence to be passed as a single input.
