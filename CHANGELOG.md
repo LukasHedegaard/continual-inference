@@ -190,7 +190,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Add `warm_up`.
 
 ### Changed
-- Container implementations to use `__call__` with alternating call_modes. This change was necessary to propperly trigger the torch hooks needed in `ptflops`.
+- Container implementations to use `__call__` with alternating call_modes. This change was necessary to properly trigger the torch hooks needed in `ptflops`.
 
 ### Fixed
 - `ptflops` compatibility.
@@ -271,7 +271,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ### Added
 - Support for zero-delay in `co.Delay`
 - Support for broadcasting in `co.Parallel`
-- Mul (hadamark product) aggregation in `co.Parallel`
+- Mul (hadamard product) aggregation in `co.Parallel`
 - Example of Squeeze and Excitation block
 
 ### Changed
@@ -281,12 +281,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ## [0.4.0] - 2021-08-19
 ### Added
 - `co.Delay` handling for padding.
-- Handling of initialisation and strides in containers
+- Handling of initialization and strides in containers
 
 ### Changed
 - `co.Conv` `build_from` behavior to not change dilation and stride. Argument overload supported instead. 
 - `pad_start` and `pad_end` args to convolution and pooling modules `forward_steps`.
-- Behavior of modules while they initialise. Now, a TensorPlaceholder is passed for initialising steps.
+- Behavior of modules while they initialize. Now, a TensorPlaceholder is passed for initializing steps.
 
 ### Removed
 - Automatic unsqueeze in pooling.
@@ -308,7 +308,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## [0.2.2] - 2021-08-17
 ### Added
-- Automatic conversion of batch normalisation and activation functions.
+- Automatic conversion of batch normalization and activation functions.
 
 ### Fixed
 - Separate dilation and stride in pool.
