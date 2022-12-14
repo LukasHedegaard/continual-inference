@@ -7,31 +7,31 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 
-## [1.0.4]
+## [1.0.4] - 2022-12-07
 
 ### Fixed
 - `co.Conditional` onnx support for single-option config.
 
 
-## [1.0.3]
+## [1.0.3] - 2022-12-07
 
 ### Fixed
 - `co.Conditional` onnx support.
 
 
-## [1.0.2]
+## [1.0.2] - 2022-12-06
 
 ### Fixed
 - `co.Conv` onnx export for kernel_size=1.
 
 
-## [1.0.1]
+## [1.0.1] - 2022-12-02
 
 ### Added
 - Ability to access onnx from root, i.e. `co.onnx`.
 
 
-## [1.0.0]
+## [1.0.0] - 2022-12-02
 
 ### Added
 - ONNX compatibility to all library modules!
@@ -53,7 +53,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - TensorPlaceholder in favour of `None`.
 
 
-## [0.17.1]
+## [0.17.1] - 2022-06-02
 
 ### Added
 - Missing part on Continual Transformers in README.
@@ -62,7 +62,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Conv cpp impl.
 
 
-## [0.17.0]
+## [0.17.0] - 2022-05-12
 
 ### Added
 - Citations for Continual Inference lib paper.
@@ -78,7 +78,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
     - `TransformerEncoder`
 
 
-## [0.16.0]
+## [0.16.0] - 2022-04-04
 
 ### Added
 - "lagging" option for shrink in `co.Delay` and `co.Residual`.
@@ -90,26 +90,26 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - `phantom_padding` renamed to `residual_shrink`.
 
 
-## [0.15.6]
+## [0.15.6] - 2022-03-18
 ### Fixed
 - Missing cpp file in package.
 
 
-## [0.15.5]
+## [0.15.5] - 2022-03-05
 ### Added
 - CoConv step impl in C++.
 
-## [0.15.4]
+## [0.15.4] - 2022-01-28
 ### Fixed
 - FLOPs module registration compatibility with ptflops >=v0.6.8.
 
 
-## [0.15.3]
+## [0.15.3] - 2021-12-13
 ### Added
 - Call-mode specific functions in `co.Lambda`
 
 
-## [0.15.2]
+## [0.15.2] - 2021-12-11
 ### Added
 - Support for functor in `co.Lambda`
 
@@ -117,12 +117,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - `nn.LayerNorm` from automatically convertible modules
 
 
-## [0.15.1]
+## [0.15.1] - 2021-12-10
 ### Added
 - `nn.LayerNorm` to automatically convertible modules
 
 
-## [0.15.0]
+## [0.15.0] - 2021-10-29
 ### Added
 - `ParallelDispatch` module.
 - `Conditional` predicate print in `__repr__`.
@@ -135,7 +135,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - CI testing for python v3.6.
 
 
-## [0.14.0]
+## [0.14.0] - 2021-09-20
 ### Added
 - Added `phantom_padding` to `Residual`.
 - Added `receptive_field` property.
@@ -155,36 +155,36 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Assertion error in `BroadcastReduce` for modules with different delays.
 
 
-## [0.13.0]
+## [0.13.0] - 2021-09-14
 ### Added
 - Add `forward_shrink` option to `Delay` and `Residual`.
 
 
-## [0.12.0]
+## [0.12.0] - 2021-09-14
 ### Added
 - Add `Constant`.
 - Add `Zero`.
 - Add `One`.
 
 
-## [0.11.4]
+## [0.11.4] - 2021-09-08
 ### Fixed
 - `co.ConvXd` cuda compatibility.
 
 
-## [0.11.3]
+## [0.11.3] - 2021-09-08
 ### Added
 - Add `flatten_state_dict` state variable.
 
 ### Removed
 - Debug message for Convolutions with padding.
 
-## [0.11.2]
+## [0.11.2] - 2021-09-08
 ### Fixed
 - `call_mode` for `Linear`.
 
 
-## [0.11.1]
+## [0.11.1] - 2021-09-06
 ### Added
 - Add `call_mode`.
 - Add `warm_up`.
@@ -196,14 +196,14 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - `ptflops` compatibility.
 
 
-## [0.11.0]
+## [0.11.0] - 2021-08-31
 ### Added
 - `co.Linear` module.
 - Improved repr in `co.Lambda`.
 - Option to skip unsqueeze in `co.Lambda.forward_step`.
 
 
-## [0.10.0]
+## [0.10.0] - 2021-08-27
 ### Changed
 - Renamed `co.Parallel` to `co.BroadcastReduce`.
 
@@ -214,7 +214,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Automatic inference of `co.Broadcast.num_streams` in `co.Sequential`.
 
 
-## [0.9.0]
+## [0.9.0] - 2021-08-26
 ### Added
 - `co.Lambda` module.
 - `co.Add` module.
@@ -223,13 +223,13 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - `co.Conditional` module.
 
 
-## [0.8.1]
+## [0.8.1] - 2021-08-26
 ### Fixed
 - Bug in `forward_stepping`.
 - Bug in `clean_state`.
 
 
-## [0.8.0]
+## [0.8.0] - 2021-08-24
 ### Fixed
 - Bugs in `forward_step(s)` with `update_state=False`.
 
@@ -242,7 +242,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - `Padded` interface.
 
 
-## [0.7.0]
+## [0.7.0] - 2021-08-24
 ### Added
 - Independent state_dict and load_state_dict functions.
 - Added nonempty check for aggregation functions in Parallel.
@@ -257,17 +257,17 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Replicate padding in `co._ConvNd`
 
 
-## [0.6.1]
+## [0.6.1] - 2021-08-23
 ### Changed
 - `co.Residual` modules to be unnamed. This allows the module state dicts to be flattened.
 
-## [0.6.0]
+## [0.6.0] - 2021-08-23
 ### Added
 - Flattened state dict export and loading via a `flatten` argument. This feature improves interoperability complex modules, that were not originally constructed with the `co.Sequential` and `co.Parallel` building blocks.
 - Context manager for triggering flattened state_dict export and loading.
 
 
-## [0.5.0]
+## [0.5.0] - 2021-08-20
 ### Added
 - Support for zero-delay in `co.Delay`
 - Support for broadcasting in `co.Parallel`
@@ -278,7 +278,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - `co._PoolNd` attribute naming: "temporal_*" removed as prefix for kernel_size, stride, dilation, and padding.
 
 
-## [0.4.0]
+## [0.4.0] - 2021-08-19
 ### Added
 - `co.Delay` handling for padding.
 - Handling of initialisation and strides in containers
@@ -292,12 +292,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Automatic unsqueeze in pooling.
 
 
-## [0.3.1]
+## [0.3.1] - 2021-08-18
 ### Added
 - Support for dropout.
 
 
-## [0.3.0]
+## [0.3.0] - 2021-08-18
 ### Added
 - Support for dilation and stride in pooling.
 
@@ -306,7 +306,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - `_ConvCoNd.forward_steps` doesn't invoke `clean_state` anymore.
 
 
-## [0.2.2]
+## [0.2.2] - 2021-08-17
 ### Added
 - Automatic conversion of batch normalisation and activation functions.
 
@@ -319,7 +319,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ### Removed
 - `co.BatchNorm2d`
 
-## [0.2.1]
+## [0.2.1] - 2021-08-17
 ### Changed
 - Renamed `unsqueezed` to `forward_stepping`.
 
@@ -327,7 +327,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Unused utility `Zeros`
 
 
-## [0.2.0]
+## [0.2.0] - 2021-08-16
 ### Changed
 - Naming to match `torch.nn`. This lets the continual modules be used as drop-in replacements for `torch.nn` modules.
 - Renamed `forward_regular_unrolled` to `forward`, `forward_regular` to `forward_steps`, and `forward` for `forward_step`.
