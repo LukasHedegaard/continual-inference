@@ -274,7 +274,7 @@ inception_module = co.BroadcastReduce(
 )
 ```
 </details>
-</br>
+
 
 ## Module library
 _Continual Inference_ features a rich library of modules for defining Continual Inference Networks. Specific care was taken to create CIN versions of the PyTorch modules found in [_torch.nn_](https://pytorch.org/docs/stable/nn.html):
@@ -333,7 +333,6 @@ _Continual Inference_ features a rich library of modules for defining Continual 
 
 </details>
 
-</br>
 
 Modules for composing and converting networks. Both _composition_ and _utility_ modules can be used for regular definition of PyTorch modules as well.
 
@@ -373,8 +372,6 @@ Modules for composing and converting networks. Both _composition_ and _utility_ 
   - [`co.forward_stepping`](): functional wrapper, which enhances temporally local `torch.nn` modules with the forward_stepping functions.
 
 </details>
-
-</br>
 
 We support drop-in interoperability with with the following _torch.nn_ modules:
 
@@ -431,7 +428,6 @@ We support drop-in interoperability with with the following _torch.nn_ modules:
   - `nn.FeatureAlphaDropout`
 
 </details>
-</br>
 
 
 ## Model Zoo
