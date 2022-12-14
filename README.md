@@ -283,8 +283,8 @@ _Continual Inference_ features a rich library of modules for defining Continual 
 <summary><b>Convolutions</b></summary>
 
 - [`co.Conv1d`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/conv/index.html#continual.conv.Conv1d)
-- [`co.Conv2d`]((https://continual-inference.readthedocs.io/en/latest/autoapi/continual/conv/index.html#continual.conv.Conv2d))
-- [`co.Conv3d`]((https://continual-inference.readthedocs.io/en/latest/autoapi/continual/conv/index.html#continual.conv.Conv3d))
+- [`co.Conv2d`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/conv/index.html#continual.conv.Conv2d)
+- [`co.Conv3d`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/conv/index.html#continual.conv.Conv3d)
 
 </details>
 
