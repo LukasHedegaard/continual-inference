@@ -2,12 +2,12 @@
 
 __A Python library for Continual Inference Networks in PyTorch__
 
-[Quick-start](#-quick-start) • 
+[Quick-start](#quick-start) • 
 [Docs](https://continual-inference.readthedocs.io) • 
 [Paper](https://arxiv.org/abs/2204.03418) • 
-[Examples](#-network-composition) • 
-[Modules](#-module-library) • 
-[Model Zoo](#-model-zoo) • 
+[Examples](#network-composition) • 
+[Modules](#module-library) • 
+[Model Zoo](#model-zoo) • 
 [Contribute]() • 
 [License](LICENSE)
 
