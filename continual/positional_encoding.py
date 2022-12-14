@@ -6,9 +6,11 @@ from torch import Tensor, nn
 
 import continual as co
 
+__all__ = ["RecyclingPositionalEncoding"]
+
 
 class CyclicPositionalEncoding(nn.Module):
-    """Cyclic PositionalE ncoding as proposed by Ma et al. in
+    """Cyclic Positional Encoding as proposed by Ma et al. in
     "Learning to Iteratively Solve Routing Problems with Dual-Aspect Collaborative Transformer"
     https://arxiv.org/abs/2110.02544
     """
