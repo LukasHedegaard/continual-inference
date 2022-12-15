@@ -1,14 +1,15 @@
-<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" style="width: 30vw; min-width: 400px;">
+<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" style="width: 400px;">
 
 __A Python library for Continual Inference Networks in PyTorch__
 
 [Quick-start](#quick-start) • 
 [Docs](https://continual-inference.readthedocs.io) • 
+[Principles](#library-principles) • 
 [Paper](https://arxiv.org/abs/2204.03418) • 
-[Examples](#network-composition) • 
+[Examples](#composition-examples) • 
 [Modules](#module-library) • 
 [Model Zoo](#model-zoo) • 
-[Contribute]() • 
+[Contribute](CONTRIBUTING.md) • 
 [License](LICENSE)
 
 <div align="left">
@@ -42,7 +43,7 @@ __A Python library for Continual Inference Networks in PyTorch__
   <sup>*</sup>
 </div>
 
-<small>\*We match PyTorch interfaces exactly. This reduces the codefactor to "A-" due to method arguments named "input".</small>
+<small>\*We match PyTorch interfaces exactly. Method arguments named "input" reduce the codefactor to "A-".</small>
 
 
 ## Continual Inference Networks ensure efficient stream processing
@@ -109,9 +110,8 @@ See the [network composition](#-composition) and [model zoo](#model-zoo) section
 ### Forward modes
 The library components feature three distinct forward modes, which are handy for different situations, namely `forward`, `forward_step`, and `forward_steps`:
 
-#### `forward`
-Performs a full forward computation exactly as the regular layer would.
-This method is handy for efficient training on clip-based data.
+#### `forward(input)`
+Performs a forward computation over multiple time-steps. This function is identical to the corresponding module in _torch.nn_, ensuring cross-compatibility. Moreover, it's handy for efficient training on clip-based data.
 
 ```
          O            (O: output)
@@ -123,8 +123,8 @@ This method is handy for efficient training on clip-based data.
 ```
 
 
-#### `forward_step`
-Performs a forward computation for a single frame and continual states are updated accordingly. This is the mode to use for continual inference.
+#### `forward_step(input, update_state=True)`
+Performs a forward computation for a single frame and (optionally) updates internal states accordingly. This function performs efficient continual inference.
 
 ```
 O+S O+S O+S O+S   (O: output, S: updated internal state)
@@ -134,11 +134,9 @@ O+S O+S O+S O+S   (O: output, S: updated internal state)
  I   I   I   I    (I: input frame)
 ```
 
-#### `forward_steps`
-Performs a layer-wise forward computation using the continual module.
-The computation is performed frame-by-frame and continual states are updated accordingly.
-The output-input mapping the exact same as that of a regular module.
-This mode is handy for initializing the network on a whole clip (multiple frames) before the `forward` is used for continual inference. 
+#### `forward_steps(input, pad_end=False, update_state=True)`
+Performs a forward computation across multiple time-steps while updating internal states for continual inference (if update_state=True).
+Start-padding is always accounted for, but end-padding is omitted per default in expectance of the next input step. It can be added by specifying pad_end=True. If so, the output-input mapping the exact same as that of forward.
 ```
          O            (O: output)
          ↑ 
@@ -150,13 +148,49 @@ This mode is handy for initializing the network on a whole clip (multiple frames
  P   I   I   I   P    (I: input frame, P: padding)
 ```
 
+#### `__call__`
+Per default, the `__call__` function operates identically to _torch.nn_ and executes forward. We supply two options for changing this behavior, namely the _call_mode_ property and the _call_mode_ context manager. An example of their use follows:
+
+```python
+timeseries = torch.randn(batch, channel, time)
+timestep = timeseries[:, :, 0]
+
+net(timeseries)  # Invokes net.forward(timeseries)
+
+# Assign permanent call_mode property
+net.call_mode = "forward_step"
+net(timestep)  # Invokes net.forward_step(timestep)
+
+# Assign temporary call_mode with context manager
+with co.call_mode("forward_steps"):
+    net(timeseries)  # Invokes net.forward_steps(timeseries)
+
+net(timestep)  # Invokes net.forward_step(timestep)
+```
+
+### Input shapes
+We enforce a unified ordering of input dimensions for all library modules, namely:
+
+    (batch, channel, time, optional_dim2, optional_dim3)
+
+### Outputs
 
 
 ### Composition
 
-Continual Inference Networks require strict handling of internal data delays to guarantee correspondence between [forward modes](#-forward-modes). While it is possible to composed neural networks with an imperative programming style, correct handling of delays is cumbersome and time-consuming. Instead, we provide a rich interface of modules for powerful module composition using a _functional style_, which handles delays automatically. Think extensions or `torch.nn.Sequential`.
+Continual Inference Networks require strict handling of internal data delays to guarantee correspondence between [forward modes](#-forward-modes). While it is possible to compose neural networks by defining _forward_, _forward_step_, and _forward_steps_ manually, correct handling of delays is cumbersome and time-consuming. Instead, we provide a rich interface of container modules, which handles delays automatically. On top of `co.Sequential` (which is a drop-in replacement of _torch.nn.Sequential_), we provide modules for handling parallel and conditional dataflow. 
 
-_Composition examples_ can be expanded below:
+- [`co.Sequential`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Sequential): Invoke modules sequentially, passing the output of one module onto the next.
+- [`co.Broadcast`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Broadcast): Broadcast one stream to multiple.
+- [`co.Parallel`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Parallel): Invoke modules in parallel given each their input.
+- [`co.ParallelDispatch`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.ParallelDispatch): Dispatch multiple input streams to multiple output streams flexibly.
+- [`co.Reduce`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Reduce): Reduce multiple input streams to one.
+- [`co.BroadcastReduce`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.BroadcastReduce): Shorthand for Sequential(Broadcast, Parallel, Reduce).
+- [`co.Residual`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Residual): Residual connection.
+- [`co.Conditional`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Conditional): Conditionally checks whether to invoke a module (or another) at runtime.
+
+
+#### Composition examples:
 
 <details>
 <summary><b>Residual module</b></summary>
@@ -277,7 +311,7 @@ inception_module = co.BroadcastReduce(
 
 
 ## Module library
-_Continual Inference_ features a rich library of modules for defining Continual Inference Networks. Specific care was taken to create CIN versions of the PyTorch modules found in [_torch.nn_](https://pytorch.org/docs/stable/nn.html):
+_Continual Inference_ features a rich collection of modules for defining Continual Inference Networks. Specific care was taken to create CIN versions of the PyTorch modules found in [_torch.nn_](https://pytorch.org/docs/stable/nn.html):
 
 <details>
 <summary><b>Convolutions</b></summary>
@@ -339,14 +373,14 @@ Modules for composing and converting networks. Both _composition_ and _utility_ 
 <details>
 <summary><b>Composition modules</b></summary>
 
-  - [`co.Sequential`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Sequential): Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalization and activation function. 
-  - [`co.Residual`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Residual): Residual wrapper for modules.
-  - [`co.BroadcastReduce`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.BroadcastReduce): BroadcastReduce wrapper for modules.
+  - [`co.Sequential`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Sequential): Invoke modules sequentially, passing the output of one module onto the next.
   - [`co.Broadcast`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Broadcast): Broadcast one stream to multiple.
-  - [`co.Parallel`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Parallel): Parallel wrapper for modules. Like `co.Sequential`, this module performs automatic conversion of torch.nn modules.
-  - [`co.ParallelDispatch`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.ParallelDispatch): Parallel dispatch of many input streams to many output streams.
+  - [`co.Parallel`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Parallel): Invoke modules in parallel given each their input.
+  - [`co.ParallelDispatch`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.ParallelDispatch): Dispatch multiple input streams to multiple output streams flexibly.
   - [`co.Reduce`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Reduce): Reduce multiple input streams to one.
-  - [`co.Conditional`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Conditional): Conditionally checks whether to invoke a module at runtime.
+  - [`co.BroadcastReduce`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.BroadcastReduce): Shorthand for Sequential(Broadcast, Parallel, Reduce).
+  - [`co.Residual`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Residual): Residual connection.
+  - [`co.Conditional`](https://continual-inference.readthedocs.io/en/latest/autoapi/continual/container/index.html#continual.container.Conditional): Conditionally checks whether to invoke a module (or another) at runtime.
 
 </details>
 
