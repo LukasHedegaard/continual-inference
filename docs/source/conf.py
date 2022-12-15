@@ -12,20 +12,26 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
-import os
-from os import path
-import re
 import glob
-import sys
+import os
 import pkgutil
+import re
 import shutil
+import sys
+from os import path
+
+import continual_sphinx_theme
+import sphinx.ext.doctest
+import torch
+from docutils import nodes
+from sphinx import addnodes
+from sphinx.ext.coverage import CoverageBuilder
+from sphinx.util.docfields import TypedField
+from sphinx.writers import html, html5
 
 # source code directory, relative to this file, for sphinx-autobuild
 # sys.path.insert(0, os.path.abspath('../..'))
 
-import torch
-
-import continual_sphinx_theme
 
 # import pytorch_sphinx_theme
 
@@ -500,7 +506,13 @@ html_css_files = [
     "css/jit.css",
 ]
 
-from sphinx.ext.coverage import CoverageBuilder
+
+def is_not_internal(modname):
+    split_name = modname.split(".")
+    for name in split_name:
+        if name[0] == "_":
+            return False
+    return True
 
 
 def coverage_post_process(app, exception):
@@ -526,13 +538,6 @@ def coverage_post_process(app, exception):
     # We go through all the torch submodules and make sure they are
     # properly tested
     missing = set()
-
-    def is_not_internal(modname):
-        split_name = modname.split(".")
-        for name in split_name:
-            if name[0] == "_":
-                return False
-        return True
 
     # The walk function does not return the top module
     if "torch" not in modules:
@@ -644,8 +649,6 @@ def setup(app):
 # in torch.html by overriding the visit_reference method of html writers.
 # Someday this can be removed, once the old links fade away
 
-from sphinx.writers import html, html5
-
 
 def replace(Klass):
     old_call = Klass.visit_reference
@@ -742,10 +745,6 @@ intersphinx_mapping = {
 # -- A patch that prevents Sphinx from cross-referencing ivar tags -------
 # See http://stackoverflow.com/a/41184353/3343043
 
-from docutils import nodes
-from sphinx.util.docfields import TypedField
-from sphinx import addnodes
-import sphinx.ext.doctest
 
 # Without this, doctest adds any example with a `>>>` as a test
 doctest_test_doctest_blocks = ""
@@ -763,7 +762,6 @@ def patched_make_field(self, types, domain, items, **kw):
     # `kw` catches `env=None` needed for newer sphinx while maintaining
     #  backwards compatibility when passed along further down!
 
-    # type: (List, unicode, Tuple) -> nodes.field
     def handle_item(fieldarg, content):
         par = nodes.paragraph()
         par += addnodes.literal_strong("", fieldarg)  # Patch: this line added
