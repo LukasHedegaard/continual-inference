@@ -5,15 +5,15 @@ Continual Inference
 .. toctree::
    :maxdepth: 1
    :name: start
-   :caption: Getting started
+   :caption: Continual Inference
 
-   starter/readme
+   generated/README.md
 
 
 .. toctree::
    :maxdepth: 2
    :name: pl_docs
-   :caption: Understanding Continual Inference
+   :caption: Papers on Continul Inference Networks
 
    Library Design <https://arxiv.org/pdf/2204.03418.pdf>
    Continual 3D CNNs <https://arxiv.org/pdf/2106.00050.pdf>
@@ -26,8 +26,7 @@ Continual Inference
    :name: api
    :caption: API Reference
 
-   autoapi/index
-
+   common/modules.rst
 
 .. toctree::
    :maxdepth: 2
@@ -42,10 +41,13 @@ Continual Inference
    :caption: Community
 
    starter/development
+   generated/CONTRIBUTING.md
    generated/CHANGELOG.md
 
+
 Indices and tables
-------------------
+==================
 
 * :ref:`genindex`
+* :ref:`modindex`
 * :ref:`search`

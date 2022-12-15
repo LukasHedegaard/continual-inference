@@ -14,6 +14,7 @@ Install extended dependencies:
 .. code-block:: bash
 
     pip install -e .[build,dev,docs]
+    npm install -g katex
 
 Run tests:
 
