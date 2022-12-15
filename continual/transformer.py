@@ -369,7 +369,7 @@ def TransformerEncoderLayerFactory(
 class TransformerEncoder(Sequential):
     """Continual Transformer Encoder as proposed by Hedegaard et al. in
     "Continual Transformers: Redundancy-Free Attention for Online Inference"
-    https://arxiv.org/abs/2201.06268TransformerEncoder
+    https://arxiv.org/abs/2201.06268
 
     This class deviates from the Pytorch implementation in the following ways:
     - `encoder_layer` parameter takes a factory functor, TransformerEncoderLayerFactory
