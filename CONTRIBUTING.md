@@ -19,10 +19,17 @@ make test
 
 
 ## Linting
-From the project root, execute the following:
 ```bash
 make lint
 ```
+
+## Building docs
+
+```bash
+cd docs
+make html
+```
+
 
 ## Issues
 We use GitHub issues to track public bugs. Please ensure your description is
