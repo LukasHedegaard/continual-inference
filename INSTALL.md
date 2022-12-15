@@ -26,5 +26,5 @@ pip install -e .[build,dev,docs]
 
 
 ## Requirements
-- Python 3.7 or 3.8 
+- Python 3.7, 3.8, or 3.9.
 - PyTorch 1.9.0 or higher.
