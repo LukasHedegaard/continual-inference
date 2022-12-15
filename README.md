@@ -8,7 +8,7 @@ __A Python library for Continual Inference Networks in PyTorch__
 [Paper](https://arxiv.org/abs/2204.03418) • 
 [Examples](#composition-examples) • 
 [Modules](#module-library) • 
-[Model Zoo](#model-zoo) • 
+[Model Zoo](#model-zoo-and-benchmarks) • 
 [Contribute](CONTRIBUTING.md) • 
 [License](LICENSE)
 
@@ -103,7 +103,7 @@ assert conv.receptive_field == 3
 assert conv.delay == 2
 ```
 
-See the [network composition](#-composition) and [model zoo](#model-zoo) sections for additional examples.
+See the [network composition](#-composition) and [model zoo](#model-zoo-and-benchmarks) sections for additional examples.
 
 ## Library principles
 
@@ -475,20 +475,46 @@ We support drop-in interoperability with with the following _torch.nn_ modules:
 </details>
 
 
-## Model Zoo
+## Model Zoo and Benchmarks
+
 ### Continual 3D CNNs
-- [_Co_ X3D](https://github.com/LukasHedegaard/co3d/tree/main/models/cox3d)
-- [_Co_ Slow](https://github.com/LukasHedegaard/co3d/tree/main/models/coslow)
-- [_Co_ I3D](https://github.com/LukasHedegaard/co3d/tree/main/models/coi3d)
+
+Benchmark results for 1-view testing on __Kinetics400__. For reference, _X3D-L_ scores 69.3% top-1 acc with 19.2 GFLOPs per prediction. 
+
+Arch     | Avg. pool size | Top 1 (%) | FLOPs (G) per step | FLOPs reduction | Params (M) | Code                                                                   | Weights
+-------- | -------------- | --------- | ------------------ | --------------- | ---------- | ---------------------------------------------------------------------- | ---- 
+CoX3D-L  | 64             | 71.6      | 1.25               | 15.3x           | 6.2        | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/cox3d)  | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D\_L.pyth)
+CoX3D-M  | 64             | 71.0      | 0.33               | 15.1x           | 3.8        | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/cox3d)  | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D\_M.pyth)
+CoX3D-S  | 64             | 64.7      | 0.17               | 12.1x           | 3.8        | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/cox3d)  | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D\_S.pyth)
+CoSlow   | 64             | 73.1      | 6.90               |  8.0x           | 32.5       | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/coslow) | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/SLOW\_8x8\_R50.pyth)
+CoI3D    | 64             | 64.0      | 5.68               |  5.0x           | 28.0       | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/coi3d)  | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/I3D\_8x8\_R50.pyth)
+
+FLOPs reduction is noted relative to non-continual inference.
+Note that [on-hardware inference](https://arxiv.org/abs/2106.00050) doesn't reach the same speedups as "FLOPs reductions" might suggest due to overhead of state reads and writes. This overhead is less important for large batch sizes. This applies to all models in the model zoo.
 
 ### Continual ST-GCNs
-- [_Co_ STGCN](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cost_gcn_mod/cost_gcn_mod.py)
-- [_Co_ AGCN](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/coa_gcn_mod/coa_gcn_mod.py)
-- [_Co_ STr](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cos_tr_mod/cos_tr_mod.py)
+
+Benchmark results for on __NTU RGB+D 60__ for the joint modality. For reference, _ST-GCN_ achieves 86% X-Sub and 93.4 X-View accuracy with 16.73 GFLOPs per prediction. 
+
+Arch      | Receptive field | X-Sub Acc (%) | X-View Acc (%) | FLOPs (G) per step | FLOPs reduction | Params (M) | Code                                                                  
+--------  | --------------- | ------------- | -------------- | ------------------ | --------------- | ---------- | -----
+CoST-GCN  | 300             | 86.3          | 93.8           | 0.16               | 107.7x          | 3.1        | [link](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cost_gcn_mod/cost_gcn_mod.py)
+CoA-GCN   | 300             | 84.1          | 92.6           | 0.17               | 108.7x          | 3.5        | [link](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/coa_gcn_mod/coa_gcn_mod.py)
+CoST-GCN  | 300             | 86.3          | 92.4           | 0.15               | 107.6x          | 3.1        | [link](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cos_tr_mod/cos_tr_mod.py)
+
+[Here](https://drive.google.com/drive/u/4/folders/1m6aV5Zv8tAytvxF6qY4m9nyqlkKv0y72), you can download pre-trained,model weights for the above architectures on NTU RGB+D 60, NTU RGB+D 120, and Kinetics-400 on joint and bone modalities.
+
 
 ### Continual Transformers
-- [_Continual_ One-block Transformer Encoder](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L8)
-- [_Continual_ Two-block Transformer Encoder](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L59)
+
+Benchmark results for on __THUMOS14__ on top of features extracted using a TSN-ResNet50 backbone pre-trained on Kinetics400. For reference, _OadTR_ achieves 64.4 % mAP with 2.5 GFLOPs per prediction. 
+
+Arch        | Receptive field | mAP (%) | FLOPs (G) per step |  Params (M) | Code                                                                  
+----------  | --------------- | ------- | ------------------ |  ---------- | -----
+CoOadTR-b1  | 64              | 64.2    | 0.41               |  15.9       | [link](https://github.com/LukasHedegaard/CoOadTR)
+CoOadTR-b2  | 64              | 64.4    | 0.01               |   9.6       | [link](https://github.com/LukasHedegaard/CoOadTR)
+
+The library features complete implementations of the [one](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L8)- and [two](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L59)-block continual transformer encoders as well.
 
 
 ## Compatibility
