@@ -22,6 +22,7 @@ pip install -e .
 
 # For developing and testing
 pip install -e .[build,dev,docs]
+npm install -g katex
 ```
 
 
