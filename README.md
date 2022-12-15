@@ -315,7 +315,7 @@ For the `forward_step` function, this comes to show by some `None`-valued output
 <div align="center">
   <img src="figures/continual/continual-stride.png" alt="1 minute overview" width="300"/>
   </br>
-  A mixed example of delay and outputs under padding and stride. Here, we illustrate the step-wise operation of two co module layers, l1 with with receptive_field = 3, padding = 2, and stride = 2 and l2 with receptive_field = 3, no padding and stride = 1. ◙ denotes a padded zero, ■ is a non-zero step-feature, and ☒ is an empty output.
+  A mixed example of delay and outputs under padding and stride. Here, we illustrate the step-wise operation of two co module layers, l1 with with receptive_field = 3, padding = 2, and stride = 2 and l2 with receptive_field = 3, no padding and stride = 1. ⧇ denotes a padded zero, ■ is a non-zero step-feature, and ☒ is an empty output.
 </div>
 
 For more information, please see the [library paper](https://arxiv.org/abs/2204.03418).
