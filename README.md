@@ -165,16 +165,8 @@ net(timestep)  # Invokes net.forward_step(timestep)
 with co.call_mode("forward_steps"):
     net(timeseries)  # Invokes net.forward_steps(timeseries)
 
-net(timestep)  # Invokes net.forward_step(timestep)
+net(timestep)  # Invokes net.forward_step(timestep) again
 ```
-
-### Input shapes
-We enforce a unified ordering of input dimensions for all library modules, namely:
-
-    (batch, channel, time, optional_dim2, optional_dim3)
-
-### Outputs
-
 
 ### Composition
 
@@ -308,6 +300,25 @@ inception_module = co.BroadcastReduce(
 )
 ```
 </details>
+
+
+### Input shapes
+We enforce a unified ordering of input dimensions for all library modules, namely:
+
+    (batch, channel, time, optional_dim2, optional_dim3)
+
+### Outputs
+The outputs produces by `forward_step` and `forward_steps` are identical to those of `forward`, provided the same data was input beforehand and state update was enabled. We know that input and output shapes aren't necessarily the same when using `forward` in the PyTorch library, and  generally depends on padding, stride and receptive field of a module. 
+
+For the `forward_step` function, this comes to show by some `None`-valued outputs. Specifically, modules with a _delay_ (i.e. with receptive fields larger than the padding + 1) will produce `None` until the input count exceeds the delay. Moreover, _stride_ > 1 will produce `Tensor` outputs every _stride_ steps and `None` the remaining steps. A visual example is shown below:
+
+<div align="center">
+  <img src="figures/continual/continual-stride.png" alt="1 minute overview" width="300"/>
+  </br>
+  A mixed example of delay and outputs under padding and stride. Here, we illustrate the step-wise operation of two co module layers, l1 with with receptive_field = 3, padding = 2, and stride = 2 and l2 with receptive_field = 3, no padding and stride = 1. ◙ denotes a padded zero, ■ is a non-zero step-feature, and ☒ is an empty output.
+</div>
+
+For more information, please see the [library paper](https://arxiv.org/abs/2204.03418).
 
 
 ## Module library
