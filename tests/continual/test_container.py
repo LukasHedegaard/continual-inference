@@ -83,21 +83,21 @@ def test_sequential():
         long_example_clip[:, :, :-1], update_state=False
     )
     co_output_firsts = coseq.forward_steps(long_example_clip[:, :, :-1])
-    assert torch.allclose(co_output_firsts, co_output_firsts_0)
-    assert torch.allclose(co_output_firsts, output[:, :, :-1])
+    assert torch.allclose(co_output_firsts, co_output_firsts_0, atol=1e-7)
+    assert torch.allclose(co_output_firsts, output[:, :, :-1], atol=1e-7)
 
     # forward_step
     co_output_last_0 = coseq.forward_step(
         long_example_clip[:, :, -1], update_state=False
     )
     co_output_last = coseq.forward_step(long_example_clip[:, :, -1])
-    assert torch.allclose(co_output_last, co_output_last_0)
-    assert torch.allclose(co_output_last, output[:, :, -1])
+    assert torch.allclose(co_output_last, co_output_last_0, atol=1e-7)
+    assert torch.allclose(co_output_last, output[:, :, -1], atol=1e-7)
 
     # Clean state can be used to restart seq computation
     coseq.clean_state()
     co_output_firsts = coseq.forward_steps(long_example_clip[:, :, :-1])
-    assert torch.allclose(co_output_firsts, output[:, :, :-1])
+    assert torch.allclose(co_output_firsts, output[:, :, :-1], atol=1e-7)
 
 
 def test_sequential_receptive_field():
