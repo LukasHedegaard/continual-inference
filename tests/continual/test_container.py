@@ -546,6 +546,9 @@ def test_reduce():
         mod.forward_step([x[:, :, 0], x[:, :, 0]]), torch.tensor([[2.0]])
     )
 
+    mod2 = co.Reduce("max")
+    assert torch.equal(mod2.forward([torch.tensor((1,)), torch.tensor((2,))]), torch.tensor((2,)))
+
 
 def test_parallel_sequential():
     x = torch.arange(7, dtype=torch.float).reshape((1, 1, 7))

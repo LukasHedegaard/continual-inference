@@ -47,6 +47,7 @@ class Reduction(Enum):
     SUM = "sum"
     CONCAT = "concat"
     MUL = "mul"
+    MAX = "max"
 
 
 ReductionFunc = Callable[[Sequence[Tensor]], Tensor]
@@ -87,6 +88,11 @@ def reduce_mul(inputs: Sequence[Tensor]) -> Tensor:
     """
     assert len(inputs) >= 2
     return reduce(torch.Tensor.mul, inputs[1:], inputs[0])
+
+
+def reduce_max(inputs: Sequence[Tensor]) -> Tensor:
+    assert len(inputs) >= 2
+    return reduce(torch.max, inputs[1:], inputs[0])
 
 
 def nonempty(fn: ReductionFunc) -> ReductionFunc:
@@ -360,7 +366,73 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
 
 
 class ParallelDispatch(CoModule, nn.Module):
-    """Parallel dispatch of many input streams to many output streams"""
+    """Reorder, copy, and group streams from parallel streams.
+
+    Reorder example::
+
+        net = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(co.Add(1), co.Unity()),
+            co.ParallelDispatch([1,0]),  # Reorder stream 0 and 1
+            co.Parallel(co.Unity(), co.Add(2)),
+            co.Reduce("max"),
+        )
+
+        assert torch.equal(net(torch.tensor([0])), torch.tensor([3]))
+
+    Depiction of the reorder example::
+
+               | -> co.Add(1)  \\ / -> co.Unity() |
+        [0] -> |                X                | -> max -> [3]
+               | -> co.Unity() / \\ -> co.Add(2)  |
+
+    Copy example::
+
+        net = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(co.Add(1), co.Unity()),
+            co.ParallelDispatch([0, 0, 1]),  # Copy stream 0
+            co.Parallel(co.Unity(), co.Add(2), co.Unity()),
+            co.Reduce("max"),
+        )
+
+        assert torch.equal(net(torch.tensor([0])), torch.tensor([3]))
+
+    Depiction of the copy example::
+
+               | -> co.Add(1)  -> | -> co.Unity() -> |
+        [0] -> |                  | -> co.Add(2)  -> | -> max -> [3]
+               | -> co.Unity() ------> co.Add(1)  -> |
+
+    Group example::
+
+        net = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(co.Add(2), co.Unity()),
+            co.ParallelDispatch([[0, 0], 1]),  # Copy and group stream 0
+            co.Parallel(co.Reduce("sum"), co.Unity()),
+            co.Reduce("max"),
+        )
+
+        assert torch.equal(net(torch.tensor([0])), torch.tensor([4]))
+
+    Depiction of the group example::
+
+                                 | -> |
+               | -> co.Add(2) -> |    | ->    sum     -> |
+        [0] -> |                 | -> |                  | -> max -> [4]
+               | -> co.Unity() ----------> co.Unity() -> |
+
+    Args:
+        dispatch_mapping (Sequence[Union[int, Sequence[int]]]):
+            input-to-output mapping, where the integers signify the input stream ordering
+            and the positions denote corresponding output ordering.
+            Examples::
+                [1,0] to shuffle order of streams.
+                [0,1,1] to copy stream 1 onto a new stream.
+                [[0,1],2] to group stream 0 and 1 while keeping stream 2 separate.
+
+    """
 
     _state_shape = 0
     _dynamic_state_inds = []
@@ -369,18 +441,6 @@ class ParallelDispatch(CoModule, nn.Module):
         self,
         dispatch_mapping: Sequence[Union[int, Sequence[int]]],
     ):
-        """Initialise ParallelDispatch
-
-        Args:
-            dispatch_mapping (Sequence[Union[int, Sequence[int]]]):
-                input-to-output mapping, where the integers signify the input stream ordering
-                and the positions denote corresponding output ordering.
-                Examples:
-                    [1,0] to shufle order of streams.
-                    [0,1,1] to copy stream 1 onto a new stream.
-                    [[0,1],2] to collect stream 0 and 1 while keeping stream 2 separate.
-
-        """
         nn.Module.__init__(self)
 
         def is_int_or_valid_list(x):
@@ -439,6 +499,7 @@ class Reduce(CoModule, nn.Module):
                 Reduction.SUM: reduce_sum,
                 Reduction.CONCAT: reduce_concat,
                 Reduction.MUL: reduce_mul,
+                Reduction.MAX: reduce_max,
             }[Reduction(reduce)]
         )
 
@@ -712,6 +773,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
                 Reduction.SUM: reduce_sum,
                 Reduction.CONCAT: reduce_concat,
                 Reduction.MUL: reduce_mul,
+                Reduction.MAX: reduce_max,
             }[Reduction(reduce)]
         )
 
