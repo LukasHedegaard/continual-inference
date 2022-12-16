@@ -136,14 +136,41 @@ def co_add_module(self, name: str, module: Optional["nn.Module"]) -> None:
 
 
 class Broadcast(CoModule, nn.Module):
-    """Broadcast a single input to multiple streams"""
+    """Broadcast one input stream to multiple output streams.
+
+    This is needed for handling parallel streams in subsequent modules.
+    For instance, here is how it is used to create a residual connection::
+
+        residual = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(
+                co.Conv3d(32, 32, kernel_size=3, padding=1),
+                co.Delay(2),
+            ),
+            co.Reduce("sum"),
+        )
+
+    Since the ``Broadcast`` -> ``Parallel`` -> ``Reduce`` sequence is so common,
+    identical behavior can be achieved with ``BroadcastReduce`` ::
+
+        residual = co.BroadcastReduce(
+            co.Conv3d(32, 32, kernel_size=3, padding=1),
+            co.Delay(2),
+            reduce="sum"
+        )
+
+    Even shorter, the library features a residual connection, which automatically handles delays::
+
+        residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
+
+    """
 
     _state_shape = 0
     _dynamic_state_inds = []
 
     def __init__(
         self,
-        num_streams: int = None,
+        num_streams: int,
     ):
         nn.Module.__init__(self)
         self.num_streams = num_streams
@@ -417,11 +444,6 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
     single module, such that performing a transformation on the
     ``Sequential`` applies to each of the modules it stores (which are
     each a registered submodule of the ``Sequential``).
-
-    What's the difference between a ``Sequential`` and a
-    :class:`torch.nn.ModuleList`? A ``ModuleList`` is exactly what it
-    sounds like--a list for storing ``Module`` s! On the other hand,
-    the layers in a ``Sequential`` are connected in a cascading way.
 
     Example::
 
