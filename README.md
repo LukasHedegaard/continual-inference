@@ -350,6 +350,9 @@ _Continual Inference_ features a rich collection of modules for defining Continu
 <summary><b>Linear</b></summary>
 
   - [`co.Linear`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Linear.html)
+  - [`co.Identity`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Identity.html): Maps input to output without modification.
+  - [`co.Add`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Add.html): Adds a constant value.
+  - [`co.Multiply`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Multiply.html): Multiplies with a constant factor.
 
 </details>
 
@@ -398,9 +401,6 @@ Modules for composing and converting networks. Both _composition_ and _utility_ 
   - [`co.Delay`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Delay.html): Pure delay module (e.g. needed in residuals).
   - [`co.Reshape`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Reshape.html): Reshape non-temporal dimensions.
   - [`co.Lambda`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Lambda.html): Lambda module which wraps any function.
-  - [`co.Add`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Add.html): Adds a constant value.
-  - [`co.Multiply`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Multiply.html): Multiplies with a constant factor.
-  - [`co.Unity`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Unity.html): Maps input to output without modification.
   - [`co.Constant`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Constant.html): Maps input to and output with constant value.
   - [`co.Zero`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Zero.html): Maps input to output of zeros.
   - [`co.One`](https://continual-inference.readthedocs.io/en/latest/generated/continual.One.html): Maps input to output of ones.

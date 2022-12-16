@@ -1,8 +1,11 @@
+These are the basic building blocks for Continual Inference Networks.
+
+
 .. role:: hidden
     :class: hidden-section
 
 
-.. contents:: Continual
+.. contents::
     :depth: 2
     :local:
     :backlinks: top
@@ -98,6 +101,9 @@ Linear Layers
     :template: classtemplate.rst
 
     Linear
+    Identity
+    Add
+    Multiply
 
 
 Utilities
@@ -111,9 +117,6 @@ Utilities
     Lambda
     Delay
     Reshape
-    Add
-    Multiply
-    Unity
     Constant
     Zero
     One
@@ -128,3 +131,4 @@ Converters
 
     continual
     forward_stepping
+    call_mode
