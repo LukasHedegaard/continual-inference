@@ -170,7 +170,7 @@ class Broadcast(CoModule, nn.Module):
         residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
 
     Args:
-        num_streams: Number of streams to broadcast to.
+        num_streams (int): Number of streams to broadcast to.
     """
 
     _state_shape = 0
@@ -727,17 +727,44 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
 
 class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     """Broadcast an input to parallel modules and reduce.
-    This module is a shorthand for
+    This module is a shorthand for::
 
-    >>> co.Sequential(co.Broadcast(), co.Parallel(*args), co.Reduce(reduce))
+        co.Sequential(co.Broadcast(), co.Parallel(*args), co.Reduce(reduce))
+
+    For instance, it can be used to succinctly create a continual 3D Inception Module::
+
+        def norm_relu(module, channels):
+            return co.Sequential(
+                module,
+                nn.BatchNorm3d(channels),
+                nn.ReLU(),
+            )
+
+        inception_module = co.BroadcastReduce(
+            co.Conv3d(192, 64, kernel_size=1),
+            co.Sequential(
+                norm_relu(co.Conv3d(192, 96, kernel_size=1), 96),
+                norm_relu(co.Conv3d(96, 128, kernel_size=3, padding=1), 128),
+            ),
+            co.Sequential(
+                norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
+                norm_relu(co.Conv3d(16, 32, kernel_size=5, padding=2), 32),
+            ),
+            co.Sequential(
+                co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
+                norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
+            ),
+            reduce="concat",
+        )
 
     Args:
-        *args: Either vargs of modules or an OrderedDict.
+        arg (OrderedDict[str, CoModule]): An OrderedDict or modules to be applied in parallel.
+        *args (CoModule): Modules to be applied in parallel.
         reduce (ReductionFuncOrEnum, optional):
             Function used to reduce the parallel outputs.
-            Sum or concatenation can be specified by passing Reduction.SUM or Reduction.CONCAT respectively.
+            Sum or concatenation can be specified by passing "sum" or "concat" respectively.
             Custom reduce functions can also be passed.
-            Defaults to Reduction.SUM.
+            Defaults to "sum".
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
@@ -747,7 +774,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def __init__(
         self,
         *args: CoModule,
-        reduce: ReductionFuncOrEnum = Reduction.SUM,
+        reduce: ReductionFuncOrEnum = "sum",
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -756,7 +783,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def __init__(
         self,
         arg: "OrderedDict[str, CoModule]",
-        reduce: ReductionFuncOrEnum = Reduction.SUM,
+        reduce: ReductionFuncOrEnum = "sum",
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -764,7 +791,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def __init__(
         self,
         *args,
-        reduce: ReductionFuncOrEnum = Reduction.SUM,
+        reduce: ReductionFuncOrEnum = "sum",
         auto_delay=True,
     ):
         nn.Module.__init__(self)
@@ -946,7 +973,24 @@ def Residual(
 
 
 class Conditional(FlattenableStateDict, CoModule, nn.Module):
-    """Module wrapper for conditional invocations at runtime"""
+    """Module wrapper for conditional invocations at runtime.
+
+    For instance, it can be used to apply a softmax if the module isn't training::
+
+        net = co.Sequential()
+
+        def not_training(module, x):
+            return not net.training
+
+        net.append(co.Conditional(not_training, torch.nn.Softmax(dim=1)))
+
+    Args:
+        predicate (Callable[[CoModule, Tensor], bool]):
+            Function used to evaluate whether on module or the other should be invoked.
+        on_true: CoModule: Module to invoke on True.
+        on_false: Optional[CoModule]: Module to invoke on False. If no module is passed, execution is skipped.
+
+    """
 
     def __init__(
         self,
