@@ -129,8 +129,12 @@ def _multiply(x: Tensor, factor: Union[float, int, Tensor]):
     return x * factor
 
 
-def Multiply(factor) -> Lambda:
-    """Create Lambda with multiplication function"""
+def Multiply(factor: float) -> Lambda:
+    r"""Applies an scaling transformation to the incoming data: :math:`y = ax`.
+
+    Args:
+        factor (float): Number to multiply with.
+    """
     fn = partial(_multiply, factor=factor)
     return Lambda(fn, takes_time=True)
 
@@ -139,7 +143,12 @@ def _add(x: Tensor, constant: Union[float, int, Tensor]):
     return x + constant
 
 
-def Add(constant) -> Lambda:
+def Add(constant: float) -> Lambda:
+    r"""Applies an additive translation to the incoming data: :math:`y = x + a`.
+
+    Args:
+        constant (float): Number to add.
+    """
     """Create Lambda with addition function"""
     fn = partial(_add, constant=constant)
     return Lambda(fn, takes_time=True)
