@@ -456,24 +456,24 @@ def test_trans_enc_b1(tmp_path):
         assert torch.allclose(torch.tensor(os), ts)
     assert torch.allclose(torch.tensor(onnx_output), target)
 
-    # Check timing
-    num_runs = 100
+    # # Check timing
+    # num_runs = 100
 
-    # Regular
-    net.eval()
-    start = timer()
-    with torch.no_grad():
-        for _ in range(num_runs):
-            net._forward_step(last, state0)
-    reg_time = timer() - start
+    # # Regular
+    # net.eval()
+    # start = timer()
+    # with torch.no_grad():
+    #     for _ in range(num_runs):
+    #         net._forward_step(last, state0)
+    # reg_time = timer() - start
 
-    # ONNX
-    start = timer()
-    for _ in range(num_runs):
-        ort_session.run(None, inputs)
-    onnx_time = timer() - start
+    # # ONNX
+    # start = timer()
+    # for _ in range(num_runs):
+    #     ort_session.run(None, inputs)
+    # onnx_time = timer() - start
 
-    assert reg_time > onnx_time
+    # assert reg_time > onnx_time
 
 
 def test_trans_enc_b2(tmp_path):
