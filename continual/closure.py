@@ -11,7 +11,7 @@ __all__ = [
     "Lambda",
     "Multiply",
     "Add",
-    "Unity",
+    "Identity",
     "Constant",
     "Zero",
     "One",
@@ -149,8 +149,26 @@ def _unity(x: Tensor):
     return x
 
 
-def Unity() -> Lambda:
-    """Create Lambda with addition function"""
+def Identity(*args, **kwargs) -> Lambda:
+    r"""A placeholder identity operator that is argument-insensitive.
+
+    Args:
+        args: any argument (unused)
+        kwargs: any keyword argument (unused)
+
+    Shape:
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
+        - Output: :math:`(*)`, same shape as the input.
+
+    Examples::
+
+        >>> m = co.Identity(54, unused_argument1=0.1, unused_argument2=False)
+        >>> input = torch.randn(128, 20)
+        >>> output = m(input)
+        >>> print(output.size())
+        torch.Size([128, 20])
+
+    """
     return Lambda(_unity, takes_time=True)
 
 

@@ -8,7 +8,7 @@ from torch import Tensor, nn
 
 from continual.delay import State as DelayState
 
-from .closure import Lambda, Unity
+from .closure import Identity, Lambda
 from .container import BroadcastReduce, Residual, Sequential
 from .delay import Delay, PaddingMode
 from .linear import Linear
@@ -218,7 +218,9 @@ def SingleOutputTransformerEncoderLayer(
                 [
                     (
                         "residual",
-                        SelectOrDelay(mha.delay) if single_output_forward else Unity(),
+                        SelectOrDelay(mha.delay)
+                        if single_output_forward
+                        else Identity(),
                     ),
                     (
                         "self_attn",

@@ -14,6 +14,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - reduce_max to `Reduce`.
 
 ### Changed
+- Rename `Unity` to `Identity` to follow `torch.nn`.
 - Major overhaul of README, improving descriptions and adding benchmark.
 - Major overhaul of docs, improving descriptions and adding benchmark.
 

@@ -374,9 +374,9 @@ class ParallelDispatch(CoModule, nn.Module):
 
         net = co.Sequential(
             co.Broadcast(2),
-            co.Parallel(co.Add(1), co.Unity()),
+            co.Parallel(co.Add(1), co.Identity()),
             co.ParallelDispatch([1,0]),  # Reorder stream 0 and 1
-            co.Parallel(co.Unity(), co.Add(2)),
+            co.Parallel(co.Identity(), co.Add(2)),
             co.Reduce("max"),
         )
 
@@ -384,17 +384,17 @@ class ParallelDispatch(CoModule, nn.Module):
 
     Depiction of the reorder example::
 
-               | -> co.Add(1)  \\ / -> co.Unity() |
+               | -> co.Add(1)  \\ / -> co.Identity() |
         [0] -> |                X                | -> max -> [3]
-               | -> co.Unity() / \\ -> co.Add(2)  |
+               | -> co.Identity() / \\ -> co.Add(2)  |
 
     Copy example::
 
         net = co.Sequential(
             co.Broadcast(2),
-            co.Parallel(co.Add(1), co.Unity()),
+            co.Parallel(co.Add(1), co.Identity()),
             co.ParallelDispatch([0, 0, 1]),  # Copy stream 0
-            co.Parallel(co.Unity(), co.Add(2), co.Unity()),
+            co.Parallel(co.Identity(), co.Add(2), co.Identity()),
             co.Reduce("max"),
         )
 
@@ -402,17 +402,17 @@ class ParallelDispatch(CoModule, nn.Module):
 
     Depiction of the copy example::
 
-               | -> co.Add(1)  -> | -> co.Unity() -> |
+               | -> co.Add(1)  -> | -> co.Identity() -> |
         [0] -> |                  | -> co.Add(2)  -> | -> max -> [3]
-               | -> co.Unity() ------> co.Add(1)  -> |
+               | -> co.Identity() ------> co.Add(1)  -> |
 
     Group example::
 
         net = co.Sequential(
             co.Broadcast(2),
-            co.Parallel(co.Add(2), co.Unity()),
+            co.Parallel(co.Add(2), co.Identity()),
             co.ParallelDispatch([[0, 0], 1]),  # Copy and group stream 0
-            co.Parallel(co.Reduce("sum"), co.Unity()),
+            co.Parallel(co.Reduce("sum"), co.Identity()),
             co.Reduce("max"),
         )
 
@@ -423,7 +423,7 @@ class ParallelDispatch(CoModule, nn.Module):
                                  | -> |
                | -> co.Add(2) -> |    | ->    sum     -> |
         [0] -> |                 | -> |                  | -> max -> [4]
-               | -> co.Unity() ----------> co.Unity() -> |
+               | -> co.Identity() ----------> co.Identity() -> |
 
     Args:
         dispatch_mapping (Sequence[Union[int, Sequence[int]]]):
