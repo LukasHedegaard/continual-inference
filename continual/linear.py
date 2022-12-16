@@ -8,6 +8,44 @@ __all__ = ["Linear"]
 
 
 class Linear(CoModule, nn.Linear):
+    r"""Applies a linear transformation to a dimension of the incoming data: :math:`y = xA^T + b`.
+
+    This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
+
+    Args:
+        in_features: size of each input sample
+        out_features: size of each output sample
+        bias: If set to ``False``, the layer will not learn an additive bias.
+            Default: ``True``
+        channel_dim: Channel dimension index over which to perform linear projection. Default: -1.
+
+    Shape:
+        - Input: :math:`(B, C_{in}, T, *)` where :math:`*` means any number of
+          additional dimensions and :math:`C_{in} = \text{in\_features}` if `channel_dim = 1`.
+          If channel_dim = -1, the order of input dimensions is :math:`(*, C_{in})`.
+        - Output: :math:`(B, C_{out}, T, *)` where all but the last dimension are the
+          same shape as the input and :math:`C_{out} = \text{out\_features}` if `channel_dim = 1`.
+          If channel_dim = -1, the order of input dimensions is :math:`(*, C_{in})`.
+
+    Attributes:
+        weight: the learnable weights of the module of shape
+            :math:`(\text{out\_features}, \text{in\_features})`. The values are
+            initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`, where
+            :math:`k = \frac{1}{\text{in\_features}}`
+        bias:   the learnable bias of the module of shape :math:`(\text{out\_features})`.
+                If :attr:`bias` is ``True``, the values are initialized from
+                :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                :math:`k = \frac{1}{\text{in\_features}}`
+
+    Examples::
+
+        >>> m = co.Linear(20, 30)
+        >>> input = torch.randn(128, 20)
+        >>> output = m(input)
+        >>> print(output.size())
+        torch.Size([128, 30])
+    """
+
     _state_shape = 0
     _dynamic_state_inds = []
 
@@ -20,41 +58,6 @@ class Linear(CoModule, nn.Linear):
         dtype=None,
         channel_dim=-1,
     ) -> None:
-        r"""Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
-
-        This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
-        Args:
-            in_features: size of each input sample
-            out_features: size of each output sample
-            bias: If set to ``False``, the layer will not learn an additive bias.
-                Default: ``True``
-            channel_dim: Channel dimension index. Default: -1.
-
-        Shape:
-            - Input: :math:`(N, *, C_{in})` where :math:`*` means any number of
-            additional dimensions and :math:`C_{in} = \text{infₑₐₜᵤᵣₑₛ}` if `channel_dim = -1`.
-            - Output: :math:`(N, *, C_{out})` where all but the last dimension
-            are the same shape as the input and :math:`C_{out} = \text{outfₑₐₜᵤᵣₑₛ}` if `channel_dim = -1`.
-
-        Attributes:
-            weight: the learnable weights of the module of shape
-                :math:`(\text{out\_features}, \text{in\_features})`. The values are
-                initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`, where
-                :math:`k = \frac{1}{\text{in\_features}}`
-            bias:   the learnable bias of the module of shape :math:`(\text{out\_features})`.
-                    If :attr:`bias` is ``True``, the values are initialized from
-                    :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
-                    :math:`k = \frac{1}{\text{in\_features}}`
-
-        Examples::
-
-            >>> m = nn.Linear(20, 30)
-            >>> input = torch.randn(128, 20)
-            >>> output = m(input)
-            >>> print(output.size())
-            torch.Size([128, 30])
-        """
         nn.Linear.__init__(self, in_features, out_features, bias, device, dtype)
         self.channel_dim = channel_dim
 
