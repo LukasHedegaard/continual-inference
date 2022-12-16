@@ -46,7 +46,7 @@ class Delay(CoModule, torch.nn.Module):
         assert auto_shrink in {True, False, "centered", "lagging"}
         self.auto_shrink = auto_shrink
         assert temporal_fill in {"zeros", "replicate"}
-        self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
+        self._make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
             temporal_fill
         ]
 
@@ -58,7 +58,7 @@ class Delay(CoModule, torch.nn.Module):
         self,
         first_output: Tensor,
     ) -> State:
-        padding = self.make_padding(first_output)
+        padding = self._make_padding(first_output)
         state_buffer = torch.stack([padding for _ in range(self.delay)], dim=0)
         state_index = torch.tensor(-self.delay)
         return state_buffer, state_index

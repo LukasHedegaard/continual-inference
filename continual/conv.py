@@ -101,7 +101,7 @@ class _ConvCoNd(CoModule, _ConvNd):
             device=device,
             dtype=dtype,
         )
-        self.make_padding = {
+        self._make_padding = {
             PaddingMode.ZEROS.value: torch.zeros_like,
             PaddingMode.REPLICATE.value: torch.clone,
         }[self.t_padding_mode]
@@ -144,7 +144,7 @@ class _ConvCoNd(CoModule, _ConvNd):
         self,
         first_output: Tensor,
     ) -> State:
-        padding = self.make_padding(first_output)
+        padding = self._make_padding(first_output)
         repeat_shape = [self.kernel_size[0] - 1]
         repeat_shape.extend((1,) * len(self.input_shape_desciption))
         state_buffer = padding.repeat(repeat_shape)

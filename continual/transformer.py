@@ -74,7 +74,7 @@ class RetroactiveUnity(Delay):
         self,
         first_output: Tensor,
     ) -> DelayState:
-        padding = self.make_padding(first_output)
+        padding = self._make_padding(first_output)
         state_buffer = torch.stack([padding for _ in range(self.delay + 1)], dim=0)
         state_index = torch.tensor(-self.delay)
         return state_buffer, state_index
