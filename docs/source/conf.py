@@ -777,7 +777,7 @@ def patched_make_field(self, types, domain, items, **kw):
                 typename = fieldtype[0].astext()
                 builtin_types = ["int", "long", "float", "bool", "type"]
                 for builtin_type in builtin_types:
-                    pattern = fr"(?<![\w.]){builtin_type}(?![\w.])"
+                    pattern = fr"(?<![\w.]){builtin_type}(?![\w.])"  # noqa: BLK100
                     repl = f"python:{builtin_type}"
                     typename = re.sub(pattern, repl, typename)
                 par.extend(
