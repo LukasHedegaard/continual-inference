@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html), with the exception that v0.X updates include backwards-incompatible API changes.
 From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
+## Unpublished
+
+### Added
+- `append` function to `co.Sequential`.
+- Production-ready docstrings for public functions.
+- reduce_max to `Reduce`.
+
+### Changed
+- Major overhaul of README, improving descriptions and adding benchmark.
+- Major overhaul of docs, improving descriptions and adding benchmark.
+
 
 ## [1.0.4] - 2022-12-07
 

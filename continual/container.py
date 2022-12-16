@@ -51,7 +51,7 @@ class Reduction(Enum):
 
 
 ReductionFunc = Callable[[Sequence[Tensor]], Tensor]
-ReductionFuncOrEnum = Union[Reduction, ReductionFunc]
+ReductionFuncOrEnum = Union[Reduction, ReductionFunc, str]
 
 
 def apply_forward(module: CoModule, input: Tensor):
@@ -482,14 +482,48 @@ class ParallelDispatch(CoModule, nn.Module):
 
 
 class Reduce(CoModule, nn.Module):
-    """Reduce multiple input streams to a single output"""
+    """Reduce multiple input streams to a single using the selected function
+
+    For instance, here is how it is used to sum streams in a residual connection::
+
+        residual = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(
+                co.Conv3d(32, 32, kernel_size=3, padding=1),
+                co.Delay(2),
+            ),
+            co.Reduce("sum"),
+        )
+
+    A user-defined can be passed as well::
+
+        from functools import reduce
+
+        def my_sum(inputs):
+            return reduce(torch.Tensor.add, inputs[1:], inputs[0])
+
+        residual = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(
+                co.Conv3d(32, 32, kernel_size=3, padding=1),
+                co.Delay(2),
+            ),
+            co.Reduce(my_sum),
+        )
+
+    Args:
+        reduce (Union[str, Callable[[Sequence[Tensor]], Tensor]]):
+            Reduce function. Either one of ["sum", "channel", "mul", "max"] or
+            user-defined function mapping a sequence of tensors to a single one.
+
+    """
 
     _state_shape = 0
     _dynamic_state_inds = []
 
     def __init__(
         self,
-        reduce: ReductionFuncOrEnum = Reduction.SUM,
+        reduce: ReductionFuncOrEnum = "sum",
     ):
         nn.Module.__init__(self)
         self.reduce = nonempty(
@@ -864,7 +898,16 @@ def Residual(
     reduce: Reduction = "sum",
     residual_shrink: Union[bool, str] = False,
 ) -> BroadcastReduce:
-    """[summary]
+    """Residual connection wrapper for input.
+
+    This module produces a short form of BroadCast reduce with one delay stream::
+
+        conv = co.Conv3d(32, 32, kernel_size=3, padding=1)
+        res1 = co.BroadcastReduce(conv, co.Delay(2), reduce="sum")
+        res2 = co.Residual(conv)
+
+        x = torch.randn(1, 32, 5, 5, 5)
+        assert torch.equal(res1(x), res2(x))
 
     Args:
         module (CoModule): module to which a residual should be added.
