@@ -170,7 +170,9 @@ class Broadcast(CoModule, nn.Module):
         residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
 
     Args:
-        num_streams (int): Number of streams to broadcast to.
+        num_streams (int):
+            Number of streams to broadcast to. If none are given, a Sequential
+            module may infer it automatically.
     """
 
     _state_shape = 0
