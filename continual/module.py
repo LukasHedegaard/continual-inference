@@ -96,6 +96,13 @@ class CoModule(ABC):
     """Base class for continual modules.
     Deriving from this class provides base-functionality and enforces
     the implementation of necessary methods.
+
+    Attributes:
+        receptive_field (int): Temporal receptive field of the module.
+        delay (int): Number of step inputs to observe before the modules produces valid outputs.
+        stride (Tuple[int,...]): (Spatio)-temporal stride.
+        padding (Tuple[int,...]): (Spatio)-temporal padding.
+
     """
 
     receptive_field: int = 1
@@ -400,3 +407,19 @@ class CoModule(ABC):
         return result
 
     __call__ = _call_impl
+
+    @staticmethod
+    def build_from(
+        module: torch.nn.Module,
+        *args,
+        **kwargs,
+    ) -> "CoModule":
+        """Copy parameters and weights from a non-continual module and
+        build the corresponding continual version.
+
+        Args:
+            module (torch.nn.Module): Module from which to copy variables and weights
+
+        Returns:
+            CoModule: Continual Module with the parameters and weights of the passed module.
+        """
