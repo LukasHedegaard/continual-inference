@@ -163,6 +163,8 @@ class Broadcast(CoModule, nn.Module):
 
         residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
 
+    Args:
+        num_streams: Number of streams to broadcast to.
     """
 
     _state_shape = 0
@@ -192,10 +194,38 @@ class Broadcast(CoModule, nn.Module):
 
 
 class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
-    """Container for parallel modules.
+    """Container for  executing modules in parallel.
+    Modules will be added to it in the order they are passed in the
+    constructor.
+
+    For instance, here is how it is used to create a residual connection::
+
+        residual = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(
+                co.Conv3d(32, 32, kernel_size=3, padding=1),
+                co.Delay(2),
+            ),
+            co.Reduce("sum"),
+        )
+
+    Since the ``Broadcast`` -> ``Parallel`` -> ``Reduce`` sequence is so common,
+    identical behavior can be achieved with ``BroadcastReduce`` ::
+
+        residual = co.BroadcastReduce(
+            co.Conv3d(32, 32, kernel_size=3, padding=1),
+            co.Delay(2),
+            reduce="sum"
+        )
+
+    Even shorter, the library features a residual connection, which automatically handles delays::
+
+        residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
+
 
     Args:
-        *args: Either vargs of modules or an OrderedDict.
+        arg (OrderedDict[str, CoModule]): An OrderedDict of strings and modules.
+        *args (CoModule): Comma-separated modules.
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
@@ -212,7 +242,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
     @overload
     def __init__(
         self,
-        arg: "OrderedDict[str, CoModule]",
+        arg: OrderedDict[str, CoModule],
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
