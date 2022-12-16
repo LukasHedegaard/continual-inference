@@ -107,7 +107,7 @@ def nonempty(fn: ReductionFunc) -> ReductionFunc:
 
 class FlattenableStateDict:
     """Mixes in the ability to flatten state dicts.
-    It is assumed that classes that inherit this modlue also inherit from nn.Module
+    It is assumed that classes that inherit this module also inherit from nn.Module
     """
 
     flatten_state_dict = False
@@ -248,7 +248,7 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
     @overload
     def __init__(
         self,
-        arg: OrderedDict[str, CoModule],
+        arg: "OrderedDict[str, CoModule]",
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -600,7 +600,7 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         ...  # pragma: no cover
 
     @overload
-    def __init__(self, arg: OrderedDict[str, nn.Module]) -> None:
+    def __init__(self, arg: "OrderedDict[str, nn.Module]") -> None:
         ...  # pragma: no cover
 
     def __init__(self, *args):
