@@ -39,7 +39,6 @@ __A Python library for Continual Inference Networks in PyTorch__
   </a>
   <a href="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/overview/main" style="display:inline-block;">
     <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="We match PyTorch interfaces exactly. Method arguments named 'input' reduce the codefactor to 'A-'" height="20" />
-    <sup>*</sup>
   </a>
 </div>
 
