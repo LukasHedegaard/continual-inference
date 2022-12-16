@@ -21,10 +21,10 @@ class Linear(CoModule, nn.Linear):
 
     Shape:
         - Input: :math:`(B, C_{in}, T, *)` where :math:`*` means any number of
-          additional dimensions and :math:`C_{in} = \text{in\_features}` if `channel_dim = 1`.
+          additional dimensions and :math:`C_{in} = \text{in\_features}` if `channel_dim = 2`.
           If channel_dim = -1, the order of input dimensions is :math:`(*, C_{in})`.
         - Output: :math:`(B, C_{out}, T, *)` where all but the last dimension are the
-          same shape as the input and :math:`C_{out} = \text{out\_features}` if `channel_dim = 1`.
+          same shape as the input and :math:`C_{out} = \text{out\_features}` if `channel_dim = 2`.
           If channel_dim = -1, the order of input dimensions is :math:`(*, C_{in})`.
 
     Attributes:
@@ -39,11 +39,23 @@ class Linear(CoModule, nn.Linear):
 
     Examples::
 
-        >>> m = co.Linear(20, 30)
-        >>> input = torch.randn(128, 20)
-        >>> output = m(input)
-        >>> print(output.size())
-        torch.Size([128, 30])
+        # Use like torch.nn.Linear
+        m = co.Linear(20, 30)
+        input = torch.randn(128, 20)
+        output = m(input)
+        assert output.size() == torch.Size([128, 30])
+
+        # Or in conjunction with other continual modules
+        #                   B  C  T   H    W
+        input = torch.randn(1, 3, 16, 128, 128)
+        net = co.Sequential(
+            co.Conv3d(3, 32, 3),
+            co.AdaptiveAvgPool3d((1, 1, 1), 32),
+            co.Linear(32, 10, channel_dim=1),
+        )
+        output = net(input)
+        assert output.size() == torch.Size([1, 10, 1, 1, 1])
+
     """
 
     _state_shape = 0
