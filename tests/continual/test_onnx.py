@@ -603,7 +603,7 @@ def test_trans_enc_full(tmp_path):
 
     # Check against baseline
     o_baseline = net.forward(firsts)
-    assert torch.allclose(o, o_baseline)
+    assert torch.allclose(o, o_baseline, atol=1e-7)
 
     # Export to ONNX
     flat_state = [s.clone() for s in flatten(state0)]
@@ -636,8 +636,8 @@ def test_trans_enc_full(tmp_path):
     target, target_state = net._forward_step(last, state0)
 
     for os, ts in zip(onnx_state, flatten(target_state)):
-        assert torch.allclose(torch.tensor(os), ts)
-    assert torch.allclose(torch.tensor(onnx_output), target)
+        assert torch.allclose(torch.tensor(os), ts, atol=1e-7)
+    assert torch.allclose(torch.tensor(onnx_output), target, atol=1e-7)
 
 
 def test_rnn_mix(tmp_path):
