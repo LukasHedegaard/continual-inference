@@ -401,11 +401,51 @@ class Reduce(CoModule, nn.Module):
 
 
 class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
-    """Continual Sequential module
+    """A sequential container.
+    This module is an augmentation of `torch.nn.Sequential`
+    which adds continual inference methods
 
-    This module is a drop-in replacement for `torch.nn.Sequential`
-    which adds the `forward_step`, `forward_steps`, and `like` methods
-    as well as a `delay` property
+    Modules will be added to it in the order they are passed in the
+    constructor. Alternatively, an ``OrderedDict`` of modules can be
+    passed in. The ``forward()``, ``forward_step()`` and ``forward_steps()``
+    methods of ``Sequential`` accept any input and forwards it to the first
+    module it contains. It then "chains" outputs to inputs sequentially for
+    each subsequent module, finally returning the output of the last module.
+
+    The value a ``Sequential`` provides over manually calling a sequence
+    of modules is that it allows treating the whole container as a
+    single module, such that performing a transformation on the
+    ``Sequential`` applies to each of the modules it stores (which are
+    each a registered submodule of the ``Sequential``).
+
+    What's the difference between a ``Sequential`` and a
+    :class:`torch.nn.ModuleList`? A ``ModuleList`` is exactly what it
+    sounds like--a list for storing ``Module`` s! On the other hand,
+    the layers in a ``Sequential`` are connected in a cascading way.
+
+    Example::
+
+        # Using Sequential to create a small model. When `model` is run,
+        # input will first be passed to `Conv2d(1,20,5)`. The output of
+        # `Conv2d(1,20,5)` will be used as the input to the first
+        # `ReLU`; the output of the first `ReLU` will become the input
+        # for `Conv2d(20,64,5)`. Finally, the output of
+        # `Conv2d(20,64,5)` will be used as input to the second `ReLU`
+        model = co.Sequential(
+            co.Conv2d(1,20,5),
+            nn.ReLU(),
+            co.Conv2d(20,64,5),
+            nn.ReLU()
+        )
+
+        # Using Sequential with OrderedDict. This is functionally the
+        # same as the above code
+        model = co.Sequential(OrderedDict([
+            ('conv1', co.Conv2d(1,20,5)),
+            ('relu1', nn.ReLU()),
+            ('conv2', co.Conv2d(20,64,5)),
+            ('relu2', nn.ReLU())
+        ]))
     """
 
     @overload
@@ -413,7 +453,7 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         ...  # pragma: no cover
 
     @overload
-    def __init__(self, arg: "OrderedDict[str, nn.Module]") -> None:
+    def __init__(self, arg: OrderedDict[str, nn.Module]) -> None:
         ...  # pragma: no cover
 
     def __init__(self, *args):
@@ -527,6 +567,15 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         for m in self:
             if hasattr(m, "clean_state"):
                 m.clean_state()
+
+    def append(self, module: nn.Module) -> "Sequential":
+        r"""Appends a given module to the end.
+
+        Args:
+            module (nn.Module): module to append
+        """
+        self.add_module(str(len(self)), module)
+        return self
 
 
 class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):

@@ -122,8 +122,8 @@ def test_sequential_receptive_field():
         co.Conv1d(1, 1, 3, padding=0, stride=1),
         co.Conv1d(1, 1, 3, padding=0, stride=2),
         co.Conv1d(1, 1, 3, padding=0, stride=3),
-        co.Conv1d(1, 1, 3, padding=0, stride=1),
     )
+    net.append(co.Conv1d(1, 1, 3, padding=0, stride=1))
     assert net.receptive_field == 21
 
     output = net.forward(sample)
