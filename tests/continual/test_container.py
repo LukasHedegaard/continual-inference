@@ -547,7 +547,9 @@ def test_reduce():
     )
 
     mod2 = co.Reduce("max")
-    assert torch.equal(mod2.forward([torch.tensor((1,)), torch.tensor((2,))]), torch.tensor((2,)))
+    assert torch.equal(
+        mod2.forward([torch.tensor((1,)), torch.tensor((2,))]), torch.tensor((2,))
+    )
 
 
 def test_parallel_sequential():
