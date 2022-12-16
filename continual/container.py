@@ -178,7 +178,7 @@ class Broadcast(CoModule, nn.Module):
 
     def __init__(
         self,
-        num_streams: int,
+        num_streams: int = None,
     ):
         nn.Module.__init__(self)
         self.num_streams = num_streams
