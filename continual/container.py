@@ -727,7 +727,7 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         return self
 
 
-class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
+class BroadcastReduce(Sequential):
     """Broadcast an input to parallel modules and reduce.
     This module is a shorthand for::
 
