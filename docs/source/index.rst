@@ -13,12 +13,12 @@ Continual Inference
 .. toctree::
    :maxdepth: 2
    :name: pl_docs
-   :caption: Papers on Continual Inference Networks
+   :caption: Papers
 
    Library Design <https://arxiv.org/pdf/2204.03418.pdf>
    Continual 3D CNNs <https://arxiv.org/pdf/2106.00050.pdf>
-   Continual Spatio-temporal Graph Convolutional Networks <https://arxiv.org/pdf/2203.11009.pdf>
    Continual Transformers <https://arxiv.org/pdf/2201.06268.pdf>
+   Continual Spatio-temporal Graph Convolutional Networks <https://arxiv.org/pdf/2203.11009.pdf>
 
 
 .. toctree::
