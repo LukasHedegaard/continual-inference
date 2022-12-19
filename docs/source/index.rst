@@ -13,7 +13,7 @@ Continual Inference
 .. toctree::
    :maxdepth: 2
    :name: pl_docs
-   :caption: Papers on Continul Inference Networks
+   :caption: Papers on Continual Inference Networks
 
    Library Design <https://arxiv.org/pdf/2204.03418.pdf>
    Continual 3D CNNs <https://arxiv.org/pdf/2106.00050.pdf>
