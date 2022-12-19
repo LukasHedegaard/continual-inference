@@ -119,9 +119,16 @@ def _scaled_dot_product_attention_step(
 
 class SingleOutputMultiheadAttention(MultiheadAttentionBase):
     """
-    Continual Single-output MultiHeadAttention as proposed by Hedegaard et al. in
+    MultiHeadAttention which only computes the attention output for the a single query during continual inference.
+
+    Continual MHAs were proposed by Hedegaard et al. in
     "Continual Transformers: Redundancy-Free Attention for Online Inference"
-    https://arxiv.org/abs/2201.06268
+    https://arxiv.org/abs/2201.06268 (paper) https://www.youtube.com/watch?v=gy802Tlp-eQ (video).
+
+    This module augments the MultiHeadAttention in PyTorch with
+    `forward_step` / `forward_steps` functions, in which one / more
+    query, key, and value tokens are passed to yield the multihead attentions, and
+    updated outputs are computed for each token input.
 
     Args:
         embed_dim: total dimension of the model.
@@ -135,11 +142,39 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         vdim: total number of features in value. Default: None.
         batch_first: If ``True``, then the input and output tensors are provided
             as (batch, seq, feature). Default: ``False`` (seq, batch, feature).
-        sequence_len: Length of token sequence
+        device: torch device to initialize layer on. Defaults to None.
+        dtype: datatype of layer parameters. Defaults to None.
+        sequence_len: Length of token sequence.
+        query_index: The index of the query to compute the attention. Here, -1 denotes the latest query.
+        forward_returns_attn_mask: Whether forward should return attention mask.
+        embed_dim_second: Whether the embed dimension should be second.
+        single_output_forward: Whether forward should be restricted to compute attention for only one query.
 
-    Note that if :attr:`kdim` and :attr:`vdim` are None, they will be set
-    to :attr:`embed_dim` such that query, key, and value have the same
-    number of features.
+    .. note::
+        If :attr:`kdim` and :attr:`vdim` are None, they will be set
+        to :attr:`embed_dim` such that query, key, and value have the same
+        number of features.
+
+    Examples::
+
+        mha = co.SingleOutputMultiheadAttention(
+            embed_dim=512,
+            num_heads=8,
+            sequence_len=32,
+            dropout=0.0,
+            batch_first=True,
+            embed_dim_second=True,
+        )
+        x = torch.rand(10, 512, 32)
+
+        out, attn_mask = mha.forward(x)
+
+        # continual inference API
+        firsts = mha.forward_steps(x[:,:,:-1])
+        last = mha.forward_step(x[:,:,-1])
+
+        assert firsts is None  # The module first needs to observe ``sequence_len`` values
+        assert torch.allclose(out[:,:,-1], last, atol=1e-6)
     """
 
     _state_shape = 4
@@ -199,11 +234,6 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         self.register_buffer("stride_index", torch.tensor(0), persistent=False)
 
     def get_state(self) -> Optional[State]:
-        """Get model state
-
-        Returns:
-            Optional[State]: A State tuple if the model has been initialised and otherwise None.
-        """
         if len(self.V_mem) > 0:
             return (
                 self.Q_mem,
@@ -214,11 +244,6 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         return None
 
     def set_state(self, state: State):
-        """Set model state
-
-        Args:
-            state (State): State tuple to set as new internal internal state
-        """
         (
             self.Q_mem,
             self.K_T_mem,
@@ -227,7 +252,6 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
         ) = state
 
     def clean_state(self):
-        """Clean model state"""
         self.Q_mem = torch.tensor([])
         self.K_T_mem = torch.tensor([])
         self.V_mem = torch.tensor([])
@@ -288,15 +312,15 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
                 See "Attention Is All You Need" for more details.
 
         Shapes for inputs:
-            - query: :math:`(N, E)` where L is the target sequence length, N is the batch size, E is
+            - query: :math:`(N, E)` N is the batch size, E is
               the embedding dimension.
-            - key: :math:`(N, E)`, where S is the source sequence length, N is the batch size, E is
+            - key: :math:`(N, E)`, N is the batch size, E is
               the embedding dimension.
-            - value: :math:`(N, E)` where S is the source sequence length, N is the batch size, E is
+            - value: :math:`(N, E)` N is the batch size, E is
               the embedding dimension.
 
         Shapes for outputs:
-            - attn_output: :math:`(L, N, E)` where L is the target sequence length, N is the batch size,
+            - attn_output: :math:`(N, E)` where N is the batch size,
               E is the embedding dimension. :math:`(N, L, E)` if ``batch_first`` is ``True``.
         """
         if key is None:
@@ -328,15 +352,16 @@ class SingleOutputMultiheadAttention(MultiheadAttentionBase):
                 See "Attention Is All You Need" for more details.
 
         Shapes for inputs:
-            - query: :math:`(N, E)` where L is the target sequence length, N is the batch size, E is
+            - query: :math:`(N, E)` N is the batch size, E is
               the embedding dimension.
-            - key: :math:`(N, E)`, where S is the source sequence length, N is the batch size, E is
+            - key: :math:`(N, E)`, N is the batch size, E is
               the embedding dimension.
-            - value: :math:`(N, E)` where S is the source sequence length, N is the batch size, E is
+            - value: :math:`(N, E)` N is the batch size, E is
               the embedding dimension.
 
         Shapes for outputs:
-            - attn_output: :math:`(N, E)` where N is the batch size and E is the embedding dimension.
+            - attn_output: :math:`(N, E)` where N is the batch size,
+              E is the embedding dimension. :math:`(N, L, E)` if ``batch_first`` is ``True``.
         """
         o = MultiheadAttentionBase.forward_step(
             self, query, key, value, update_state, *args, **kwargs

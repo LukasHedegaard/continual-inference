@@ -165,6 +165,54 @@ def SingleOutputTransformerEncoderLayer(
     sequence_len: int = None,
     single_output_forward=False,
 ):
+    """Continual Single-output Transformer Encoder layer.
+
+    Contrary to the ``torch.nn.TransformerEncoderLayer``, this layer only computes the attention
+    for the last query during ``forward_step``. The behavior during ``forward`` is controllable
+    with the ``single_output_forward`` parameter.
+
+    The continual formulation of the Transformer Encoder Layer was proposed by Hedegaard et al.
+    in "Continual Transformers: Redundancy-Free Attention for Online Inference".
+    https://arxiv.org/abs/2201.06268 (paper) https://www.youtube.com/watch?v=gy802Tlp-eQ (video).
+
+    .. note::
+        In order to handle positional encoding correctly for continual input streams, the
+        :class:`RecyclingPositionalEncoding` should be used together with this module.
+
+    Args:
+        d_model: the number of expected features in the input (required).
+        nhead: the number of heads in the multiheadattention models (required).
+        dim_feedforward: the dimension of the feedforward network model (default=2048).
+        dropout: the dropout value (default=0.1).
+        activation: the activation function of the intermediate layer, can be a string
+            ("relu" or "gelu") or a unary callable. Default: relu.
+        layer_norm_eps: the eps value in layer normalization components (default=1e-5).
+        device: torch device to initialize layer on. Defaults to None.
+        dtype: datatype of layer parameters. Defaults to None.
+        sequence_len: length of token-sequence to perform attention across. Defaults to None.
+        single_output_forward: whether to restrict the attention to the last token during forward. Defaults to False.
+
+    Examples::
+
+        encoder_layer = co.SingleOutputTransformerEncoderLayer(
+            d_model=512, nhead=8, sequence_len=32, dropout=0.0
+        )
+        x = torch.rand(10, 512, 32)  # (N, E, T)
+
+        # corresponds to torch.nn.TransformerEncoderLayer
+        out = encoder_layer.forward(x)
+
+        # continual inference API
+        firsts = encoder_layer.forward_steps(x[:,:,:-1])
+        last = encoder_layer.forward_step(x[:,:,-1])
+
+        assert firsts is None  # The module first needs to observe ``sequence_len`` values
+        assert torch.allclose(out[:,:,-1], last, atol=1e-6)
+
+    """
+    assert (
+        sequence_len > 0
+    ), "Please provide a positive integer value as sequence length."
 
     factory_kwargs = {"device": device, "dtype": dtype}
     norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, **factory_kwargs)
@@ -256,6 +304,52 @@ def RetroactiveTransformerEncoderLayer(
     dtype=None,
     sequence_len: int = None,
 ):
+    """Continual Retroactive Transformer Encoder layer.
+
+    When a new token is received, it computes the updated attention values corresponding
+    to prior tokens as well.
+
+    The continual formulation of the Transformer Encoder Layer was proposed by Hedegaard et al.
+    in "Continual Transformers: Redundancy-Free Attention for Online Inference".
+    https://arxiv.org/abs/2201.06268 (paper) https://www.youtube.com/watch?v=gy802Tlp-eQ (video).
+
+    .. note::
+        In order to handle positional encoding correctly for continual input streams, the
+        :class:`RecyclingPositionalEncoding` should be used together with this module.
+
+    Args:
+        d_model: the number of expected features in the input (required).
+        nhead: the number of heads in the multiheadattention models (required).
+        dim_feedforward: the dimension of the feedforward network model (default=2048).
+        dropout: the dropout value (default=0.1).
+        activation: the activation function of the intermediate layer, can be a string
+            ("relu" or "gelu") or a unary callable. Default: relu.
+        layer_norm_eps: the eps value in layer normalization components (default=1e-5).
+        device: torch device to initialize layer on. Defaults to None.
+        dtype: datatype of layer parameters. Defaults to None.
+        sequence_len: length of token-sequence to perform attention across. Defaults to None.
+
+    Examples::
+
+        encoder_layer = co.RetroactiveTransformerEncoderLayer(
+            d_model=512, nhead=8, sequence_len=32, dropout=0.0
+        )
+        x = torch.rand(10, 512, 32)  # (N, E, T)
+
+        # corresponds to torch.nn.TransformerEncoderLayer
+        out = encoder_layer.forward(x)
+
+        # continual inference API
+        firsts = encoder_layer.forward_steps(x[:,:,:-1])
+        last = encoder_layer.forward_step(x[:,:,-1])
+
+        assert firsts is None  # The module first needs to observe ``sequence_len`` values
+        assert torch.allclose(out, last, atol=1e-6)
+
+    """
+    assert (
+        sequence_len > 0
+    ), "Please provide a positive integer value as sequence length."
     factory_kwargs = {"device": device, "dtype": dtype}
     norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps, **factory_kwargs)
     norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps, **factory_kwargs)
@@ -340,6 +434,40 @@ def TransformerEncoderLayerFactory(
     dtype=None,
     sequence_len: int = None,
 ) -> Callable[[MhaType], Sequential]:
+    """Defines the hyper-parameters of Continual Transformer Encoder layers, where each layer
+    contains feed forward networks and continual multi-head attentions as proposed by
+    Vaswani et al. in "Attention is all you need".
+
+    It can produce either a :class:`SingleOutputTransformerEncoderLayer` or a
+    :class:`RetroactiveTransformerEncoderLayer`.
+    These were proposed by Hedegaard et al. in
+    "Continual Transformers: Redundancy-Free Attention for Online Inference".
+    https://arxiv.org/abs/2201.06268 (paper) https://www.youtube.com/watch?v=gy802Tlp-eQ (video).
+
+    Args:
+        d_model: the number of expected features in the input (required).
+        nhead: the number of heads in the multiheadattention models (required).
+        dim_feedforward: the dimension of the feedforward network model (default=2048).
+        dropout: the dropout value (default=0.1).
+        activation: the activation function of the intermediate layer, can be a string
+            ("relu" or "gelu") or a unary callable. Default: relu.
+        layer_norm_eps: the eps value in layer normalization components (default=1e-5).
+        device: torch device to initialize layer on. Defaults to None.
+        dtype: datatype of layer parameters. Defaults to None.
+        sequence_len: length of token-sequence to perform attention across. Defaults to None.
+
+    Returns:
+        Callable[[Union[str,MhaType]], Sequential]: Factory function return the layer module given
+            the desired MHA type (one of "retroactive", "single_output", "single_output_forward", and "regular").
+
+    Examples::
+
+        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8)
+        transformer_encoder = co.TransformerEncoder(encoder_layer, num_layers=2)
+        src = torch.rand(10, 512, 32)
+        out = transformer_encoder(src)
+    """
+
     def TransformerEncoderLayer(mha_type: MhaType):
 
         factory_fn = {
@@ -369,19 +497,36 @@ def TransformerEncoderLayerFactory(
 
 
 class TransformerEncoder(Sequential):
-    """Continual Transformer Encoder as proposed by Hedegaard et al. in
-    "Continual Transformers: Redundancy-Free Attention for Online Inference"
-    https://arxiv.org/abs/2201.06268
+    """Continual Transformer Encoder is a stack of N encoder layers.
 
-    This class deviates from the Pytorch implementation in the following ways:
-    - `encoder_layer` parameter takes a factory functor, TransformerEncoderLayerFactory
-    - `mask` and `src_key_padding_mask` are not supported currently.
+    The continual formulation of the Transformer Encoder was proposed by Hedegaard et al.
+    in "Continual Transformers: Redundancy-Free Attention for Online Inference".
+    https://arxiv.org/abs/2201.06268 (paper) https://www.youtube.com/watch?v=gy802Tlp-eQ (video).
+
+    .. note::
+        This class deviates from the Pytorch implementation in the following ways:
+        1) `encoder_layer` parameter takes a factory functor, TransformerEncoderLayerFactory
+        2) `mask` and `src_key_padding_mask` are not supported currently.
+
+    .. note::
+        The efficiency gains of ``forward_step`` compared to ``forward`` is highly dependent
+        on the chosen ``num_layers``. Here, a lower ``num_layers`` is most efficient.
+        Accordingly, we recommend increasing ``d_model``, ``nhead``, and ``dim_feedforward``
+        of the :class:`TransformerEncoderLayerFactory` rather than increasing ``num_layers`` if larger
+        models are desired. Keeping the parameter-count equal, this was found to work well
+        for regular Transformer Encoders as well (https://arxiv.org/pdf/2210.00640.pdf).
+
+    .. note::
+        In order to handle positional encoding correctly for continual input streams, the
+        :class:`RecyclingPositionalEncoding` should be used together with this module.
 
     Args:
+        encoder_layer: An instance of :class:`TransformerEncoderLayerFactory`.
         num_layers: the number of sub-encoder-layers in the encoder (required).
         norm: the layer normalization component (optional).
 
-    Examples:
+    Examples::
+
         encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8)
         transformer_encoder = co.TransformerEncoder(encoder_layer, num_layers=2)
         src = torch.rand(10, 512, 32)

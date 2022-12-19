@@ -146,14 +146,16 @@ def _scaled_dot_product_attention_step(
 
 class RetroactiveMultiheadAttention(MultiheadAttentionBase):
     """
-    Continual Retroactive MultiHeadAttention as proposed by Hedegaard et al. in
-    "Continual Transformers: Redundancy-Free Attention for Online Inference"
-    https://arxiv.org/abs/2201.06268
+    MultiHeadAttention with retroactively updated attention outputs during continual inference.
 
-    It augments the MultiHeadAttention in PyTorch with
+    Continual MHAs were proposed by Hedegaard et al. in
+    "Continual Transformers: Redundancy-Free Attention for Online Inference"
+    https://arxiv.org/abs/2201.06268 (paper) https://www.youtube.com/watch?v=gy802Tlp-eQ (video).
+
+    This module augments the MultiHeadAttention in PyTorch with
     `forward_step` / `forward_steps` functions, in which one / more
-    query, key, and value tokens are passed to yield the multihead attention
-    corresponding to the last (self.sequence_len) tokens.
+    query, key, and value tokens are passed to yield the multihead attentions, and
+    updated outputs are computed for each token input.
 
     Args:
         embed_dim: total dimension of the model.
@@ -167,11 +169,37 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         vdim: total number of features in value. Default: None.
         batch_first: If ``True``, then the input and output tensors are provided
             as (batch, seq, feature). Default: ``False`` (seq, batch, feature).
-        sequence_len: Length of token sequence
+        device: torch device to initialize layer on. Defaults to None.
+        dtype: datatype of layer parameters. Defaults to None.
+        sequence_len: Length of token sequence.
+        forward_returns_attn_mask: Whether forward should return attention mask.
+        embed_dim_second: Whether the embed dimension should be second.
 
-    Note that if :attr:`kdim` and :attr:`vdim` are None, they will be set
-    to :attr:`embed_dim` such that query, key, and value have the same
-    number of features.
+    .. note::
+        If :attr:`kdim` and :attr:`vdim` are None, they will be set
+        to :attr:`embed_dim` such that query, key, and value have the same
+        number of features.
+
+    Examples::
+
+        mha = co.RetroactiveMultiheadAttention(
+            embed_dim=512,
+            num_heads=8,
+            sequence_len=32,
+            dropout=0.0,
+            batch_first=True,
+            embed_dim_second=True,
+        )
+        x = torch.rand(10, 512, 32)
+
+        out, attn_mask = mha.forward(x)
+
+        # continual inference API
+        firsts = mha.forward_steps(x[:,:,:-1])
+        last = mha.forward_step(x[:,:,-1])
+
+        assert firsts is None  # The module first needs to observe ``sequence_len`` values
+        assert torch.allclose(out, last, atol=1e-6)
     """
 
     _state_shape = 6
@@ -227,11 +255,6 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         self.register_buffer("stride_index", torch.tensor(0), persistent=False)
 
     def get_state(self) -> Optional[State]:
-        """Get model state
-
-        Returns:
-            Optional[State]: A State tuple if the model has been initialised and otherwise None.
-        """
         if len(self.d_mem) > 0:
             return (
                 self.d_mem,
@@ -243,11 +266,6 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
             )
 
     def set_state(self, state: State):
-        """Set model state
-
-        Args:
-            state (State): State tuple to set as new internal internal state
-        """
         (
             self.d_mem,
             self.AV_mem,
@@ -258,7 +276,6 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         ) = state
 
     def clean_state(self):
-        """Clean model state"""
         self.d_mem = torch.tensor([])
         self.AV_mem = torch.tensor([])
         self.Q_mem = torch.tensor([])
@@ -279,12 +296,9 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
                 See "Attention Is All You Need" for more details.
 
         Shapes for inputs:
-            - query: :math:`(N, E)` where L is the target sequence length, N is the batch size, E is
-              the embedding dimension.
-            - key: :math:`(N, E)`, where S is the source sequence length, N is the batch size, E is
-              the embedding dimension.
-            - value: :math:`(N, E)` where S is the source sequence length, N is the batch size, E is
-              the embedding dimension.
+            - query: :math:`(N, E)` where N is the batch size, E is the embedding dimension.
+            - key: :math:`(N, E)`, where N is the batch size, E is the embedding dimension.
+            - value: :math:`(N, E)` where N is the batch size, E is the embedding dimension.
 
         Shapes for outputs:
             - attn_output: :math:`(L, N, E)` where L is the target sequence length, N is the batch size,
@@ -323,12 +337,9 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
                 See "Attention Is All You Need" for more details.
 
         Shapes for inputs:
-            - query: :math:`(N, E)` where L is the target sequence length, N is the batch size, E is
-              the embedding dimension.
-            - key: :math:`(N, E)`, where S is the source sequence length, N is the batch size, E is
-              the embedding dimension.
-            - value: :math:`(N, E)` where S is the source sequence length, N is the batch size, E is
-              the embedding dimension.
+            - query: :math:`(N, E)` N is the batch size, E is the embedding dimension.
+            - key: :math:`(N, E)`, where N is the batch size, E is the embedding dimension.
+            - value: :math:`(N, E)` where N is the batch size, E is the embedding dimension.
 
         Shapes for outputs:
             - attn_output: :math:`(L, N, E)` where L is the target sequence length, N is the batch size,
@@ -353,17 +364,6 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         *args,
         **kwargs,
     ) -> Optional[Tensor]:
-        """Forward computation for multiple steps with state initialisation
-
-        Args:
-            query (Tensor): query.
-            key (Tensor): key.
-            value (Tensor): value.
-            update_state (bool): Whether internal state should be updated during this operation.
-
-        Returns:
-            Tensor: Stepwise layer outputs
-        """
         o = MultiheadAttentionBase.forward_steps(
             self, query, key, value, update_state, *args, **kwargs
         )

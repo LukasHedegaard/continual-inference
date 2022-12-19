@@ -93,6 +93,43 @@ State = Tuple[Tensor]
 
 
 class RecyclingPositionalEncoding(co.CoModule, nn.Module):
+    """Recycling Positional Encoding with learned or static weights.
+
+    Recycling Positional Encoding were proposed by Hedegaard et al. in
+    "Continual Transformers: Redundancy-Free Attention for Online Inference"
+    https://arxiv.org/abs/2201.06268 (paper) https://www.youtube.com/watch?v=gy802Tlp-eQ (video).
+
+    When static encoding is selected, the module employs "Cyclic Positional Encoding" as
+    proposed by Ma et al. in
+    "Learning to Iteratively Solve Routing Problems with Dual-Aspect Collaborative Transformer"
+    https://arxiv.org/abs/2110.02544.
+
+    Args:
+        embed_dim: dimensionality of positional embeddings.
+        num_embeds: number of embeddings to recycle among.
+        learned: whether embeddings should be learned or static sinusoidal
+        forward_update_index_steps: the number of index steps to offset the encoding query with
+            each time ``forward`` is called. This ensures that positional encodings have a
+            new starting position at each call.
+
+    Examples::
+
+        pe = RecyclingPositionalEncoding(
+            embed_dim=10,
+            num_embeds=16 * 2 - 1,
+            forward_update_index_steps=0
+        )
+        x = torch.zeros((1, 10, 16))  # (B, C, T)
+
+        o_forward = pe.forward(x)
+        o_forward_steps = pe.forward_steps(x[:, :, :-1])
+        o_forward_step = pe.forward_step(x[:, :, -1])
+
+        assert torch.equal(o_forward[:, :, :-1], o_forward_steps)
+        assert torch.equal(o_forward[:, :, -1], o_forward_step)
+
+    """
+
     _state_shape = 1
     _dynamic_state_inds = [False]
 
@@ -100,8 +137,8 @@ class RecyclingPositionalEncoding(co.CoModule, nn.Module):
         self,
         embed_dim: int,
         num_embeds: int,
-        learned=True,
-        forward_update_index_steps=1,
+        learned: bool = True,
+        forward_update_index_steps: int = 1,
     ):
         nn.Module.__init__(self)
         self.pe = {True: nn.Embedding, False: CyclicPositionalEncoding}[learned](
@@ -152,10 +189,8 @@ class RecyclingPositionalEncoding(co.CoModule, nn.Module):
         return output, (state_index,)
 
     def init_state(self) -> State:
-        """Initalize model state"""
         self.state_index = torch.tensor(0)
         return (self.state_index,)
 
     def clean_state(self):
-        """Clean model state"""
         self.state_index = torch.tensor(0)
