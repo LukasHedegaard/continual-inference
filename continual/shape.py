@@ -8,13 +8,18 @@ __all__ = ["Reshape"]
 
 
 class Reshape(CoModule, nn.Module):
-    """Reshape of non-temporal dimensions"""
+    """Reshape non-temporal dimensions of an input
+
+    Arguments:
+        shape: The required shape of non-temporal dimensions.
+        contiguous: Whether reshaped output should be made contiguous.
+    """
 
     _state_shape = 0
     _dynamic_state_inds = []
 
     @overload
-    def __init__(self, shape: Sequence[int], contiguous=False):
+    def __init__(self, shape: Sequence[int], contiguous: bool = False):
         ...  # pragma: no cover
 
     @overload
