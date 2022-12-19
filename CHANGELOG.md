@@ -17,6 +17,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 - Rename `Unity` to `Identity` to follow `torch.nn`.
 - Major overhaul of README, improving descriptions and adding benchmark.
 - Major overhaul of docs, improving descriptions and adding benchmark.
+- MHA warnings to only log once.
 
 ### Removed
 - Unused parameters `batch_first` and `bidirectional` for RNN, GRU, and LSTM.

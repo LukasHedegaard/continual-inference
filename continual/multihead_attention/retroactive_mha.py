@@ -1,16 +1,17 @@
 import math
 from functools import partial
-from logging import getLogger
 from typing import Optional, Tuple
 
 import torch
 from torch import Tensor
 
+from continual.logging import getLogger
 from continual.module import _callmode
 
 from .mha_base import MultiheadAttentionBase, scaled_dot_prod_attn_flops
 
 logger = getLogger(__name__)
+logger_once = getLogger(__name__, log_once=True)
 
 State = Tuple[
     Tensor,  # d_mem, (B, Nt-1)
@@ -69,9 +70,9 @@ def _scaled_dot_product_attention_step(
         - Output: attention values have shape :math:`(B, Nt, E)`; new state
     """
     if attn_mask is not None:  # pragma: no cover
-        logger.warning("attn_mask is not supported yet and will be skipped")
+        logger_once.warning("attn_mask is not supported yet and will be skipped")
     if dropout_p != 0.0:  # pragma: no cover
-        logger.warning("dropout_p is not supported yet and will be skipped")
+        logger_once.warning("dropout_p is not supported yet and will be skipped")
 
     (
         d_mem,  # (B, Nt-1)
