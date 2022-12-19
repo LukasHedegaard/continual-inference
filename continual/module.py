@@ -55,13 +55,28 @@ def _callmode(cm) -> torch.Tensor:
 
 
 class _CallModeContext(object):
-    """Context-manager state holder."""
+    """Context-manager which temporarily specifies a call_mode
+
+    When the call_mode context is used, the ``__call__`` function of continual modules with be set accordingly
+
+    Example::
+
+        sequence = torch.randn(1, 3, 10)
+        step = sequence[:, :, -1]
+
+        forward_output = module(sequence)  # Calls `forward`
+
+        with co.call_mode("forward_step"):
+            forward_step_output = module(step)  # Calls `forward_step`
+
+        forward_output = module(sequence)  # Calls `forward`
+    """
 
     def __init__(self):
         self.cur = _callmode("forward")
         self.prev = None
 
-    def __call__(self, value: Union[str, int, torch.Tensor]) -> "_CallModeContext":
+    def __call__(self, value: Union[str, int, torch.Tensor]):
         self.prev = self.cur
         self.cur = _callmode(value)
         return self
@@ -75,16 +90,6 @@ class _CallModeContext(object):
 
 
 call_mode = _CallModeContext()
-"""Context-manager that holds a call_mode
-
-When the call_mode context is used, the __call__ function of continual modules with be set accordingly
-
-Example:
-    >>> forward_output = module(forward_input)
-    >>>
-    >>> with co.call_mode("forward_step"):
-    >>>     forward_step_output = module(forward_step_input)
-"""
 
 
 def _clone_first(state: State) -> State:

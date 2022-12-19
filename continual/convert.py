@@ -37,17 +37,17 @@ __all__ = [
 
 def forward_stepping(module: nn.Module, dim: int = 2):
     """Enhances torch.nn.Module with `forward_step` and `forward_steps`
-    by unsqueezing the temporal dimension.
 
-    NB: The passed module must not have time-dependent operations!
-    For instance, `module = nn.Conv3d(1, 1, kernel_size=(1,1,1))` is OK,
-    but results for `module = nn.Conv3d(1, 1, kernel_size=(3,3,3))` would be invalid.
+    .. note::
+        The passed module must not have time-dependent operations!
+        For instance, ``module = nn.Conv3d(1, 1, kernel_size=(1,1,1))`` is OK,
+        but results for ``module = nn.Conv3d(1, 1, kernel_size=(3,3,3))`` would be invalid.
 
     Alternatively, one may attempt to automatically convert the module by using
-    `co.continual(module)` instead.
+    :class:`co.continual` instead.
 
     Args:
-        module (nn.Module): the torch.nn.Module to enchange
+        module (nn.Module): the torch.nn.Module to enchance.
         dim (int, optional): The dimension to unsqueeze during `forward_step`. Defaults to 2.
     """
 
@@ -180,6 +180,25 @@ def register(TorchNnModule: Type[nn.Module], CoClass: Type[CoModule]):
 
 
 def continual(module: nn.Module) -> CoModule:
+    """Convert a ``torch.nn`` module to a Continual Inference Network enhanced with
+    ``forward_step`` and ``forward_steps``.
+
+    Modules may be either ``torch.nn`` Modules for which a corresponding module is
+    implemented in this library (e.g. ``nn.Conv3d``), or a ``torch.nn`` which can be
+    naively mapped (e.g. ``nn.ReLU``).
+
+    Custom modules can also be made continual by means of the
+    :class:`forward_stepping` function.
+
+    Examples ::
+        coconv = co.continual(nn.Conv3d(3, 3, 3))
+
+        coseq = co.continual(nn.Sequential(
+            nn.Conv3d(3, 3, 3),  # Automatically converted as well!
+            nn.ReLU()
+        ))
+
+    """
     if isinstance(module, CoModule):
         return module
 
