@@ -238,8 +238,10 @@ class AvgPool1d(nn.AvgPool1d, _PoolNd):
     If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
     for :attr:`padding` number of points.
 
-    Note:
+    .. note::
         When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
         or the input. Sliding windows that would start in the right padded region are ignored.
 
@@ -338,8 +340,10 @@ class AvgPool2d(nn.AvgPool2d, _PoolNd):
     If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
     for :attr:`padding` number of points.
 
-    Note:
+    .. note::
         When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
         or the input. Sliding windows that would start in the right padded region are ignored.
 
@@ -461,8 +465,12 @@ class AvgPool3d(nn.AvgPool3d, _PoolNd):
     If :attr:`padding` is non-zero, then the input is implicitly zero-padded on all three sides
     for :attr:`padding` number of points.
 
-    Note:
+    .. note::
+
         When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
+
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
         or the input. Sliding windows that would start in the right padded region are ignored.
 
@@ -583,8 +591,12 @@ class MaxPool1d(nn.MaxPool1d, _PoolNd):
     for :attr:`padding` number of points. :attr:`dilation` is the stride between the elements within the
     sliding window. This `link`_ has a nice visualization of the pooling parameters.
 
-    Note:
+    .. note::
+
         When :attr:`stride` > 1, the forward_step will only produce non-None values every :attr:`stride` steps.
+
+    .. note::
+
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
         or the input. Sliding windows that would start in the right padded region are ignored.
 
@@ -685,8 +697,11 @@ class MaxPool2d(nn.MaxPool2d, _PoolNd):
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
     It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
 
-    Note:
+    .. note::
+
         When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
         or the input. Sliding windows that would start in the right padded region are ignored.
 
@@ -802,8 +817,11 @@ class MaxPool3d(nn.MaxPool3d, _PoolNd):
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
     It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
 
-    Note:
+    .. note::
+
         When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
         or the input. Sliding windows that would start in the right padded region are ignored.
 
