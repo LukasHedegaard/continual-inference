@@ -123,20 +123,20 @@ class RNN(CoModule, nn.RNN):
         num_layers: int = 1,
         nonlinearity="tanh",
         bias: bool = True,
-        batch_first: bool = True,  # NB: differs from torch.nn version!
+        # batch_first: bool = True,  # NB: differs from torch.nn version!
         dropout: float = 0.0,
-        bidirectional: bool = False,  # NB: differs from torch.nn version!
+        # bidirectional: bool = False,  # NB: differs from torch.nn version!
         device=None,
         dtype=None,
         *args,
         **kwargs,
     ):
-        assert (
-            batch_first
-        ), "`batch_first == False` is not supported for a Continual module"
-        assert (
-            not bidirectional
-        ), "`bidirectional == True` is not supported for a Continual module"
+        # assert (
+        #     batch_first
+        # ), "`batch_first == False` is not supported for a Continual module"
+        # assert (
+        #     not bidirectional
+        # ), "`bidirectional == True` is not supported for a Continual module"
 
         nn.RNN.__init__(
             self,
@@ -145,9 +145,9 @@ class RNN(CoModule, nn.RNN):
             num_layers=num_layers,
             nonlinearity=nonlinearity,
             bias=bias,
-            batch_first=batch_first,
+            batch_first=True,
             dropout=dropout,
-            bidirectional=bidirectional,
+            bidirectional=False,
             device=device,
             dtype=dtype,
         )
@@ -340,20 +340,20 @@ class GRU(CoModule, nn.GRU):
         hidden_size: int,
         num_layers: int = 1,
         bias: bool = True,
-        batch_first: bool = True,  # NB: differs from torch.nn version!
+        # batch_first: bool = True,  # NB: differs from torch.nn version!
         dropout: float = 0.0,
-        bidirectional: bool = False,  # NB: differs from torch.nn version!
+        # bidirectional: bool = False,  # NB: differs from torch.nn version!
         device=None,
         dtype=None,
         *args,
         **kwargs,
     ):
-        assert (
-            batch_first
-        ), "`batch_first == False` is not supported for a Continual module"
-        assert (
-            not bidirectional
-        ), "`bidirectional == True` is not supported for a Continual module"
+        # assert (
+        #     batch_first
+        # ), "`batch_first == False` is not supported for a Continual module"
+        # assert (
+        #     not bidirectional
+        # ), "`bidirectional == True` is not supported for a Continual module"
 
         nn.GRU.__init__(
             self,
@@ -361,9 +361,9 @@ class GRU(CoModule, nn.GRU):
             hidden_size=hidden_size,
             num_layers=num_layers,
             bias=bias,
-            batch_first=batch_first,
+            batch_first=True,
             dropout=dropout,
-            bidirectional=bidirectional,
+            bidirectional=False,
             device=device,
             dtype=dtype,
         )
@@ -594,21 +594,21 @@ class LSTM(CoModule, nn.LSTM):
         hidden_size: int,
         num_layers: int = 1,
         bias: bool = True,
-        batch_first: bool = True,  # NB: differs from torch.nn version!
+        # batch_first: bool = True,  # NB: differs from torch.nn version!
         dropout: float = 0.0,
-        bidirectional: bool = False,  # NB: differs from torch.nn version!
+        # bidirectional: bool = False,  # NB: differs from torch.nn version!
         proj_size=0,
         device=None,
         dtype=None,
         *args,
         **kwargs,
     ):
-        assert (
-            batch_first
-        ), "`batch_first == False` is not supported for a Continual module"
-        assert (
-            not bidirectional
-        ), "`bidirectional == True` is not supported for a Continual module"
+        # assert (
+        #     batch_first
+        # ), "`batch_first == False` is not supported for a Continual module"
+        # assert (
+        #     not bidirectional
+        # ), "`bidirectional == True` is not supported for a Continual module"
 
         nn.LSTM.__init__(
             self,
@@ -616,9 +616,9 @@ class LSTM(CoModule, nn.LSTM):
             hidden_size=hidden_size,
             num_layers=num_layers,
             bias=bias,
-            batch_first=batch_first,
+            batch_first=True,
             dropout=dropout,
-            bidirectional=bidirectional,
+            bidirectional=False,
             proj_size=proj_size,
             device=device,
             dtype=dtype,
