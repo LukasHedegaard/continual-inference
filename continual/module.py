@@ -22,6 +22,7 @@ State = Tuple[Tensor, Tensor, Tensor]
 class PaddingMode(Enum):
     REPLICATE = "replicate"
     ZEROS = "zeros"
+    NEG_INF = "neg_inf"
 
 
 # Not compatible with torch.jit:

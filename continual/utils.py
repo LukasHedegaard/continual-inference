@@ -245,3 +245,7 @@ def _flatten(lst: Union[Sequence[Any], Any]) -> List[Any]:
         return _flatten(first) + _flatten(rest)
     else:
         return [lst]
+
+
+def neginf_like(x: Tensor):
+    return -torch.ones_like(x) * float("inf")
