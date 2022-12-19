@@ -83,21 +83,21 @@ def test_sequential():
         long_example_clip[:, :, :-1], update_state=False
     )
     co_output_firsts = coseq.forward_steps(long_example_clip[:, :, :-1])
-    assert torch.allclose(co_output_firsts, co_output_firsts_0)
-    assert torch.allclose(co_output_firsts, output[:, :, :-1])
+    assert torch.allclose(co_output_firsts, co_output_firsts_0, atol=1e-7)
+    assert torch.allclose(co_output_firsts, output[:, :, :-1], atol=1e-7)
 
     # forward_step
     co_output_last_0 = coseq.forward_step(
         long_example_clip[:, :, -1], update_state=False
     )
     co_output_last = coseq.forward_step(long_example_clip[:, :, -1])
-    assert torch.allclose(co_output_last, co_output_last_0)
-    assert torch.allclose(co_output_last, output[:, :, -1])
+    assert torch.allclose(co_output_last, co_output_last_0, atol=1e-7)
+    assert torch.allclose(co_output_last, output[:, :, -1], atol=1e-7)
 
     # Clean state can be used to restart seq computation
     coseq.clean_state()
     co_output_firsts = coseq.forward_steps(long_example_clip[:, :, :-1])
-    assert torch.allclose(co_output_firsts, output[:, :, :-1])
+    assert torch.allclose(co_output_firsts, output[:, :, :-1], atol=1e-7)
 
 
 def test_sequential_receptive_field():
@@ -122,8 +122,8 @@ def test_sequential_receptive_field():
         co.Conv1d(1, 1, 3, padding=0, stride=1),
         co.Conv1d(1, 1, 3, padding=0, stride=2),
         co.Conv1d(1, 1, 3, padding=0, stride=3),
-        co.Conv1d(1, 1, 3, padding=0, stride=1),
     )
+    net.append(co.Conv1d(1, 1, 3, padding=0, stride=1))
     assert net.receptive_field == 21
 
     output = net.forward(sample)
@@ -544,6 +544,11 @@ def test_reduce():
     assert torch.equal(mod.forward_steps(xx), torch.tensor([[[2.0, 4.0]]]))
     assert torch.equal(
         mod.forward_step([x[:, :, 0], x[:, :, 0]]), torch.tensor([[2.0]])
+    )
+
+    mod2 = co.Reduce("max")
+    assert torch.equal(
+        mod2.forward([torch.tensor((1,)), torch.tensor((2,))]), torch.tensor((2,))
     )
 
 

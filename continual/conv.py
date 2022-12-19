@@ -19,7 +19,6 @@ from .module import CoModule, PaddingMode
 
 logger = getLogger(__name__)
 
-# State = Tuple[Tensor, Optional[int], Optional[int]]
 State = Tuple[Tensor, Tensor, Tensor]
 
 # _forward_step_impl = None
@@ -102,7 +101,7 @@ class _ConvCoNd(CoModule, _ConvNd):
             device=device,
             dtype=dtype,
         )
-        self.make_padding = {
+        self._make_padding = {
             PaddingMode.ZEROS.value: torch.zeros_like,
             PaddingMode.REPLICATE.value: torch.clone,
         }[self.t_padding_mode]
@@ -145,7 +144,7 @@ class _ConvCoNd(CoModule, _ConvNd):
         self,
         first_output: Tensor,
     ) -> State:
-        padding = self.make_padding(first_output)
+        padding = self._make_padding(first_output)
         repeat_shape = [self.kernel_size[0] - 1]
         repeat_shape.extend((1,) * len(self.input_shape_desciption))
         state_buffer = padding.repeat(repeat_shape)
@@ -288,7 +287,7 @@ class _ConvCoNd(CoModule, _ConvNd):
 
     def forward(self, input: Tensor) -> Tensor:
         """Performs a full forward computation exactly as the regular layer would.
-        This method is handy for effient training on clip-based data.
+        This method is handy for efficient training on clip-based data.
 
         Args:
             input (Tensor): Layer input
@@ -331,6 +330,42 @@ class _ConvCoNd(CoModule, _ConvNd):
 
 
 class Conv1d(_ConvCoNd):
+    r"""Continual 1D convolution over a temporal input signal.
+
+    Continual Convolutions were proposed by
+    Hedegaard et al.: "Continual 3D Convolutional Neural Networks for Real-time Processing of Videos", in ECCV (2022),
+    https://arxiv.org/pdf/2106.00050.pdf (paper) https://www.youtube.com/watch?v=Jm2A7dVEaF4 (video).
+
+    Assuming an input of shape `(B, C, T)`, it computes the convolution over one temporal instant `t` at a time
+    where `t` ∈ `range(T)`, and keeps an internal state.
+
+    Args:
+        in_channels (int): Number of channels in the input image
+        out_channels (int): Number of channels produced by the convolution
+        kernel_size (int or tuple): Size of the convolving kernel
+        stride (int or tuple, optional): Stride of the convolution. NB: stride > 1 over the first channel is not supported. Default: 1
+        padding (int or tuple, optional): Zero-padding added to all three sides of the input. NB: padding over the first channel is not supported. Default: 0
+        dilation (int or tuple, optional): Spacing between kernel elements. NB: dilation > 1 over the first channel is not supported. Default: 1
+        groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
+        bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
+        temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_steps` along the temporal dimension. Default: ``'replicate'``
+
+    Attributes:
+        weight (Tensor): the learnable weights of the module of shape
+                        :math:`(\text{out\_channels}, \frac{\text{in\_channels}}{\text{groups}},`
+                        :math:`\text{kernel\_size[0]}, \text{kernel\_size[1]}, \text{kernel\_size[2]})`.
+                        The values of these weights are sampled from
+                        :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                        :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
+        bias (Tensor):   the learnable bias of the module of shape (out_channels). If :attr:`bias` is ``True``,
+                        then the values of these weights are
+                        sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                        :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
+        state (List[Tensor]):  a running buffer of partial computations from previous frames which are used for
+                        the calculation of subsequent outputs.
+
+    """
+
     def __init__(
         self,
         in_channels: int,
@@ -346,45 +381,6 @@ class Conv1d(_ConvCoNd):
         dtype=None,
         temporal_fill: PaddingMode = "zeros",
     ):
-        r"""Applies a continual 1D convolution over an input signal composed of several input
-        planes.
-
-        Assuming an input of shape `(B, C, T)`, it computes the convolution over one temporal instant `t` at a time
-        where `t` ∈ `range(T)`, and keeps an internal state. Two forward modes are supported here.
-
-        `forward`   takes an input of shape `(B, C)`, and computes a single-frame output (B, C') based on its internal state.
-                    On the first execution, the state is initialised with either ``'zeros'`` (corresponding to a zero padding of kernel_size[0]-1)
-                    or with a `'replicate'`` of the first frame depending on the choice of `temporal_fill`.
-                    `forward` also supports a functional-style exercution, by passing a `prev_state` explicitely as parameters, and by
-                    optionally returning the updated `next_state` via the `return_next_state` parameter.
-                    NB: The output when recurrently applying forward will be delayed by the `kernel_size[0] - 1`.
-
-        Args:
-            in_channels (int): Number of channels in the input image
-            out_channels (int): Number of channels produced by the convolution
-            kernel_size (int or tuple): Size of the convolving kernel
-            stride (int or tuple, optional): Stride of the convolution. NB: stride > 1 over the first channel is not supported. Default: 1
-            padding (int or tuple, optional): Zero-padding added to all three sides of the input. NB: padding over the first channel is not supported. Default: 0
-            dilation (int or tuple, optional): Spacing between kernel elements. NB: dilation > 1 over the first channel is not supported. Default: 1
-            groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
-            bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
-            temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_steps` along the temporal dimension. Default: ``'replicate'``
-
-        Attributes:
-            weight (Tensor): the learnable weights of the module of shape
-                            :math:`(\text{out\_channels}, \frac{\text{in\_channels}}{\text{groups}},`
-                            :math:`\text{kernel\_size[0]}, \text{kernel\_size[1]}, \text{kernel\_size[2]})`.
-                            The values of these weights are sampled from
-                            :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
-                            :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
-            bias (Tensor):   the learnable bias of the module of shape (out_channels). If :attr:`bias` is ``True``,
-                            then the values of these weights are
-                            sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
-                            :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
-            state (List[Tensor]):  a running buffer of partial computations from previous frames which are used for
-                            the calculation of subsequent outputs.
-
-        """
         _ConvCoNd.__init__(
             self,
             nn.Conv1d,
@@ -434,6 +430,42 @@ class Conv1d(_ConvCoNd):
 
 
 class Conv2d(_ConvCoNd):
+    r"""Continual 2D convolution over a spatio-temporal input signal.
+
+    Continual Convolutions were proposed by
+    Hedegaard et al.: "Continual 3D Convolutional Neural Networks for Real-time Processing of Videos", in ECCV (2022),
+    https://arxiv.org/pdf/2106.00050.pdf (paper) https://www.youtube.com/watch?v=Jm2A7dVEaF4 (video).
+
+    Assuming an input of shape `(B, C, T, S)`, it computes the convolution over one temporal instant `t` at a time
+    where `t` ∈ `range(T)`, and keeps an internal state.
+
+    Args:
+        in_channels (int): Number of channels in the input image
+        out_channels (int): Number of channels produced by the convolution
+        kernel_size (int or tuple): Size of the convolving kernel
+        stride (int or tuple, optional): Stride of the convolution. NB: stride > 1 over the first channel is not supported. Default: 1
+        padding (int or tuple, optional): Zero-padding added to all three sides of the input. NB: padding over the first channel is not supported. Default: 0
+        dilation (int or tuple, optional): Spacing between kernel elements. NB: dilation > 1 over the first channel is not supported. Default: 1
+        groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
+        bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
+        temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_steps` along the temporal dimension. Default: ``'replicate'``
+
+    Attributes:
+        weight (Tensor): the learnable weights of the module of shape
+                        :math:`(\text{out\_channels}, \frac{\text{in\_channels}}{\text{groups}},`
+                        :math:`\text{kernel\_size[0]}, \text{kernel\_size[1]}, \text{kernel\_size[2]})`.
+                        The values of these weights are sampled from
+                        :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                        :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
+        bias (Tensor):   the learnable bias of the module of shape (out_channels). If :attr:`bias` is ``True``,
+                        then the values of these weights are
+                        sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                        :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
+        state (List[Tensor]):  a running buffer of partial computations from previous frames which are used for
+                        the calculation of subsequent outputs.
+
+    """
+
     def __init__(
         self,
         in_channels: int,
@@ -449,45 +481,6 @@ class Conv2d(_ConvCoNd):
         dtype=None,
         temporal_fill: PaddingMode = "zeros",
     ):
-        r"""Applies a continual 2D convolution over an input signal composed of several input
-        planes.
-
-        Assuming an input of shape `(B, C, T, S)`, it computes the convolution over one temporal instant `t` at a time
-        where `t` ∈ `range(T)`, and keeps an internal state. Two forward modes are supported here.
-
-        `forward`   takes an input of shape `(B, C, S)`, and computes a single-frame output (B, C', S') based on its internal state.
-                    On the first execution, the state is initialised with either ``'zeros'`` (corresponding to a zero padding of kernel_size[0]-1)
-                    or with a `'replicate'`` of the first frame depending on the choice of `temporal_fill`.
-                    `forward` also supports a functional-style exercution, by passing a `prev_state` explicitely as parameters, and by
-                    optionally returning the updated `next_state` via the `return_next_state` parameter.
-                    NB: The output when recurrently applying forward will be delayed by the `kernel_size[0] - 1`.
-
-        Args:
-            in_channels (int): Number of channels in the input image
-            out_channels (int): Number of channels produced by the convolution
-            kernel_size (int or tuple): Size of the convolving kernel
-            stride (int or tuple, optional): Stride of the convolution. NB: stride > 1 over the first channel is not supported. Default: 1
-            padding (int or tuple, optional): Zero-padding added to all three sides of the input. NB: padding over the first channel is not supported. Default: 0
-            dilation (int or tuple, optional): Spacing between kernel elements. NB: dilation > 1 over the first channel is not supported. Default: 1
-            groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
-            bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
-            temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_steps` along the temporal dimension. Default: ``'replicate'``
-
-        Attributes:
-            weight (Tensor): the learnable weights of the module of shape
-                            :math:`(\text{out\_channels}, \frac{\text{in\_channels}}{\text{groups}},`
-                            :math:`\text{kernel\_size[0]}, \text{kernel\_size[1]}, \text{kernel\_size[2]})`.
-                            The values of these weights are sampled from
-                            :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
-                            :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
-            bias (Tensor):   the learnable bias of the module of shape (out_channels). If :attr:`bias` is ``True``,
-                            then the values of these weights are
-                            sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
-                            :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
-            state (List[Tensor]):  a running buffer of partial computations from previous frames which are used for
-                            the calculation of subsequent outputs.
-
-        """
         _ConvCoNd.__init__(
             self,
             nn.Conv2d,
@@ -537,6 +530,42 @@ class Conv2d(_ConvCoNd):
 
 
 class Conv3d(_ConvCoNd):
+    r"""Continual 3D convolution over a spatio-temporal input signal.
+
+    Continual Convolutions were proposed by
+    Hedegaard et al.: "Continual 3D Convolutional Neural Networks for Real-time Processing of Videos", in ECCV (2022),
+    https://arxiv.org/pdf/2106.00050.pdf (paper) https://www.youtube.com/watch?v=Jm2A7dVEaF4 (video).
+
+    Assuming an input of shape `(B, C, T, H, W)`, it computes the convolution over one temporal instant `t` at a time
+    where `t` ∈ `range(T)`, and keeps an internal state. Two forward modes are supported here.
+
+    Args:
+        in_channels (int): Number of channels in the input image
+        out_channels (int): Number of channels produced by the convolution
+        kernel_size (int or tuple): Size of the convolving kernel
+        stride (int or tuple, optional): Stride of the convolution. NB: stride > 1 over the first channel is not supported. Default: 1
+        padding (int or tuple, optional): Zero-padding added to all three sides of the input. NB: padding over the first channel is not supported. Default: 0
+        dilation (int or tuple, optional): Spacing between kernel elements. NB: dilation > 1 over the first channel is not supported. Default: 1
+        groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
+        bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
+        temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_steps` along the temporal dimension. Default: ``'replicate'``
+
+    Attributes:
+        weight (Tensor): the learnable weights of the module of shape
+                        :math:`(\text{out\_channels}, \frac{\text{in\_channels}}{\text{groups}},`
+                        :math:`\text{kernel\_size[0]}, \text{kernel\_size[1]}, \text{kernel\_size[2]})`.
+                        The values of these weights are sampled from
+                        :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                        :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
+        bias (Tensor):   the learnable bias of the module of shape (out_channels). If :attr:`bias` is ``True``,
+                        then the values of these weights are
+                        sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                        :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
+        state (List[Tensor]):  a running buffer of partial computations from previous frames which are used for
+                        the calculation of subsequent outputs.
+
+    """
+
     def __init__(
         self,
         in_channels: int,
@@ -552,47 +581,6 @@ class Conv3d(_ConvCoNd):
         dtype=None,
         temporal_fill: PaddingMode = "zeros",
     ):
-        r"""Applies a continual 3D convolution over an input signal composed of several input
-        planes.
-
-        Assuming an input of shape `(B, C, T, H, W)`, it computes the convolution over one temporal instant `t` at a time
-        where `t` ∈ `range(T)`, and keeps an internal state. Two forward modes are supported here.
-
-        `forward_steps` operates identically to `nn.Conv3d.forward`
-
-        `forward`   takes an input of shape `(B, C, H, W)`, and computes a single-frame output (B, C', H', W') based on its internal state.
-                    On the first execution, the state is initialised with either ``'zeros'`` (corresponding to a zero padding of kernel_size[0]-1)
-                    or with a `'replicate'`` of the first frame depending on the choice of `temporal_fill`.
-                    `forward` also supports a functional-style exercution, by passing a `prev_state` explicitely as parameters, and by
-                    optionally returning the updated `next_state` via the `return_next_state` parameter.
-                    NB: The output when recurrently applying forward will be delayed by the `kernel_size[0] - 1`.
-
-        Args:
-            in_channels (int): Number of channels in the input image
-            out_channels (int): Number of channels produced by the convolution
-            kernel_size (int or tuple): Size of the convolving kernel
-            stride (int or tuple, optional): Stride of the convolution. NB: stride > 1 over the first channel is not supported. Default: 1
-            padding (int or tuple, optional): Zero-padding added to all three sides of the input. NB: padding over the first channel is not supported. Default: 0
-            dilation (int or tuple, optional): Spacing between kernel elements. NB: dilation > 1 over the first channel is not supported. Default: 1
-            groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
-            bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
-            temporal_fill (string, optional): ``'zeros'`` or ``'replicate'`` (= "boring video"). `temporal_fill` determines how state is initialised and which padding is applied during `forward_steps` along the temporal dimension. Default: ``'replicate'``
-
-        Attributes:
-            weight (Tensor): the learnable weights of the module of shape
-                            :math:`(\text{out\_channels}, \frac{\text{in\_channels}}{\text{groups}},`
-                            :math:`\text{kernel\_size[0]}, \text{kernel\_size[1]}, \text{kernel\_size[2]})`.
-                            The values of these weights are sampled from
-                            :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
-                            :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
-            bias (Tensor):   the learnable bias of the module of shape (out_channels). If :attr:`bias` is ``True``,
-                            then the values of these weights are
-                            sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
-                            :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
-            state (List[Tensor]):  a running buffer of partial computations from previous frames which are used for
-                            the calculation of subsequent outputs.
-
-        """
         _ConvCoNd.__init__(
             self,
             nn.Conv3d,

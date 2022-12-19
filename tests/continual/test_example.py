@@ -194,3 +194,15 @@ def test_se():
 
     output_steps = se.forward_steps(example, pad_end=True)
     assert torch.allclose(output_steps, output)
+
+
+def test_linear():
+    #                   B  C  T   H    W
+    input = torch.randn(1, 3, 16, 128, 128)
+    net = co.Sequential(
+        co.Conv3d(3, 32, 3),
+        co.AdaptiveAvgPool3d((1, 1, 1), 32),
+        co.Linear(32, 10, channel_dim=1),
+    )
+    output = net(input)
+    assert output.size() == torch.Size([1, 10, 1, 1, 1])

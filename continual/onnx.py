@@ -7,6 +7,8 @@ import torch._C._onnx as _C_onnx
 from continual.module import CoModule
 from continual.utils import flatten
 
+__all__ = ["export", "OnnxWrapper"]
+
 
 def export(
     model: Union[torch.nn.Module, torch.jit.ScriptModule, torch.jit.ScriptFunction],

@@ -7,19 +7,50 @@ from torch import Tensor, nn
 from .module import CoModule
 from .utils import function_repr
 
+__all__ = [
+    "Lambda",
+    "Multiply",
+    "Add",
+    "Identity",
+    "Constant",
+    "Zero",
+    "One",
+]
+
 
 class Lambda(CoModule, nn.Module):
     """Module wrapper for stateless functions.
 
-    NB: Operations performed in a Lambda are not counted in `ptflops`
+    .. note::
+        Operations performed in a Lambda are not counted in `ptflops`
 
     Args:
-        fn (Callable[[Tensor], Tensor]): Function to be called during forward.
-        forward_only_fn (Callable[[Tensor], Tensor]): Function to be called only during `forward`. `fn` is used for the other call modes.
-        forward_step_only_fn (Callable[[Tensor], Tensor]): Function to be called only during `forward_step`. `fn` is used for the other call modes.
-        forward_steps_only_fn (Callable[[Tensor], Tensor]): Function to be called only during `forward_steps`. `fn` is used for the other call modes.
-        forward_only_fn (Callable[[Tensor], Tensor]): Function to be called only during forward. `fn` is used for the other call modes.
-        takes_time (bool, optional): If True, `fn` recieves all steps, if False, it received one step and no time dimension. Defaults to False.
+        fn: Function to be called during forward.
+        forward_only_fn: Function to be called only during ``forward``. ``fn`` is used for the other call modes.
+        forward_step_only_fn: Function to be called only during ``forward_step``. ``fn`` is used for the other call modes.
+        forward_steps_only_fn: Function to be called only during ``forward_steps``. ``fn`` is used for the other call modes.
+        forward_only_fn: Function to be called only during forward. ``fn`` is used for the other call modes.
+        takes_time: If True, ``fn`` receives all steps, if False, it received one step and no time dimension. Defaults to False.
+
+    Examples::
+
+        x = torch.arange(90).reshape(1,3,30) * 1.0
+
+        # Using named function
+        def same_stats_different_values(x):
+            return torch.randn_like(x) * x.std() + x.mean()
+
+        same_stats_layer = co.Lambda(same_stats_different_values)
+        same_stats_layer(x)
+
+        # Using unnamed function
+        mean_layer = co.Lambda(lambda x: torch.ones_like(x) * x.mean())
+        mean_layer(x)
+
+        # Using functor
+        sigmoid = co.Lambda(torch.nn.Sigmoid())
+        sigmoid(x)
+
     """
 
     _state_shape = 0
@@ -119,8 +150,12 @@ def _multiply(x: Tensor, factor: Union[float, int, Tensor]):
     return x * factor
 
 
-def Multiply(factor) -> Lambda:
-    """Create Lambda with multiplication function"""
+def Multiply(factor: float) -> Lambda:
+    r"""Applies an scaling transformation to the incoming data: :math:`y = ax`.
+
+    Args:
+        factor (float): Number to multiply with.
+    """
     fn = partial(_multiply, factor=factor)
     return Lambda(fn, takes_time=True)
 
@@ -129,7 +164,12 @@ def _add(x: Tensor, constant: Union[float, int, Tensor]):
     return x + constant
 
 
-def Add(constant) -> Lambda:
+def Add(constant: float) -> Lambda:
+    r"""Applies an additive translation to the incoming data: :math:`y = x + a`.
+
+    Args:
+        constant (float): Number to add.
+    """
     """Create Lambda with addition function"""
     fn = partial(_add, constant=constant)
     return Lambda(fn, takes_time=True)
@@ -139,20 +179,42 @@ def _unity(x: Tensor):
     return x
 
 
-def Unity() -> Lambda:
-    """Create Lambda with addition function"""
+def Identity(*args, **kwargs) -> Lambda:
+    """A placeholder identity operator that is argument-insensitive.
+
+    Args:
+        args: any argument (unused)
+        kwargs: any keyword argument (unused)
+
+    Shape:
+        - Input: :math:`(*)`, where :math:`*` means any number of dimensions.
+        - Output: :math:`(*)`, same shape as the input.
+
+    Examples::
+
+        m = co.Identity(54, unused_argument1=0.1, unused_argument2=False)
+        input = torch.randn(128, 20)
+        output = m(input)
+        assert output.size() == torch.Size([128, 20])
+
+    """
     return Lambda(_unity, takes_time=True)
 
 
-def Constant(constant: float):
+def Constant(constant: float) -> Lambda:
+    """Returns ``constant * torch.ones_like(input)``.
+
+    Arguments:
+        constant: Constant value to return.
+    """
     return Lambda(lambda x: constant * torch.ones_like(x), takes_time=True)
 
 
 def Zero() -> Lambda:
-    """Create Lambda with zero output"""
+    """Returns ``torch.zeros_like(input)``."""
     return Lambda(torch.zeros_like, takes_time=True)
 
 
 def One() -> Lambda:
-    """Create Lambda with zero output"""
+    """Returns ``torch.ones_like(input)``."""
     return Lambda(torch.ones_like, takes_time=True)

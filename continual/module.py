@@ -2,7 +2,7 @@ import functools
 import itertools
 from abc import ABC
 from enum import Enum
-from typing import Any, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.utils.hooks as hooks
@@ -13,14 +13,16 @@ from torch.nn.modules.module import (
     _global_forward_pre_hooks,
 )
 
+__all__ = ["CoModule", "call_mode"]
+
 # First element is a value buffer, while others are indexes
-# State = Tuple[Tensor, Optional[int], Optional[int]]
 State = Tuple[Tensor, Tensor, Tensor]
 
 
 class PaddingMode(Enum):
     REPLICATE = "replicate"
     ZEROS = "zeros"
+    NEG_INF = "neg_inf"
 
 
 # Not compatible with torch.jit:
@@ -53,13 +55,28 @@ def _callmode(cm) -> torch.Tensor:
 
 
 class _CallModeContext(object):
-    """Context-manager state holder."""
+    """Context-manager which temporarily specifies a call_mode
+
+    When the call_mode context is used, the ``__call__`` function of continual modules with be set accordingly
+
+    Example::
+
+        sequence = torch.randn(1, 3, 10)
+        step = sequence[:, :, -1]
+
+        forward_output = module(sequence)  # Calls `forward`
+
+        with co.call_mode("forward_step"):
+            forward_step_output = module(step)  # Calls `forward_step`
+
+        forward_output = module(sequence)  # Calls `forward`
+    """
 
     def __init__(self):
         self.cur = _callmode("forward")
         self.prev = None
 
-    def __call__(self, value: Union[str, int, torch.Tensor]) -> "_CallModeContext":
+    def __call__(self, value: Union[str, int, torch.Tensor]):
         self.prev = self.cur
         self.cur = _callmode(value)
         return self
@@ -73,16 +90,6 @@ class _CallModeContext(object):
 
 
 call_mode = _CallModeContext()
-"""Context-manager that holds a call_mode
-
-When the call_mode context is used, the __call__ function of continual modules with be set accordingly
-
-Example:
-    >>> forward_output = module(forward_input)
-    >>>
-    >>> with co.call_mode("forward_step"):
-    >>>     forward_step_output = module(forward_step_input)
-"""
 
 
 def _clone_first(state: State) -> State:
@@ -93,13 +100,21 @@ def _clone_first(state: State) -> State:
 
 class CoModule(ABC):
     """Base class for continual modules.
-    Deriving from this class enforces that neccessary class methods are implemented
+    Deriving from this class provides base-functionality and enforces
+    the implementation of necessary methods.
+
+    Attributes:
+        receptive_field (int): Temporal receptive field of the module.
+        delay (int): Number of step inputs to observe before the modules produces valid outputs.
+        stride (Tuple[int,...]): (Spatio)-temporal stride.
+        padding (Tuple[int,...]): (Spatio)-temporal padding.
+
     """
 
     receptive_field: int = 1
     stride: Tuple[int, ...] = (1,)
     padding: Tuple[int, ...] = (0,)
-    make_padding = torch.zeros_like
+    _make_padding = torch.zeros_like
     _state_shape: int = 0
     _dynamic_state_inds: List[bool] = []
     _call_mode = _callmode("forward")
@@ -151,7 +166,7 @@ class CoModule(ABC):
         return True
 
     def get_state(self) -> Optional[State]:
-        """Get model state
+        """Get model state.
 
         Returns:
             Optional[State]: A State tuple if the model has been initialised and otherwise None.
@@ -167,7 +182,7 @@ class CoModule(ABC):
         ...  # pragma: no cover
 
     def clean_state(self):
-        """Clean model state"""
+        """Clean model state, resetting the network memory."""
         ...  # pragma: no cover
 
     @property
@@ -177,14 +192,23 @@ class CoModule(ABC):
     def forward_step(
         self, input: Tensor, update_state: bool = True
     ) -> Optional[Tensor]:
-        """Forward computation for a single step with state initialisation
+        """Performs a forward computation for a single frame and (optionally) updates internal states accordingly.
+        This function performs efficient continual inference.
+
+        Illustration::
+
+            O+S O+S O+S O+S   (O: output, S: updated internal state)
+             ↑   ↑   ↑   ↑
+             N   N   N   N    (N: network module)
+             ↑   ↑   ↑   ↑
+             I   I   I   I    (I: input frame)
 
         Args:
             input (Tensor): Layer input.
             update_state (bool): Whether internal state should be updated during this operation.
 
         Returns:
-            Optional[Tensor]: Step output. This will be a placeholder while the module initialises and every (stride - 1) : stride.
+            Optional[Tensor]: Step output. This will be a placeholder while the module initializes and every (stride - 1) / stride.
         """
         state = self.get_state()
         if not update_state and state:
@@ -197,7 +221,19 @@ class CoModule(ABC):
     def forward_steps(
         self, input: Tensor, pad_end: bool = False, update_state=True
     ) -> Optional[Tensor]:
-        """Forward computation for multiple steps with state initialisation
+        """Performs a forward computation across multiple time-steps while updating internal states for continual inference (if update_state=True).
+        Start-padding is always accounted for, but end-padding is omitted per default in expectance of the next input step. It can be added by specifying pad_end=True. If so, the output-input mapping the exact same as that of forward.
+
+        Illustration::
+
+                    O            (O: output)
+                    ↑
+            -----------------    (-: aggregation)
+            O  O+S O+S O+S  O    (O: output, S: updated internal state)
+            ↑   ↑   ↑   ↑   ↑
+            N   N   N   N   N    (N: network module)
+            ↑   ↑   ↑   ↑   ↑
+            P   I   I   I   P    (I: input frame, P: padding)
 
         Args:
             input (Tensor): Layer input.
@@ -205,7 +241,7 @@ class CoModule(ABC):
             update_state (bool): Whether internal state should be updated during this operation.
 
         Returns:
-            Tensor: Layer output
+            Optional[Tensor]: Layer output
         """
         return self._forward_steps_impl(input, pad_end, update_state)
 
@@ -244,7 +280,7 @@ class CoModule(ABC):
                 state = _clone_first(opt_state)
 
             for t, i in enumerate(
-                [self.make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
+                [self._make_padding(input[:, :, -1]) for _ in range(self.padding[0])]
             ):
                 o, state = self._forward_step(i, state)
                 if isinstance(o, Tensor):
@@ -255,24 +291,39 @@ class CoModule(ABC):
 
         return torch.stack(outs, dim=2)
 
-    def forward(self, input: Tensor) -> Any:
-        """Forward computation for multiple steps without state initialisation.
-        This function is identical to the non-continual module found `torch.nn`
+    def forward(self, input: Tensor) -> Tensor:
+        """Performs a forward computation over multiple time-steps.
+        This function is identical to the corresponding module in _torch.nn_,
+        ensuring cross-compatibility. Moreover, it's handy for efficient training
+        on clip-based data.
+
+        Illustration::
+
+                    O            (O: output)
+                    ↑
+                    N            (N: network module)
+                    ↑
+            -----------------    (-: aggregation)
+            P   I   I   I   P    (I: input frame, P: padding)
 
         Args:
-            input (Tensor): Layer input.
+            input (Tensor): Network input.
         """
         ...  # pragma: no cover
 
     def warm_up(self, step_shape: List[int]):
         """Warms up the model state with a dummy input.
-        The initial `self.delay` steps will still produce inexact results.
+        The initial `self.delay` steps will produce results, but they will be inexact.
+
+        To warm up the model with a user-defined data, pass the data to forward_steps::
+
+            net.forward_steps(user_data)
 
         Args:
             step_shape (Sequence[int]): input shape with which to warm the model up, including batch size.
         """
         step_shape = (*step_shape[:2], self.delay, *step_shape[2:])
-        dummy = self.make_padding(torch.zeros(step_shape, dtype=torch.float))
+        dummy = self._make_padding(torch.zeros(step_shape, dtype=torch.float))
         self.forward_steps(dummy)
 
     @property
@@ -362,3 +413,19 @@ class CoModule(ABC):
         return result
 
     __call__ = _call_impl
+
+    @staticmethod
+    def build_from(
+        module: torch.nn.Module,
+        *args,
+        **kwargs,
+    ) -> "CoModule":
+        """Copy parameters and weights from a non-continual module and
+        build the corresponding continual version.
+
+        Args:
+            module (torch.nn.Module): Module from which to copy variables and weights
+
+        Returns:
+            CoModule: Continual Module with the parameters and weights of the passed module.
+        """

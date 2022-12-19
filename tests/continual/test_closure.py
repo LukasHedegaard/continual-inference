@@ -1,6 +1,6 @@
 import torch
 
-from continual.closure import Add, Constant, Lambda, Multiply, One, Unity, Zero
+from continual.closure import Add, Constant, Identity, Lambda, Multiply, One, Zero
 
 
 def test_add():
@@ -103,9 +103,9 @@ def test_lambda_call_specific_fns():
     )
 
 
-def test_unity():
+def test_identity():
     x = torch.ones((1, 1, 2, 2))
-    assert torch.equal(x, Unity()(x))
+    assert torch.equal(x, Identity()(x))
 
 
 def test_constant():

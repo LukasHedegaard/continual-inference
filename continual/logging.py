@@ -2,6 +2,9 @@
 
 import logging
 from functools import wraps
+from typing import Callable
+
+__all__ = ["getLogger"]
 
 
 def _process_rank():
@@ -23,6 +26,20 @@ def _process_rank():
 process_rank = _process_rank()
 
 
+def once(fn: Callable):
+    mem = set()
+
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        h = hash((args, str(kwargs)))
+        if h in mem:
+            return
+        mem.add(h)
+        return fn(*args, **kwargs)
+
+    return wrapped
+
+
 def if_rank_zero(fn):
     @wraps(fn)
     def wrapped(*args, **kwargs):
@@ -33,7 +50,9 @@ def if_rank_zero(fn):
     return wrapped
 
 
-def getLogger(name):
+def getLogger(name, log_once=False):
     logger = logging.getLogger(name)
+    if log_once:
+        logger._log = once(logger._log)
     logger._log = if_rank_zero(logger._log)
     return logger

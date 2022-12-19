@@ -1,6 +1,6 @@
 from . import onnx  # noqa: F401
 from .__about__ import __copyright__, __license__, __version__  # noqa: F401
-from .closure import Add, Constant, Lambda, Multiply, One, Unity, Zero  # noqa: F401
+from .closure import Add, Constant, Identity, Lambda, Multiply, One, Zero  # noqa: F401
 from .container import (  # noqa: F401
     Broadcast,
     BroadcastReduce,

@@ -132,6 +132,7 @@ dmypy.json
 docs/_build/
 docs/autoapi
 docs/source/generated/
+docs/source/common/generated/
 
 
 # VSCode

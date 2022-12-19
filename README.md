@@ -1,50 +1,79 @@
-<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" style="width: 30vw; min-width: 400px;">
+<img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/logo/logo_name.svg" style="width: 400px;">
 
-__PyTorch building blocks for Continual Inference Networks__
+__A Python library for Continual Inference Networks in PyTorch__
 
-<div align="left">
-  <a href="https://pypi.org/project/continual-inference/">
+[Quick-start](#quick-start) • 
+[Docs](https://continual-inference.readthedocs.io) • 
+[Principles](#library-principles) • 
+[Paper](https://arxiv.org/abs/2204.03418) • 
+[Examples](#composition-examples) • 
+[Modules](#module-library) • 
+[Model Zoo](#model-zoo-and-benchmarks) • 
+[Contribute](CONTRIBUTING.md) • 
+[License](LICENSE)
+
+<div>
+  <a href="https://pypi.org/project/continual-inference/" style="display:inline-block;">
     <img src="https://img.shields.io/pypi/pyversions/continual-inference" height="20" >
   </a>
-  <a href="https://badge.fury.io/py/continual-inference">
+  <a href="https://badge.fury.io/py/continual-inference" style="display:inline-block;">
     <img src="https://badge.fury.io/py/continual-inference.svg" height="20" >
   </a>
-  <a href="https://continual-inference.readthedocs.io/en/latest/?badge=latest">
+  <a href="https://continual-inference.readthedocs.io/en/latest/?badge=latest" style="display:inline-block;">
     <img src="https://readthedocs.org/projects/continual-inference/badge/?version=latest" alt="Documentation Status" height="20"/>
   </a>
-  <a href="https://pepy.tech/project/continual-inference">
+  <a href="https://pepy.tech/project/continual-inference" style="display:inline-block;">
     <img src="https://pepy.tech/badge/continual-inference" height="20">
   </a>
-  <a href="https://codecov.io/gh/LukasHedegaard/continual-inference">
+  <a href="https://codecov.io/gh/LukasHedegaard/continual-inference" style="display:inline-block;">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG" height="20"/>
   </a>
-  <a href="https://opensource.org/licenses/Apache-2.0">
+  <a href="https://opensource.org/licenses/Apache-2.0" style="display:inline-block;">
     <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" height="20">
   </a>
-  <a href="https://arxiv.org/abs/2204.03418">
+  <!-- <a href="https://arxiv.org/abs/2204.03418" style="display:inline-block;">
     <img src="http://img.shields.io/badge/paper-arxiv.2204.03418-B31B1B.svg" height="20" >
-  </a>
-  <a href="https://github.com/psf/black">
+  </a> -->
+  <a href="https://github.com/psf/black" style="display:inline-block;">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg" height="20">
   </a>
-  <a href="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/overview/main">
-    <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="CodeFactor" height="20" />
+  <a href="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/overview/main" style="display:inline-block;">
+    <img src="https://www.codefactor.io/repository/github/lukashedegaard/continual-inference/badge/main" alt="We match PyTorch interfaces exactly. Method arguments named 'input' reduce the codefactor to 'A-'" height="20" />
   </a>
-  <sup>*</sup>
 </div>
 
-###### \*We match PyTorch interfaces exacly. This reduces the codefactor to "A-" due to method arguments named "input".
+## Continual Inference Networks ensure efficient stream processing
+Many of our favorite Deep Neural Network architectures (e.g., [CNNs](https://arxiv.org/abs/2106.00050) and [Transformers](https://arxiv.org/abs/2201.06268)) were built with offline-processing for offline processing. Rather than processing inputs one sequence element at a time, they require the whole (spatio-)temporal sequence to be passed as a single input.
+Yet, **many important real-life applications need online predictions on a continual input stream**. 
+While CNNs and Transformers can be applied by re-assembling and passing sequences within a sliding window, this is _inefficient_ due to the redundant intermediary computations from overlapping clips.
 
-## Install 
+**Continual Inference Networks** (CINs) are built to ensure efficient stream processing by employing an alternative computational ordering, which allows sequential computations without the use of sliding window processing.
+In general, CINs requires approx. _L_ ×  fewer FLOPs per prediction compared to sliding window-based inference with non-CINs, where _L_ is the corresponding sequence length of a non-CIN network. For more details, check out the videos below describing Continual 3D CNNs [[1](https://arxiv.org/abs/2106.00050)] and Transformers [[2](https://arxiv.org/abs/2201.06268)].
+
+
+<div align="center">
+  <a href="http://www.youtube.com/watch?feature=player_embedded&v=Jm2A7dVEaF4" target="_blank">
+     <img src="http://img.youtube.com/vi/Jm2A7dVEaF4/hqdefault.jpg" alt="Presentation of Continual 3D CNNs" style="width:240px;height:auto;" />
+  </a>
+  <a href="http://www.youtube.com/watch?feature=player_embedded&v=gy802Tlp-eQ" target="_blank">
+     <img src="http://img.youtube.com/vi/gy802Tlp-eQ/hqdefault.jpg" alt="Presentation of Continual Transformers" style="width:240px;height:auto;" />
+  </a>
+</div>
+
+## News
+- 2022-12-02: ONNX compatibility for all modules is available from v1.0.0. See [test_onnx.py](tests/continual/test_onnx.py) for examples.
+
+
+## Quick-start
+
+### Install 
 ```bash
 pip install continual-inference
 ```
 
-## News
-- 2022-12-02: ONNX compatibility for all modules is available from v1.0.0. See [test_onnx.py](tests/continual/test_onnx.py) for examples.
-- 2022-08-18: The library paper ["Continual Inference: A Library for Efficient Online Inference with Deep Neural Networks in PyTorch"](https://arxiv.org/abs/2204.03418) was accepted at the ECCV 2022 workhop on Computational Aspects of Deep Learning. 🎉
 
-## A motivating example
+
+### Example
 `co` modules are weight-compatible drop-in replacement for `torch.nn`, enhanced with the capability of efficient _continual inference_:
 
 ```python3
@@ -71,238 +100,95 @@ assert conv.receptive_field == 3
 assert conv.delay == 2
 ```
 
-For more examples, see the [Advanced Module Examples](#advanced-module-examples) and [Model Zoo](#model-zoo).
+See the [network composition](#composition) and [model zoo](#model-zoo-and-benchmarks) sections for additional examples.
 
-## Continual Inference Networks (CINs)
-Continual Inference Networks are a neural network subset, which can make new predictions efficiently _for each new time-step_.
-They are ideal for __online detection__ and monitoring scenarios, but can also be used succesfully in offline situations.
+## Library principles
 
-Some example CINs and non-CINs are illustrated below to 
-
-__CIN__:
-```
-   O          O          O        (output)
-   ↑          ↑          ↑       
-nn.LSTM    nn.LSTM    nn.LSTM     (temporal LSTM)
-   ↑          ↑          ↑    
-nn.Conv2D  nn.Conv2D  nn.Conv2D   (spatial 2D conv)
-   ↑          ↑          ↑    
-   I          I          I        (input frame)
-```
-
-Here, we see that all network-modules, which do not utilise temporal information can be used for an Continual Inference Network (e.g. `nn.Conv1d` and `nn.Conv2d` on spatial data such as an image). 
-Moreover, recurrent modules (e.g. `LSTM` and `GRU`), that summarize past events in an internal state are also useable in CINs.
-
-However, modules that operate on temporal data with the assumption that the more temporal context is available than the current frame cannot be directly applied.
-One such example is the spatio-temporal `nn.Conv3d` used by many SotA video recognition models (see below)
-
-__Not CIN__:
-```
-          Θ              (output)   
-          ↑              
-      nn.Conv3D          (spatio-temporal 3D conv)
-          ↑
-  -----------------      (concatenate frames to clip)
-  ↑       ↑       ↑    
-  I       I       I      (input frame)  
-```
-
-Sometimes, though, the computations in such modules, can be cleverly restructured to work for online inference as well! 💪 
-
-__CIN__:
-```
-    O          O          Θ      (output)
-    ↑          ↑          ↑    
-co.Conv3d  co.Conv3d  co.Conv3d  (continual spatio-temporal 3D conv)
-    ↑          ↑          ↑    
-    I          I          I      (input frame)
-```
-Here, the `ϴ` output of the `Conv3D` and `ConvCo3D` are identical! ✨
-
-The last conversion from a non-CIN to a CIN is possible due to a recent break-through in Online Action Detection, namely [Continual Convolutions](https://arxiv.org/abs/2106.00050).
-
-### Continual Convolutions
-Below, we see principle sketches, which compare regular and continual convolutions during online / continual inference.
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/regular-convolution.png" style="width: 25vw; min-width: 350px;">
-  <br>
-  (1) <br> 
-  Regular Convolution. 
-	A regular temporal convolutional layer leads to redundant computations during online processing of video clips, as illustrated by the repeated convolution of inputs (green b,c,d) with a kernel (blue α,β) in the temporal dimension. Moreover, prior inputs (b,c,d) must be stored between time-steps for online processing tasks.
-  <br><br>
-  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/continual-convolution.png" style="width: 25vw; min-width: 350px;">
-  <br>
-  (2) <br>
-  Continual Convolution. 
-	An input (green d or e) is convolved with a kernel (blue α, β). The intermediary feature-maps corresponding to all but the last temporal position are stored, while the last feature map and prior memory are summed to produce the resulting output. For a continual stream of inputs, Continual Convolutions produce identical outputs to regular convolutions.
-  <br><br>  
-</div>
-
-Comparing Figures (1) and (2), we see that Continual Convolutions get rid of computational redundancies.
-This can speed up online inference greatly - for example, a Continual X3D model for Human Activity Recognition has __10× less Floating Point Operations per prediction__ than the vanilla X3D models 🚀. 
-
-> 💡  The longer the length of the temporal sequence, the larger the savings.
-
-For more information, we refer to the [paper describing this library](https://arxiv.org/abs/2204.03418).
-
-
-## Forward modes
+### Forward modes
 The library components feature three distinct forward modes, which are handy for different situations, namely `forward`, `forward_step`, and `forward_steps`:
 
-### `forward`
-Performs a full forward computation exactly as the regular layer would.
-This method is handy for effient training on clip-based data.
+#### `forward(input)`
+Performs a forward computation over multiple time-steps. This function is identical to the corresponding module in _torch.nn_, ensuring cross-compatibility. Moreover, it's handy for efficient training on clip-based data.
 
 ```
          O            (O: output)
          ↑ 
-         N            (N: nework module)
+         N            (N: network module)
          ↑ 
  -----------------    (-: aggregation)
  P   I   I   I   P    (I: input frame, P: padding)
 ```
 
 
-### `forward_step`
-Performs a forward computation for a single frame and continual states are updated accordingly. This is the mode to use for continual inference.
+#### `forward_step(input, update_state=True)`
+Performs a forward computation for a single frame and (optionally) updates internal states accordingly. This function performs efficient continual inference.
 
 ```
 O+S O+S O+S O+S   (O: output, S: updated internal state)
  ↑   ↑   ↑   ↑ 
- N   N   N   N    (N: nework module)
+ N   N   N   N    (N: network module)
  ↑   ↑   ↑   ↑ 
  I   I   I   I    (I: input frame)
 ```
 
-### `forward_steps`
-Performs a layer-wise forward computation using the continual module.
-The computation is performed frame-by-frame and continual states are updated accordingly.
-The output-input mapping the exact same as that of a regular module.
-This mode is handy for initialising the network on a whole clip (multipleframes) before the `forward` is usead for continual inference. 
+#### `forward_steps(input, pad_end=False, update_state=True)`
+Performs a forward computation across multiple time-steps while updating internal states for continual inference (if update_state=True).
+Start-padding is always accounted for, but end-padding is omitted per default in expectance of the next input step. It can be added by specifying pad_end=True. If so, the output-input mapping the exact same as that of forward.
 ```
          O            (O: output)
          ↑ 
  -----------------    (-: aggregation)
  O  O+S O+S O+S  O    (O: output, S: updated internal state)
  ↑   ↑   ↑   ↑   ↑
- N   N   N   N   N    (N: nework module)
+ N   N   N   N   N    (N: network module)
  ↑   ↑   ↑   ↑   ↑
  P   I   I   I   P    (I: input frame, P: padding)
 ```
 
-## Modules
-Below is a list of the modules and utilities included in the library:
+#### `__call__`
+Per default, the `__call__` function operates identically to _torch.nn_ and executes forward. We supply two options for changing this behavior, namely the _call_mode_ property and the _call_mode_ context manager. An example of their use follows:
 
-<!-- TODO: Replace with link to docs once they are set up -->
-- Convolutions:
-    - `co.Conv1d`
-    - `co.Conv2d`
-    - `co.Conv3d`
+```python
+timeseries = torch.randn(batch, channel, time)
+timestep = timeseries[:, :, 0]
 
-- Pooling:
-    - `co.AvgPool1d`
-    - `co.AvgPool2d`
-    - `co.AvgPool3d`
-    - `co.MaxPool1d`
-    - `co.MaxPool2d`
-    - `co.MaxPool3d`
-    - `co.AdaptiveAvgPool1d`
-    - `co.AdaptiveAvgPool2d`
-    - `co.AdaptiveAvgPool3d`
-    - `co.AdaptiveMaxPool1d`
-    - `co.AdaptiveMaxPool2d`
-    - `co.AdaptiveMaxPool3d`
+net(timeseries)  # Invokes net.forward(timeseries)
 
-- Linear:
-    - `co.Linear`
+# Assign permanent call_mode property
+net.call_mode = "forward_step"
+net(timestep)  # Invokes net.forward_step(timestep)
 
-- Recurrent:
-    - `co.RNN`
-    - `co.LSTM`
-    - `co.GRU`
+# Assign temporary call_mode with context manager
+with co.call_mode("forward_steps"):
+    net(timeseries)  # Invokes net.forward_steps(timeseries)
 
-- Transformers:
-    - `co.TransformerEncoder`
-    - `co.TransformerEncoderLayerFactory` - Factory function corresponding to `nn.TransformerEncoderLayer`.
-    - `co.SingleOutputTransformerEncoderLayer` - SingleOutputMHA version of `nn.TransformerEncoderLayer`.
-    - `co.RetroactiveTransformerEncoderLayer` - RetroactiveMHA version of `nn.TransformerEncoderLayer`.
-    - `co.RetroactiveMultiheadAttention` - Retroactive version of `nn.MultiheadAttention`.
-    - `co.SingleOutputMultiheadAttention` - Single-output version of `nn.MultiheadAttention`.
-    - `co.RecyclingPositionalEncoding` - Positional Encoding used for Continual Transformers.
+net(timestep)  # Invokes net.forward_step(timestep) again
+```
 
-- Containers
-    - `co.Sequential` - Sequential wrapper for modules. This module automatically performs conversions of torch.nn modules, which are safe during continual inference. These include all batch normalisation and activation function. 
-    - `co.Broadcast` - Broadcast one stream to multiple.
-    - `co.Parallel` - Parallel wrapper for modules. Like `co.Sequential`, this module performs automatic conersion of torch.nn modules.
-    - `co.ParallelDispatch` - Parallel dispatch of many input streams to many output streams.
-    - `co.Reduce` - Reduce multiple input streams to one.
-    - `co.Residual` - Residual wrapper for modules.
-    - `co.BroadcastReduce` - BroadcastReduce wrapper for modules.
-    - `co.Conditional` - Conditionally checks whether to invoke a module at runtime.
+### Composition
 
-- Other
-    - `co.Delay` - Pure delay module (e.g. needed in residuals).
-    - `co.Reshape` - Reshape non-temporal dimensions.
-    - `co.Lambda` - Lambda module which wraps any function.
-    - `co.Add` - Adds a constant value.
-    - `co.Multiply` - Multiplies with a constant factor.
-    - `co.Unity` - Maps input to output without modification.
-    - `co.Constant` - Maps input to and output with constant value.
-    - `co.Zero` - Maps input to output of zeros.
-    - `co.One` - Maps input to output of ones.
+Continual Inference Networks require strict handling of internal data delays to guarantee correspondence between [forward modes](#forward-modes). While it is possible to compose neural networks by defining _forward_, _forward_step_, and _forward_steps_ manually, correct handling of delays is cumbersome and time-consuming. Instead, we provide a rich interface of container modules, which handles delays automatically. On top of `co.Sequential` (which is a drop-in replacement of _torch.nn.Sequential_), we provide modules for handling parallel and conditional dataflow. 
 
-- Converters
-    - `co.continual` - conversion function from `torch.nn` modules to `co` modules.
-    - `co.forward_stepping` - functional wrapper, which enhances temporally local `torch.nn` modules with the forward_stepping functions.
+- [`co.Sequential`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Sequential.html): Invoke modules sequentially, passing the output of one module onto the next.
+- [`co.Broadcast`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Broadcast.html): Broadcast one stream to multiple.
+- [`co.Parallel`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Parallel.html): Invoke modules in parallel given each their input.
+- [`co.ParallelDispatch`](https://continual-inference.readthedocs.io/en/latest/generated/continual.ParallelDispatch.html): Dispatch multiple input streams to multiple output streams flexibly.
+- [`co.Reduce`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Reduce.html): Reduce multiple input streams to one.
+- [`co.BroadcastReduce`](https://continual-inference.readthedocs.io/en/latest/generated/continual.BroadcastReduce.html): Shorthand for Sequential(Broadcast, Parallel, Reduce).
+- [`co.Residual`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Residual.html): Residual connection.
+- [`co.Conditional`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conditional.html): Conditionally checks whether to invoke a module (or another) at runtime.
 
-In addition, we support interoperability with a wide range of modules from `torch.nn`:
 
-- Activation
-    - `nn.Threshold`
-    - `nn.ReLU`
-    - `nn.RReLU`
-    - `nn.Hardtanh`
-    - `nn.ReLU6`
-    - `nn.Sigmoid`
-    - `nn.Hardsigmoid`
-    - `nn.Tanh`
-    - `nn.SiLU`
-    - `nn.Hardswish`
-    - `nn.ELU`
-    - `nn.CELU`
-    - `nn.SELU`
-    - `nn.GLU`
-    - `nn.GELU`
-    - `nn.Hardshrink`
-    - `nn.LeakyReLU`
-    - `nn.LogSigmoid`
-    - `nn.Softplus`
-    - `nn.Softshrink`
-    - `nn.PReLU`
-    - `nn.Softsign`
-    - `nn.Tanhshrink`
-    - `nn.Softmin`
-    - `nn.Softmax`
-    - `nn.Softmax2d`
-    - `nn.LogSoftmax`
+#### Composition examples:
 
-- Normalisation
-    - `nn.BatchNorm1d`
-    - `nn.BatchNorm2d`
-    - `nn.BatchNorm3d`
-    - `nn.LayerNorm`
+<details>
+<summary><b>Residual module</b></summary>
 
-- Dropout
-    - `nn.Dropout`
-    - `nn.Dropout2d`
-    - `nn.Dropout3d`
-    - `nn.AlphaDropout`
-    - `nn.FeatureAlphaDropout`
+Short-hand:
+```python3
+residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
+```
 
-## Advanced module examples
-
-### Residual module
 Explicit:
 ```python3
 residual = co.Sequential(
@@ -315,12 +201,12 @@ residual = co.Sequential(
 )
 ```
 
-Short-hand:
-```python3
-residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
-```
+</details>
 
-### Continual 3D [MBConv](https://arxiv.org/pdf/1801.04381.pdf)
+<details>
+<summary><b>3D MobileNetV2 Inverted residual block</b></summary>
+
+Continual 3D version of the [MobileNetV2 Inverted residual block](https://arxiv.org/pdf/1801.04381.pdf).
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/mb_conv.png" style="width: 15vw; min-width: 200px;">
@@ -342,8 +228,12 @@ mb_conv = co.Residual(
 )
 ```
 
+</details>
 
-### Continual 3D [Squeeze-and-Excitation module](https://arxiv.org/pdf/1709.01507.pdf)
+<details>
+<summary><b>3D Squeeze-and-Excitation module</b></summary>
+
+Continual 3D version of the [Squeeze-and-Excitation module](https://arxiv.org/pdf/1709.01507.pdf)
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/se_block.png" style="width: 15vw; min-width: 200px;">
@@ -368,13 +258,17 @@ se = co.Residual(
 )
 ```
 
+</details>
 
-### Continual 3D [Inception module](https://arxiv.org/pdf/1409.4842v1.pdf)
+<details>
+<summary><b>3D Inception module</b></summary>
 
+Continual 3D version of the [Inception module](https://arxiv.org/pdf/1409.4842v1.pdf):
 <div align="center">
   <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/examples/inception_block.png" style="width: 25vw; min-width: 350px;">
   <br>
-  Inception module with dimension reductions. Source: https://arxiv.org/pdf/1409.4842v1.pdf
+  Inception module. Source: https://arxiv.org/pdf/1409.4842v1.pdf
+   
 </div>
 
 ```python3
@@ -402,100 +296,248 @@ inception_module = co.BroadcastReduce(
     reduce="concat",
 )
 ```
+</details>
 
-## Model Zoo
+
+### Input shapes
+We enforce a unified ordering of input dimensions for all library modules, namely:
+
+    (batch, channel, time, optional_dim2, optional_dim3)
+
+### Outputs
+The outputs produces by `forward_step` and `forward_steps` are identical to those of `forward`, provided the same data was input beforehand and state update was enabled. We know that input and output shapes aren't necessarily the same when using `forward` in the PyTorch library, and  generally depends on padding, stride and receptive field of a module. 
+
+For the `forward_step` function, this comes to show by some `None`-valued outputs. Specifically, modules with a _delay_ (i.e. with receptive fields larger than the padding + 1) will produce `None` until the input count exceeds the delay. Moreover, _stride_ > 1 will produce `Tensor` outputs every _stride_ steps and `None` the remaining steps. A visual example is shown below:
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/LukasHedegaard/continual-inference/main/figures/continual/continual-stride.png" style="width:300px;height:auto;"/>
+  </br>
+  A mixed example of delay and outputs under padding and stride. Here, we illustrate the step-wise operation of two co module layers, l1 with with receptive_field = 3, padding = 2, and stride = 2 and l2 with receptive_field = 3, no padding and stride = 1. ⧇ denotes a padded zero, ■ is a non-zero step-feature, and ☒ is an empty output.
+</div>
+
+For more information, please see the [library paper](https://arxiv.org/abs/2204.03418).
+
+
+## Module library
+_Continual Inference_ features a rich collection of modules for defining Continual Inference Networks. Specific care was taken to create CIN versions of the PyTorch modules found in [_torch.nn_](https://pytorch.org/docs/stable/nn.html):
+
+<details>
+<summary><b>Convolutions</b></summary>
+
+- [`co.Conv1d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conv1d.html)
+- [`co.Conv2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conv2d.html)
+- [`co.Conv3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conv3d.html)
+
+</details>
+
+<details>
+<summary><b>Pooling</b></summary>
+
+  - [`co.AvgPool1d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AvgPool1d.html)
+  - [`co.AvgPool2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AvgPool2d.html)
+  - [`co.AvgPool3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AvgPool3d.html)
+  - [`co.MaxPool1d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.MaxPool1d.html)
+  - [`co.MaxPool2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.MaxPool2d.html)
+  - [`co.MaxPool3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.MaxPool3d.html)
+  - [`co.AdaptiveAvgPool2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AdaptiveAvgPool2d.html)
+  - [`co.AdaptiveAvgPool3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AdaptiveAvgPool3d.html)
+  - [`co.AdaptiveMaxPool2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AdaptiveMaxPool2d.html)
+  - [`co.AdaptiveMaxPool3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AdaptiveMaxPool3d.html)
+
+</details>
+
+<details>
+<summary><b>Linear</b></summary>
+
+  - [`co.Linear`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Linear.html)
+  - [`co.Identity`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Identity.html): Maps input to output without modification.
+  - [`co.Add`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Add.html): Adds a constant value.
+  - [`co.Multiply`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Multiply.html): Multiplies with a constant factor.
+
+</details>
+
+<details>
+<summary><b>Recurrent</b></summary>
+
+  - [`co.RNN`](https://continual-inference.readthedocs.io/en/latest/generated/continual.RNN.html)
+  - [`co.LSTM`](https://continual-inference.readthedocs.io/en/latest/generated/continual.LSTM.html)
+  - [`co.GRU`](https://continual-inference.readthedocs.io/en/latest/generated/continual.GRU.html)
+
+</details>
+
+<details>
+<summary><b>Transformers</b></summary>
+
+  - [`co.TransformerEncoder`](https://continual-inference.readthedocs.io/en/latest/generated/continual.TransformerEncoder.html)
+  - [`co.TransformerEncoderLayerFactory`](https://continual-inference.readthedocs.io/en/latest/generated/continual.TransformerEncoderLayerFactory.html): Factory function corresponding to `nn.TransformerEncoderLayer`.
+  - [`co.SingleOutputTransformerEncoderLayer`](https://continual-inference.readthedocs.io/en/latest/generated/continual.SingleOutputTransformerEncoderLayer.html): SingleOutputMHA version of `nn.TransformerEncoderLayer`.
+  - [`co.RetroactiveTransformerEncoderLayer`](https://continual-inference.readthedocs.io/en/latest/generated/continual.RetroactiveTransformerEncoderLayer.html): RetroactiveMHA version of `nn.TransformerEncoderLayer`.
+  - [`co.RetroactiveMultiheadAttention`](https://continual-inference.readthedocs.io/en/latest/generated/continual.retroactive_mha.html.RetroactiveMultiheadAttention): Retroactive version of `nn.MultiheadAttention`.
+  - [`co.SingleOutputMultiheadAttention`](https://continual-inference.readthedocs.io/en/latest/generated/continual.single_output_mha.html.SingleOutputMultiheadAttention): Single-output version of `nn.MultiheadAttention`.
+  - [`co.RecyclingPositionalEncoding`](https://continual-inference.readthedocs.io/en/latest/generated/continual.RecyclingPositionalEncoding.html): Positional Encoding used for Continual Transformers.
+
+</details>
+
+
+Modules for composing and converting networks. Both _composition_ and _utility_ modules can be used for regular definition of PyTorch modules as well.
+
+<details>
+<summary><b>Composition modules</b></summary>
+
+  - [`co.Sequential`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Sequential.html): Invoke modules sequentially, passing the output of one module onto the next.
+  - [`co.Broadcast`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Broadcast.html): Broadcast one stream to multiple.
+  - [`co.Parallel`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Parallel.html): Invoke modules in parallel given each their input.
+  - [`co.ParallelDispatch`](https://continual-inference.readthedocs.io/en/latest/generated/continual.ParallelDispatch.html): Dispatch multiple input streams to multiple output streams flexibly.
+  - [`co.Reduce`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Reduce.html): Reduce multiple input streams to one.
+  - [`co.BroadcastReduce`](https://continual-inference.readthedocs.io/en/latest/generated/continual.BroadcastReduce.html): Shorthand for Sequential(Broadcast, Parallel, Reduce).
+  - [`co.Residual`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Residual.html): Residual connection.
+  - [`co.Conditional`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conditional.html): Conditionally checks whether to invoke a module (or another) at runtime.
+
+</details>
+
+<details>
+<summary><b>Utility modules</b></summary>
+
+  - [`co.Delay`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Delay.html): Pure delay module (e.g. needed in residuals).
+  - [`co.Reshape`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Reshape.html): Reshape non-temporal dimensions.
+  - [`co.Lambda`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Lambda.html): Lambda module which wraps any function.
+  - [`co.Constant`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Constant.html): Maps input to and output with constant value.
+  - [`co.Zero`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Zero.html): Maps input to output of zeros.
+  - [`co.One`](https://continual-inference.readthedocs.io/en/latest/generated/continual.One.html): Maps input to output of ones.
+
+</details>
+
+<details>
+<summary><b>Converters</b></summary>
+
+  - [`co.continual`](https://continual-inference.readthedocs.io/en/latest/generated/continual.continual.html): conversion function from `torch.nn` modules to `co` modules.
+  - [`co.forward_stepping`](https://continual-inference.readthedocs.io/en/latest/generated/continual.forward_stepping.html): functional wrapper, which enhances temporally local `torch.nn` modules with the forward_stepping functions.
+
+</details>
+
+We support drop-in interoperability with with the following _torch.nn_ modules:
+
+<details>
+<summary><b>Activation</b></summary>
+
+  - `nn.Threshold`
+  - `nn.ReLU`
+  - `nn.RReLU`
+  - `nn.Hardtanh`
+  - `nn.ReLU6`
+  - `nn.Sigmoid`
+  - `nn.Hardsigmoid`
+  - `nn.Tanh`
+  - `nn.SiLU`
+  - `nn.Hardswish`
+  - `nn.ELU`
+  - `nn.CELU`
+  - `nn.SELU`
+  - `nn.GLU`
+  - `nn.GELU`
+  - `nn.Hardshrink`
+  - `nn.LeakyReLU`
+  - `nn.LogSigmoid`
+  - `nn.Softplus`
+  - `nn.Softshrink`
+  - `nn.PReLU`
+  - `nn.Softsign`
+  - `nn.Tanhshrink`
+  - `nn.Softmin`
+  - `nn.Softmax`
+  - `nn.Softmax2d`
+  - `nn.LogSoftmax`
+
+</details>
+
+<details>
+<summary><b>Normalization</b></summary>
+
+  - `nn.BatchNorm1d`
+  - `nn.BatchNorm2d`
+  - `nn.BatchNorm3d`
+  - `nn.LayerNorm`
+
+</details>
+
+<details>
+<summary><b>Dropout</b></summary>
+
+  - `nn.Dropout`
+  - `nn.Dropout2d`
+  - `nn.Dropout3d`
+  - `nn.AlphaDropout`
+  - `nn.FeatureAlphaDropout`
+
+</details>
+
+
+## Model Zoo and Benchmarks
+
 ### Continual 3D CNNs
-- [_Co_ X3D](https://github.com/LukasHedegaard/co3d/tree/main/models/cox3d)
-- [_Co_ Slow](https://github.com/LukasHedegaard/co3d/tree/main/models/coslow)
-- [_Co_ I3D](https://github.com/LukasHedegaard/co3d/tree/main/models/coi3d)
+
+Benchmark results for 1-view testing on __Kinetics400__. For reference, _X3D-L_ scores 69.3% top-1 acc with 19.2 GFLOPs per prediction. 
+
+Arch     | Avg. pool size | Top 1 (%) | FLOPs (G) per step | FLOPs reduction | Params (M) | Code                                                                   | Weights
+-------- | -------------- | --------- | ------------------ | --------------- | ---------- | ---------------------------------------------------------------------- | ---- 
+CoX3D-L  | 64             | 71.6      | 1.25               | 15.3x           | 6.2        | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/cox3d)  | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D\_L.pyth)
+CoX3D-M  | 64             | 71.0      | 0.33               | 15.1x           | 3.8        | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/cox3d)  | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D\_M.pyth)
+CoX3D-S  | 64             | 64.7      | 0.17               | 12.1x           | 3.8        | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/cox3d)  | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/X3D\_S.pyth)
+CoSlow   | 64             | 73.1      | 6.90               |  8.0x           | 32.5       | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/coslow) | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/SLOW\_8x8\_R50.pyth)
+CoI3D    | 64             | 64.0      | 5.68               |  5.0x           | 28.0       | [link](https://github.com/LukasHedegaard/co3d/tree/main/models/coi3d)  | [link](https://dl.fbaipublicfiles.com/pytorchvideo/model_zoo/kinetics/I3D\_8x8\_R50.pyth)
+
+FLOPs reduction is noted relative to non-continual inference.
+Note that [on-hardware inference](https://arxiv.org/abs/2106.00050) doesn't reach the same speedups as "FLOPs reductions" might suggest due to overhead of state reads and writes. This overhead is less important for large batch sizes. This applies to all models in the model zoo.
 
 ### Continual ST-GCNs
-- [_Co_ STGCN](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cost_gcn_mod/cost_gcn_mod.py)
-- [_Co_ AGCN](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/coa_gcn_mod/coa_gcn_mod.py)
-- [_Co_ STr](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cos_tr_mod/cos_tr_mod.py)
+
+Benchmark results for on __NTU RGB+D 60__ for the joint modality. For reference, _ST-GCN_ achieves 86% X-Sub and 93.4 X-View accuracy with 16.73 GFLOPs per prediction. 
+
+Arch      | Receptive field | X-Sub Acc (%) | X-View Acc (%) | FLOPs (G) per step | FLOPs reduction | Params (M) | Code                                                                  
+--------  | --------------- | ------------- | -------------- | ------------------ | --------------- | ---------- | -----
+CoST-GCN  | 300             | 86.3          | 93.8           | 0.16               | 107.7x          | 3.1        | [link](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cost_gcn_mod/cost_gcn_mod.py)
+CoA-GCN   | 300             | 84.1          | 92.6           | 0.17               | 108.7x          | 3.5        | [link](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/coa_gcn_mod/coa_gcn_mod.py)
+CoST-GCN  | 300             | 86.3          | 92.4           | 0.15               | 107.6x          | 3.1        | [link](https://github.com/LukasHedegaard/continual-skeletons/blob/main/models/cos_tr_mod/cos_tr_mod.py)
+
+[Here](https://drive.google.com/drive/u/4/folders/1m6aV5Zv8tAytvxF6qY4m9nyqlkKv0y72), you can download pre-trained,model weights for the above architectures on NTU RGB+D 60, NTU RGB+D 120, and Kinetics-400 on joint and bone modalities.
+
 
 ### Continual Transformers
-- [_Continual_ One-block Transformer Encoder](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L8)
-- [_Continual_ Two-block Transformer Encoder](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L59)
 
+Benchmark results for on __THUMOS14__ on top of features extracted using a TSN-ResNet50 backbone pre-trained on Kinetics400. For reference, _OadTR_ achieves 64.4 % mAP with 2.5 GFLOPs per prediction. 
 
+Arch        | Receptive field | mAP (%) | FLOPs (G) per step |  Params (M) | Code                                                                  
+----------  | --------------- | ------- | ------------------ |  ---------- | -----
+CoOadTR-b1  | 64              | 64.2    | 0.41               |  15.9       | [link](https://github.com/LukasHedegaard/CoOadTR)
+CoOadTR-b2  | 64              | 64.4    | 0.01               |   9.6       | [link](https://github.com/LukasHedegaard/CoOadTR)
+
+The library features complete implementations of the [one](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L8)- and [two](https://github.com/LukasHedegaard/continual-inference/blob/9895344f50a93ebb5cf5c4f26ecfdf27b6a3fe75/tests/continual/test_transformer.py#L59)-block continual transformer encoders as well.
 
 
 ## Compatibility
 The library modules are built to integrate seamlessly with other PyTorch projects.
 Specifically, extra care was taken to ensure out-of-the-box compatibility with:
-- [onnx](https://github.com/onnx/onnx)
 - [pytorch-lightning](https://github.com/PyTorchLightning/pytorch-lightning)
 - [ptflops](https://github.com/sovrasov/flops-counter.pytorch)
 - [ride](https://github.com/LukasHedegaard/ride)
+- [onnx](https://github.com/onnx/onnx)
+<!-- - [onnxruntime](https://github.com/microsoft/onnxruntime) -->
 
 
 ## Citation
-If you use this library or the continual modules, please consider citing:
-
-### This library
-<div align="left">
-<a href="https://arxiv.org/abs/2204.03418">
+<a href="https://arxiv.org/abs/2204.03418" style="display:inline-block;">
   <img src="http://img.shields.io/badge/paper-arxiv.2204.03418-B31B1B.svg" height="20" >
 </a>
-</div>
 
 ```bibtex
-@article{hedegaard2022colib,
+@inproceedings{hedegaard2022colib,
   title={Continual Inference: A Library for Efficient Online Inference with Deep Neural Networks in PyTorch},
   author={Lukas Hedegaard and Alexandros Iosifidis},
-  journal={preprint, arXiv:2204.03418},
+  booktitle={European Conference on Computer Vision Workshops (ECCVW)},
   year={2022}
 }
 ```
 
-### Continual Convolutions
-<div align="left">
-<a href="https://arxiv.org/abs/2106.00050">
-  <img src="http://img.shields.io/badge/paper-arxiv.2106.00050-B31B1B.svg" height="20" >
-</a>
-</div>
-
-```bibtex
-@inproceedings{hedegaard2022co3d,
-    title={Continual 3D Convolutional Neural Networks for Real-time Processing of Videos},
-    author={Lukas Hedegaard and Alexandros Iosifidis},
-    pages={1--18},
-    booktitle={European Conference on Computer Vision (ECCV)},
-    year={2022},
-}
-```
-
-<div align="left">
-<a href="https://arxiv.org/abs/2203.11009">
-  <img src="http://img.shields.io/badge/paper-arxiv.2203.11009-B31B1B.svg" height="20" >
-</a>
-</div>
-
-```bibtex
-@article{hedegaard2022online,
-  title={Online Skeleton-based Action Recognition with Continual Spatio-Temporal Graph Convolutional Networks},
-  author={Lukas Hedegaard and Negar Heidari and Alexandros Iosifidis},
-  journal={preprint, arXiv: 2203.11009}, 
-  year={2022}
-}
-```
-
-### Continual Transformers
-<div align="left">
-<a href="https://arxiv.org/abs/2201.06268">
-  <img src="http://img.shields.io/badge/paper-arxiv.2201.06268-B31B1B.svg" height="20" >
-</a>
-</div>
-
-```bibtex
-@article{hedegaard2022cotrans,
-  title={Continual Transformers: Redundancy-Free Attention for Online Inference},
-  author={Lukas Hedegaard and Alexandros Iosifidis},
-  journal={preprint, arXiv:2201.06268},
-  year={2022}
-}
-```
 
 ## Acknowledgement
 This work has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 871449 (OpenDR).

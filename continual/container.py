@@ -25,7 +25,9 @@ __all__ = [
     "Residual",
     "Broadcast",
     "Parallel",
+    "ParallelDispatch",
     "Reduce",
+    "Conditional",
 ]
 
 T = TypeVar("T")
@@ -45,10 +47,11 @@ class Reduction(Enum):
     SUM = "sum"
     CONCAT = "concat"
     MUL = "mul"
+    MAX = "max"
 
 
 ReductionFunc = Callable[[Sequence[Tensor]], Tensor]
-ReductionFuncOrEnum = Union[Reduction, ReductionFunc]
+ReductionFuncOrEnum = Union[Reduction, ReductionFunc, str]
 
 
 def apply_forward(module: CoModule, input: Tensor):
@@ -87,6 +90,11 @@ def reduce_mul(inputs: Sequence[Tensor]) -> Tensor:
     return reduce(torch.Tensor.mul, inputs[1:], inputs[0])
 
 
+def reduce_max(inputs: Sequence[Tensor]) -> Tensor:
+    assert len(inputs) >= 2
+    return reduce(torch.max, inputs[1:], inputs[0])
+
+
 def nonempty(fn: ReductionFunc) -> ReductionFunc:
     @wraps(fn)
     def wrapped(inputs: Sequence[Tensor]) -> Tensor:
@@ -99,7 +107,7 @@ def nonempty(fn: ReductionFunc) -> ReductionFunc:
 
 class FlattenableStateDict:
     """Mixes in the ability to flatten state dicts.
-    It is assumed that classes that inherit this modlue also inherit from nn.Module
+    It is assumed that classes that inherit this module also inherit from nn.Module
     """
 
     flatten_state_dict = False
@@ -134,7 +142,38 @@ def co_add_module(self, name: str, module: Optional["nn.Module"]) -> None:
 
 
 class Broadcast(CoModule, nn.Module):
-    """Broadcast a single input to multiple streams"""
+    """Broadcast one input stream to multiple output streams.
+
+    This is needed for handling parallel streams in subsequent modules.
+    For instance, here is how it is used to create a residual connection::
+
+        residual = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(
+                co.Conv3d(32, 32, kernel_size=3, padding=1),
+                co.Delay(2),
+            ),
+            co.Reduce("sum"),
+        )
+
+    Since the ``Broadcast`` -> ``Parallel`` -> ``Reduce`` sequence is so common,
+    identical behavior can be achieved with ``BroadcastReduce`` ::
+
+        residual = co.BroadcastReduce(
+            co.Conv3d(32, 32, kernel_size=3, padding=1),
+            co.Delay(2),
+            reduce="sum"
+        )
+
+    Even shorter, the library features a residual connection, which automatically handles delays::
+
+        residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
+
+    Args:
+        num_streams (int):
+            Number of streams to broadcast to. If none are given, a Sequential
+            module may infer it automatically.
+    """
 
     _state_shape = 0
     _dynamic_state_inds = []
@@ -163,10 +202,38 @@ class Broadcast(CoModule, nn.Module):
 
 
 class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
-    """Container for parallel modules.
+    """Container for  executing modules in parallel.
+    Modules will be added to it in the order they are passed in the
+    constructor.
+
+    For instance, here is how it is used to create a residual connection::
+
+        residual = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(
+                co.Conv3d(32, 32, kernel_size=3, padding=1),
+                co.Delay(2),
+            ),
+            co.Reduce("sum"),
+        )
+
+    Since the ``Broadcast`` -> ``Parallel`` -> ``Reduce`` sequence is so common,
+    identical behavior can be achieved with ``BroadcastReduce`` ::
+
+        residual = co.BroadcastReduce(
+            co.Conv3d(32, 32, kernel_size=3, padding=1),
+            co.Delay(2),
+            reduce="sum"
+        )
+
+    Even shorter, the library features a residual connection, which automatically handles delays::
+
+        residual = co.Residual(co.Conv3d(32, 32, kernel_size=3, padding=1))
+
 
     Args:
-        *args: Either vargs of modules or an OrderedDict.
+        arg (OrderedDict[str, CoModule]): An OrderedDict of strings and modules.
+        *args (CoModule): Comma-separated modules.
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
@@ -301,7 +368,73 @@ class Parallel(FlattenableStateDict, CoModule, nn.Sequential):
 
 
 class ParallelDispatch(CoModule, nn.Module):
-    """Parallel dispatch of many input streams to many output streams"""
+    """Reorder, copy, and group streams from parallel streams.
+
+    Reorder example::
+
+        net = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(co.Add(1), co.Identity()),
+            co.ParallelDispatch([1,0]),  # Reorder stream 0 and 1
+            co.Parallel(co.Identity(), co.Add(2)),
+            co.Reduce("max"),
+        )
+
+        assert torch.equal(net(torch.tensor([0])), torch.tensor([3]))
+
+    Depiction of the reorder example::
+
+               | -> co.Add(1)  \\ / -> co.Identity() |
+        [0] -> |                X                | -> max -> [3]
+               | -> co.Identity() / \\ -> co.Add(2)  |
+
+    Copy example::
+
+        net = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(co.Add(1), co.Identity()),
+            co.ParallelDispatch([0, 0, 1]),  # Copy stream 0
+            co.Parallel(co.Identity(), co.Add(2), co.Identity()),
+            co.Reduce("max"),
+        )
+
+        assert torch.equal(net(torch.tensor([0])), torch.tensor([3]))
+
+    Depiction of the copy example::
+
+               | -> co.Add(1)  -> | -> co.Identity() -> |
+        [0] -> |                  | -> co.Add(2)  -> | -> max -> [3]
+               | -> co.Identity() ------> co.Add(1)  -> |
+
+    Group example::
+
+        net = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(co.Add(2), co.Identity()),
+            co.ParallelDispatch([[0, 0], 1]),  # Copy and group stream 0
+            co.Parallel(co.Reduce("sum"), co.Identity()),
+            co.Reduce("max"),
+        )
+
+        assert torch.equal(net(torch.tensor([0])), torch.tensor([4]))
+
+    Depiction of the group example::
+
+                                 | -> |
+               | -> co.Add(2) -> |    | ->    sum     -> |
+        [0] -> |                 | -> |                  | -> max -> [4]
+               | -> co.Identity() ----------> co.Identity() -> |
+
+    Args:
+        dispatch_mapping (Sequence[Union[int, Sequence[int]]]):
+            input-to-output mapping, where the integers signify the input stream ordering
+            and the positions denote corresponding output ordering.
+            Examples::
+                [1,0] to shuffle order of streams.
+                [0,1,1] to copy stream 1 onto a new stream.
+                [[0,1],2] to group stream 0 and 1 while keeping stream 2 separate.
+
+    """
 
     _state_shape = 0
     _dynamic_state_inds = []
@@ -310,18 +443,6 @@ class ParallelDispatch(CoModule, nn.Module):
         self,
         dispatch_mapping: Sequence[Union[int, Sequence[int]]],
     ):
-        """Initialise ParallelDispatch
-
-        Args:
-            dispatch_mapping (Sequence[Union[int, Sequence[int]]]):
-                input-to-output mapping, where the integers signify the input stream ordering
-                and the positions denote corresponding output ordering.
-                Examples:
-                    [1,0] to shufle order of streams.
-                    [0,1,1] to copy stream 1 onto a new stream.
-                    [[0,1],2] to collect stream 0 and 1 while keeping stream 2 separate.
-
-        """
         nn.Module.__init__(self)
 
         def is_int_or_valid_list(x):
@@ -363,14 +484,48 @@ class ParallelDispatch(CoModule, nn.Module):
 
 
 class Reduce(CoModule, nn.Module):
-    """Reduce multiple input streams to a single output"""
+    """Reduce multiple input streams to a single using the selected function
+
+    For instance, here is how it is used to sum streams in a residual connection::
+
+        residual = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(
+                co.Conv3d(32, 32, kernel_size=3, padding=1),
+                co.Delay(2),
+            ),
+            co.Reduce("sum"),
+        )
+
+    A user-defined can be passed as well::
+
+        from functools import reduce
+
+        def my_sum(inputs):
+            return reduce(torch.Tensor.add, inputs[1:], inputs[0])
+
+        residual = co.Sequential(
+            co.Broadcast(2),
+            co.Parallel(
+                co.Conv3d(32, 32, kernel_size=3, padding=1),
+                co.Delay(2),
+            ),
+            co.Reduce(my_sum),
+        )
+
+    Args:
+        reduce (Union[str, Callable[[Sequence[Tensor]], Tensor]]):
+            Reduce function. Either one of ["sum", "channel", "mul", "max"] or
+            user-defined function mapping a sequence of tensors to a single one.
+
+    """
 
     _state_shape = 0
     _dynamic_state_inds = []
 
     def __init__(
         self,
-        reduce: ReductionFuncOrEnum = Reduction.SUM,
+        reduce: ReductionFuncOrEnum = "sum",
     ):
         nn.Module.__init__(self)
         self.reduce = nonempty(
@@ -380,6 +535,7 @@ class Reduce(CoModule, nn.Module):
                 Reduction.SUM: reduce_sum,
                 Reduction.CONCAT: reduce_concat,
                 Reduction.MUL: reduce_mul,
+                Reduction.MAX: reduce_max,
             }[Reduction(reduce)]
         )
 
@@ -399,11 +555,46 @@ class Reduce(CoModule, nn.Module):
 
 
 class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
-    """Continual Sequential module
+    """A sequential container.
+    This module is an augmentation of `torch.nn.Sequential`
+    which adds continual inference methods
 
-    This module is a drop-in replacement for `torch.nn.Sequential`
-    which adds the `forward_step`, `forward_steps`, and `like` methods
-    as well as a `delay` property
+    Modules will be added to it in the order they are passed in the
+    constructor. Alternatively, an ``OrderedDict`` of modules can be
+    passed in. The ``forward()``, ``forward_step()`` and ``forward_steps()``
+    methods of ``Sequential`` accept any input and forwards it to the first
+    module it contains. It then "chains" outputs to inputs sequentially for
+    each subsequent module, finally returning the output of the last module.
+
+    The value a ``Sequential`` provides over manually calling a sequence
+    of modules is that it allows treating the whole container as a
+    single module, such that performing a transformation on the
+    ``Sequential`` applies to each of the modules it stores (which are
+    each a registered submodule of the ``Sequential``).
+
+    Example::
+
+        # Using Sequential to create a small model. When `model` is run,
+        # input will first be passed to `Conv2d(1,20,5)`. The output of
+        # `Conv2d(1,20,5)` will be used as the input to the first
+        # `ReLU`; the output of the first `ReLU` will become the input
+        # for `Conv2d(20,64,5)`. Finally, the output of
+        # `Conv2d(20,64,5)` will be used as input to the second `ReLU`
+        model = co.Sequential(
+            co.Conv2d(1,20,5),
+            nn.ReLU(),
+            co.Conv2d(20,64,5),
+            nn.ReLU()
+        )
+
+        # Using Sequential with OrderedDict. This is functionally the
+        # same as the above code
+        model = co.Sequential(OrderedDict([
+            ('conv1', co.Conv2d(1,20,5)),
+            ('relu1', nn.ReLU()),
+            ('conv2', co.Conv2d(20,64,5)),
+            ('relu2', nn.ReLU())
+        ]))
     """
 
     @overload
@@ -526,20 +717,56 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
             if hasattr(m, "clean_state"):
                 m.clean_state()
 
+    def append(self, module: nn.Module) -> "Sequential":
+        r"""Appends a given module to the end.
 
-class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
+        Args:
+            module (nn.Module): module to append
+        """
+        self.add_module(str(len(self)), module)
+        return self
+
+
+class BroadcastReduce(Sequential):
     """Broadcast an input to parallel modules and reduce.
-    This module is a shorthand for
+    This module is a shorthand for::
 
-    >>> co.Sequential(co.Broadcast(), co.Parallel(*args), co.Reduce(reduce))
+        co.Sequential(co.Broadcast(), co.Parallel(*args), co.Reduce(reduce))
+
+    For instance, it can be used to succinctly create a continual 3D Inception Module::
+
+        def norm_relu(module, channels):
+            return co.Sequential(
+                module,
+                nn.BatchNorm3d(channels),
+                nn.ReLU(),
+            )
+
+        inception_module = co.BroadcastReduce(
+            co.Conv3d(192, 64, kernel_size=1),
+            co.Sequential(
+                norm_relu(co.Conv3d(192, 96, kernel_size=1), 96),
+                norm_relu(co.Conv3d(96, 128, kernel_size=3, padding=1), 128),
+            ),
+            co.Sequential(
+                norm_relu(co.Conv3d(192, 16, kernel_size=1), 16),
+                norm_relu(co.Conv3d(16, 32, kernel_size=5, padding=2), 32),
+            ),
+            co.Sequential(
+                co.MaxPool3d(kernel_size=(1, 3, 3), padding=(0, 1, 1), stride=1),
+                norm_relu(co.Conv3d(192, 32, kernel_size=1), 32),
+            ),
+            reduce="concat",
+        )
 
     Args:
-        *args: Either vargs of modules or an OrderedDict.
+        arg (OrderedDict[str, CoModule]): An OrderedDict or modules to be applied in parallel.
+        *args (CoModule): Modules to be applied in parallel.
         reduce (ReductionFuncOrEnum, optional):
             Function used to reduce the parallel outputs.
-            Sum or concatenation can be specified by passing Reduction.SUM or Reduction.CONCAT respectively.
+            Sum or concatenation can be specified by passing "sum" or "concat" respectively.
             Custom reduce functions can also be passed.
-            Defaults to Reduction.SUM.
+            Defaults to "sum".
         auto_delay (bool, optional):
             Automatically add delay to modules in order to match the longest delay.
             Defaults to True.
@@ -549,7 +776,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def __init__(
         self,
         *args: CoModule,
-        reduce: ReductionFuncOrEnum = Reduction.SUM,
+        reduce: ReductionFuncOrEnum = "sum",
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -558,7 +785,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def __init__(
         self,
         arg: "OrderedDict[str, CoModule]",
-        reduce: ReductionFuncOrEnum = Reduction.SUM,
+        reduce: ReductionFuncOrEnum = "sum",
         auto_delay=True,
     ) -> None:
         ...  # pragma: no cover
@@ -566,7 +793,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
     def __init__(
         self,
         *args,
-        reduce: ReductionFuncOrEnum = Reduction.SUM,
+        reduce: ReductionFuncOrEnum = "sum",
         auto_delay=True,
     ):
         nn.Module.__init__(self)
@@ -609,6 +836,7 @@ class BroadcastReduce(FlattenableStateDict, CoModule, nn.Sequential):
                 Reduction.SUM: reduce_sum,
                 Reduction.CONCAT: reduce_concat,
                 Reduction.MUL: reduce_mul,
+                Reduction.MAX: reduce_max,
             }[Reduction(reduce)]
         )
 
@@ -699,7 +927,16 @@ def Residual(
     reduce: Reduction = "sum",
     residual_shrink: Union[bool, str] = False,
 ) -> BroadcastReduce:
-    """[summary]
+    """Residual connection wrapper for input.
+
+    This module produces a short form of BroadCast reduce with one delay stream::
+
+        conv = co.Conv3d(32, 32, kernel_size=3, padding=1)
+        res1 = co.BroadcastReduce(conv, co.Delay(2), reduce="sum")
+        res2 = co.Residual(conv)
+
+        x = torch.randn(1, 32, 5, 5, 5)
+        assert torch.equal(res1(x), res2(x))
 
     Args:
         module (CoModule): module to which a residual should be added.
@@ -738,7 +975,24 @@ def Residual(
 
 
 class Conditional(FlattenableStateDict, CoModule, nn.Module):
-    """Module wrapper for conditional invocations at runtime"""
+    """Module wrapper for conditional invocations at runtime.
+
+    For instance, it can be used to apply a softmax if the module isn't training::
+
+        net = co.Sequential()
+
+        def not_training(module, x):
+            return not net.training
+
+        net.append(co.Conditional(not_training, torch.nn.Softmax(dim=1)))
+
+    Args:
+        predicate (Callable[[CoModule, Tensor], bool]):
+            Function used to evaluate whether on module or the other should be invoked.
+        on_true: CoModule: Module to invoke on True.
+        on_false: Optional[CoModule]: Module to invoke on False. If no module is passed, execution is skipped.
+
+    """
 
     def __init__(
         self,

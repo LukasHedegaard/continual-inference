@@ -8,6 +8,8 @@ from torch import Tensor, nn
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from torch.nn.modules.utils import _ntuple, _pair, _single, _triple
 
+from continual.utils import neginf_like
+
 from .module import CoModule, PaddingMode
 
 __all__ = [
@@ -93,6 +95,7 @@ class _PoolNd(CoModule, nn.Module):
         self._make_padding = {
             temporal_fill.ZEROS: torch.zeros_like,
             temporal_fill.REPLICATE: torch.clone,
+            temporal_fill.NEG_INF: neginf_like,
         }[temporal_fill]
 
         temporal_pool = PoolType(temporal_pool)
@@ -221,10 +224,52 @@ class _PoolNd(CoModule, nn.Module):
 
 
 class AvgPool1d(nn.AvgPool1d, _PoolNd):
-    """
-    Continual Average Pool in 1D
+    r"""Applies a Continual 1D average pooling over an input signal.
 
-    This is the continual version of the regular :class:`torch.nn.AvgPool1d`
+    In the simplest case, the output value of the layer with input size :math:`(N, C, L)`,
+    output :math:`(N, C, L_{out})` and :attr:`kernel_size` :math:`k`
+    can be precisely described as:
+
+    .. math::
+
+        \text{out}(N_i, C_j, l) = \frac{1}{k} \sum_{m=0}^{k-1}
+                               \text{input}(N_i, C_j, \text{stride} \times l + m)
+
+    If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
+    for :attr:`padding` number of points.
+
+    .. note::
+        When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
+        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
+        or the input. Sliding windows that would start in the right padded region are ignored.
+
+    The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding` can each be
+    an ``int`` or a one-element tuple.
+
+    Args:
+        kernel_size: the size of the window
+        stride: the stride of the window. Default value is :attr:`kernel_size`
+        padding: implicit zero padding to be added on both sides
+        ceil_mode: when True, will use `ceil` instead of `floor` to compute the output shape
+        count_include_pad: when True, will include the zero-padding in the averaging calculation
+        dilation: The stride between elements within a sliding window, must be > 0. Only temporal dimension is supported
+        temporal_fill: How temporal states are initialized
+
+    Shape:
+        - Input: :math:`(N, C, L_{in})`.
+        - Output: :math:`(N, C, L_{out})`, where
+
+          .. math::
+              L_{out} = \left\lfloor \frac{L_{in} +
+              2 \times \text{padding} - \text{kernel\_size}}{\text{stride}} + 1\right\rfloor
+
+    Examples::
+
+        m = co.AvgPool1d(3, padding=1)
+        x = torch.randn(20, 16, 50)
+        assert torch.allclose(m.forward(x), m.forward_steps(x))
     """
 
     def __init__(
@@ -280,10 +325,62 @@ class AvgPool1d(nn.AvgPool1d, _PoolNd):
 
 
 class AvgPool2d(nn.AvgPool2d, _PoolNd):
-    """
-    Continual Average Pool in 2D
+    r"""Applies a Continual 2D average pooling over an input signal composed of several input
+    planes.
 
-    This is the continual version of the regular :class:`torch.nn.AvgPool2d`
+    In the simplest case, the output value of the layer with input size :math:`(N, C, T, W)`,
+    output :math:`(N, C, T_{out}, W_{out})` and :attr:`kernel_size` :math:`(kT, kW)`
+    can be precisely described as:
+
+    .. math::
+
+        out(N_i, C_j, h, w)  = \frac{1}{kT * kW} \sum_{m=0}^{kT-1} \sum_{n=0}^{kW-1}
+                               input(N_i, C_j, stride[0] \times h + m, stride[1] \times w + n)
+
+    If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
+    for :attr:`padding` number of points.
+
+    .. note::
+        When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
+        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
+        or the input. Sliding windows that would start in the right padded region are ignored.
+
+    The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding` can either be:
+
+        - a single ``int`` -- in which case the same value is used for the height and width dimension
+        - a ``tuple`` of two ints -- in which case, the first `int` is used for the height dimension,
+          and the second `int` for the width dimension
+
+    Args:
+        kernel_size: the size of the window
+        stride: the stride of the window. Default value is :attr:`kernel_size`
+        padding: implicit zero padding to be added on both sides
+        ceil_mode: when True, will use `ceil` instead of `floor` to compute the output shape
+        count_include_pad: when True, will include the zero-padding in the averaging calculation
+        divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used
+        dilation: The stride between elements within a sliding window, must be > 0. Only temporal dimension is supported
+        temporal_fill: How temporal states are initialized
+
+
+    Shape:
+        - Input: :math:`(N, C, T_{in}, W_{in})``.
+        - Output: :math:`(N, C, T_{out}, W_{out})``, where
+
+          .. math::
+              T_{out} = \left\lfloor\frac{T_{in}  + 2 \times \text{padding}[0] -
+                \text{kernel\_size}[0]}{\text{stride}[0]} + 1\right\rfloor
+
+          .. math::
+              W_{out} = \left\lfloor\frac{W_{in}  + 2 \times \text{padding}[1] -
+                \text{kernel\_size}[1]}{\text{stride}[1]} + 1\right\rfloor
+
+    Examples::
+
+        m = co.AvgPool2d(3, stride=(2, 1))
+        x = torch.randn(20, 16, 50, 32)
+        assert torch.allclose(m.forward(x), m.forward_steps(x), atol=1e-7)
     """
 
     def __init__(
@@ -350,10 +447,70 @@ class AvgPool2d(nn.AvgPool2d, _PoolNd):
 
 
 class AvgPool3d(nn.AvgPool3d, _PoolNd):
-    """
-    Continual Average Pool in 3D
+    r"""Applies a Continual 3D average pooling over an input signal composed of several input
+    planes.
 
-    This is the continual version of the regular :class:`torch.nn.AvgPool3d`
+    In the simplest case, the output value of the layer with input size :math:`(N, C, T, H, W)`,
+    output :math:`(N, C, T_{out}, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kT, kH, kW)`
+    can be precisely described as:
+
+    .. math::
+        \begin{aligned}
+            \text{out}(N_i, C_j, d, h, w) ={} & \sum_{k=0}^{kT-1} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1} \\
+                                              & \frac{\text{input}(N_i, C_j, \text{stride}[0] \times d + k,
+                                                      \text{stride}[1] \times h + m, \text{stride}[2] \times w + n)}
+                                                     {kT \times kH \times kW}
+        \end{aligned}
+
+    If :attr:`padding` is non-zero, then the input is implicitly zero-padded on all three sides
+    for :attr:`padding` number of points.
+
+    .. note::
+
+        When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
+
+        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
+        or the input. Sliding windows that would start in the right padded region are ignored.
+
+    The parameters :attr:`kernel_size`, :attr:`stride` can either be:
+
+        - a single ``int`` -- in which case the same value is used for the depth, height and width dimension
+        - a ``tuple`` of three ints -- in which case, the first `int` is used for the depth dimension,
+          the second `int` for the height dimension and the third `int` for the width dimension
+
+    Args:
+        kernel_size: the size of the window
+        stride: the stride of the window. Default value is :attr:`kernel_size`
+        padding: implicit zero padding to be added on all three sides
+        ceil_mode: when True, will use `ceil` instead of `floor` to compute the output shape
+        count_include_pad: when True, will include the zero-padding in the averaging calculation
+        divisor_override: if specified, it will be used as divisor, otherwise :attr:`kernel_size` will be used
+        dilation: The stride between elements within a sliding window, must be > 0. Only temporal dimension is supported
+        temporal_fill: How temporal states are initialized
+
+    Shape:
+        - Input: :math:`(N, C, T_{in}, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, T_{out}, H_{out}, W_{out})`, where
+
+          .. math::
+              T_{out} = \left\lfloor\frac{T_{in} + 2 \times \text{padding}[0] -
+                    \text{kernel\_size}[0]}{\text{stride}[0]} + 1\right\rfloor
+
+          .. math::
+              H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] -
+                    \text{kernel\_size}[1]}{\text{stride}[1]} + 1\right\rfloor
+
+          .. math::
+              W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] -
+                    \text{kernel\_size}[2]}{\text{stride}[2]} + 1\right\rfloor
+
+    Examples::
+
+        m = co.AvgPool3d((3, 3, 3))
+        x = torch.randn(20, 16, 50, 44, 31)
+        assert torch.allclose(m.forward(x), m.forward_steps(x), atol=1e-7)
     """
 
     def __init__(
@@ -421,10 +578,53 @@ class AvgPool3d(nn.AvgPool3d, _PoolNd):
 
 
 class MaxPool1d(nn.MaxPool1d, _PoolNd):
-    """
-    Continual Max Pool in 1D
+    r"""Applies a Continual 1D max pooling over an input signal.
 
-    This is the continual version of the regular :class:`torch.nn.MaxPool1d`
+    In the simplest case, the output value of the layer with input size :math:`(N, C, T)`
+    and output :math:`(N, C, T_{out})` can be precisely described as:
+
+    .. math::
+        out(N_i, C_j, k) = \max_{m=0, \ldots, \text{kernel\_size} - 1}
+                input(N_i, C_j, stride \times k + m)
+
+    If :attr:`padding` is non-zero, then the input is implicitly padded with negative infinity on both sides
+    for :attr:`padding` number of points. :attr:`dilation` is the stride between the elements within the
+    sliding window. This `link`_ has a nice visualization of the pooling parameters.
+
+    .. note::
+
+        When :attr:`stride` > 1, the forward_step will only produce non-None values every :attr:`stride` steps.
+
+    .. note::
+
+        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
+        or the input. Sliding windows that would start in the right padded region are ignored.
+
+    Args:
+        kernel_size: The size of the sliding window, must be > 0.
+        stride: The stride of the sliding window, must be > 0. Default value is :attr:`kernel_size`.
+        padding: Implicit negative infinity padding to be added on both sides, must be >= 0 and <= kernel_size / 2.
+        dilation: The stride between elements within a sliding window, must be > 0.
+        ceil_mode: If ``True``, will use `ceil` instead of `floor` to compute the output shape. This
+                   ensures that every element in the input tensor is covered by a sliding window.
+        temporal_fill: How temporal states are initialized.
+
+    Shape:
+        - Input: :math:`(N, C, T_{in})`.
+        - Output: :math:`(N, C, T_{out})`, where
+
+          .. math::
+              T_{out} = \left\lfloor \frac{L_{in} + 2 \times \text{padding} - \text{dilation}
+                    \times (\text{kernel\_size} - 1) - 1}{\text{stride}} + 1\right\rfloor
+
+    Examples::
+
+        m = co.MaxPool1d(kernel_size=3, dilation=2)
+        x = torch.randn(20, 16, 50)
+        assert torch.allclose(m.forward(x), m.forward_steps(x))
+
+    .. _link:
+        https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
 
     def __init__(
@@ -435,7 +635,7 @@ class MaxPool1d(nn.MaxPool1d, _PoolNd):
         dilation: _size_1_t = 1,
         # return_indices: bool = False, # Not supported
         ceil_mode: bool = False,
-        temporal_fill: PaddingMode = "zeros",
+        temporal_fill: PaddingMode = "neg_inf",
     ) -> None:
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride if (stride is not None) else kernel_size)
@@ -478,10 +678,67 @@ class MaxPool1d(nn.MaxPool1d, _PoolNd):
 
 
 class MaxPool2d(nn.MaxPool2d, _PoolNd):
-    """
-    Continual Max Pool in 2D
+    r"""Applies a Continual 2D max pooling over an input signal composed of several input
+    planes.
 
-    This is the continual version of the regular :class:`torch.nn.MaxPool2d`
+    In the simplest case, the output value of the layer with input size :math:`(N, C, T, S)`,
+    output :math:`(N, C, T_{out}, S_{out})` and :attr:`kernel_size` :math:`(kT, kS)`
+    can be precisely described as:
+
+    .. math::
+        \begin{aligned}
+            out(N_i, C_j, t, s) ={} & \max_{m=0, \ldots, kT-1} \max_{n=0, \ldots, kS-1} \\
+                                    & \text{input}(N_i, C_j, \text{stride[0]} \times t + m,
+                                                   \text{stride[1]} \times s + n)
+        \end{aligned}
+
+    The pooling over the :math:`T` dimension is continual (progressively cached) and the other is regular.
+    If :attr:`padding` is non-zero, then the input is implicitly padded with negative infinity on both sides
+    for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
+    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+
+    .. note::
+
+        When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
+        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
+        or the input. Sliding windows that would start in the right padded region are ignored.
+
+    The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`dilation` can either be:
+
+        - a single ``int`` -- in which case the same value is used for the height and width dimension
+        - a ``tuple`` of two ints -- in which case, the first `int` is used for the height dimension,
+          and the second `int` for the width dimension
+
+    Args:
+        kernel_size: the size of the window to take a max over
+        stride: the stride of the window. Default value is :attr:`kernel_size`
+        padding: implicit zero padding to be added on both sides
+        dilation: a parameter that controls the stride of elements in the window
+        ceil_mode: when True, will use `ceil` instead of `floor` to compute the output shape
+        temporal_fill: How temporal states are initialized.
+
+    Shape:
+        - Input: :math:`(N, C, T_{in}, S_{in})`
+        - Output: :math:`(N, C, T_{out}, S_{out})`, where
+
+          .. math::
+              T_{out} = \left\lfloor\frac{T_{in} + 2 * \text{padding[0]} - \text{dilation[0]}
+                    \times (\text{kernel\_size[0]} - 1) - 1}{\text{stride[0]}} + 1\right\rfloor
+
+          .. math::
+              S_{out} = \left\lfloor\frac{S_{in} + 2 * \text{padding[1]} - \text{dilation[1]}
+                    \times (\text{kernel\_size[1]} - 1) - 1}{\text{stride[1]}} + 1\right\rfloor
+
+    Examples::
+
+        m = MaxPool2d(3, stride=2)
+        x = torch.randn(20, 16, 50, 32)
+        assert torch.allclose(m.forward(x), m.forward_steps(x))
+
+    .. _link:
+        https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
 
     def __init__(
@@ -541,10 +798,71 @@ class MaxPool2d(nn.MaxPool2d, _PoolNd):
 
 
 class MaxPool3d(nn.MaxPool3d, _PoolNd):
-    """
-    Continual Max Pool in 3D
+    r"""Applies a Continual 3D max pooling over an input signal composed of several input
+    planes.
 
-    This is the continual version of the regular :class:`torch.nn.MaxPool2d`
+    In the simplest case, the output value of the layer with input size :math:`(N, C, T, H, W)`,
+    output :math:`(N, C, T_{out}, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kT, kH, kW)`
+    can be precisely described as:
+
+    .. math::
+        \begin{aligned}
+            \text{out}(N_i, C_j, d, h, w) ={} & \max_{k=0, \ldots, kT-1} \max_{m=0, \ldots, kH-1} \max_{n=0, \ldots, kW-1} \\
+                                              & \text{input}(N_i, C_j, \text{stride[0]} \times d + k,
+                                                             \text{stride[1]} \times h + m, \text{stride[2]} \times w + n)
+        \end{aligned}
+
+    The pooling over the :math:`T` dimension is continual (progressively cached) and the others are regular.
+    If :attr:`padding` is non-zero, then the input is implicitly padded with negative infinity on both sides
+    for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
+    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+
+    .. note::
+
+        When stride > 1, the forward_step will only produce non-None values every stride steps.
+
+    .. note::
+        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
+        or the input. Sliding windows that would start in the right padded region are ignored.
+
+    The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`dilation` can either be:
+
+        - a single ``int`` -- in which case the same value is used for the depth, height and width dimension
+        - a ``tuple`` of three ints -- in which case, the first `int` is used for the depth dimension,
+          the second `int` for the height dimension and the third `int` for the width dimension
+
+    Args:
+        kernel_size: the size of the window to take a max over
+        stride: the stride of the window. Default value is :attr:`kernel_size`
+        padding: implicit zero padding to be added on all three sides
+        dilation: a parameter that controls the stride of elements in the window
+        ceil_mode: when True, will use `ceil` instead of `floor` to compute the output shape
+        temporal_fill: How temporal states are initialized.
+
+    Shape:
+        - Input: :math:`(N, C, T_{in}, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, T_{out}, H_{out}, W_{out})`, where
+
+          .. math::
+              T_{out} = \left\lfloor\frac{T_{in} + 2 \times \text{padding}[0] - \text{dilation}[0] \times
+                (\text{kernel\_size}[0] - 1) - 1}{\text{stride}[0]} + 1\right\rfloor
+
+          .. math::
+              H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - \text{dilation}[1] \times
+                (\text{kernel\_size}[1] - 1) - 1}{\text{stride}[1]} + 1\right\rfloor
+
+          .. math::
+              W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - \text{dilation}[2] \times
+                (\text{kernel\_size}[2] - 1) - 1}{\text{stride}[2]} + 1\right\rfloor
+
+    Examples::
+
+        m = nn.MaxPool3d(kernel_size=3, stride=(1, 2, 2))
+        x = torch.randn(20, 16, 50,44, 31)
+        assert torch.allclose(m.forward(x), m.forward_steps(x))
+
+    .. _link:
+        https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
 
     def __init__(
@@ -604,10 +922,33 @@ class MaxPool3d(nn.MaxPool3d, _PoolNd):
 
 
 class AdaptiveAvgPool2d(nn.AdaptiveAvgPool2d, _PoolNd):
-    """
-    Continual Adaptive Average Pool in 2D
+    r"""Applies a Continual 2D adaptive average pooling over an input signal composed of several input planes.
 
-    This is the continual version of the regular :class:`torch.nn.AdaptiveAvgPool2d`
+    The output is of size T x W, for any input size.
+    The pooling over the T dimension is continual (progressively cached) and the other is regular.
+    During continual inference, the temporal pooling size is determined by the :attr:`kernel_size`.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the image of the form T x W.
+                     Can be a tuple (T, W) or a single T for a square image T x T.
+                     T and W can be either a ``int``, or ``None`` which means the size will
+                     be the same as that of the input.
+        kernel_size: Temporal kernel size to use for ``forward_step`` and ``forward_steps``.
+        temporal_fill: How temporal states are initialized.
+
+    Shape:
+        - Input: :math:`(N, C, T_{in}, W_{in})`.
+        - Output: :math:`(N, C, S_{0}, S_{1})`, where
+          :math:`S=\text{output\_size}`.
+
+    Examples::
+
+        # target output size of 1x1
+        m = co.AdaptiveAvgPool2d((1, 1), kernel_size=5)
+        x = torch.randn(1, 64, 5, 16)
+        assert torch.allclose(m.forward(x), m.forward_steps(x))
+
     """
 
     def __init__(
@@ -658,10 +999,33 @@ class AdaptiveAvgPool2d(nn.AdaptiveAvgPool2d, _PoolNd):
 
 
 class AdaptiveAvgPool3d(nn.AdaptiveAvgPool3d, _PoolNd):
-    """
-    Continual Adaptive Average Pool in 3D
+    r"""Applies a Continual 3D adaptive average pooling over an input signal composed of several input planes.
 
-    This is the continual version of the regular :class:`torch.nn.AdaptiveAvgPool3d`
+    The output is of size T x H x W, for any input size.
+    The pooling over the T dimension is continual (progressively cached) and the other is regular.
+    During continual inference, the temporal pooling size is determined by the :attr:`kernel_size`.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the form T x H x W.
+                     Can be a tuple (T, H, W) or a single number T for a cube T x T x T.
+                     T, H and W can be either a ``int``, or ``None`` which means the size will
+                     be the same as that of the input.
+        kernel_size: Temporal kernel size to use for ``forward_step`` and ``forward_steps``.
+        temporal_fill: How temporal states are initialized.
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, S_{0}, S_{1}, S_{2})`,
+          where :math:`S=\text{output\_size}`.
+
+    Examples::
+
+        # target output size of 1x1x1
+        m = co.AdaptiveAvgPool3d((1, 1, 1), kernel_size=5)
+        x = torch.randn(1, 64, 5, 16, 16)
+        assert torch.allclose(m.forward(x), m.forward_steps(x))
+
     """
 
     def __init__(
@@ -712,10 +1076,33 @@ class AdaptiveAvgPool3d(nn.AdaptiveAvgPool3d, _PoolNd):
 
 
 class AdaptiveMaxPool2d(nn.AdaptiveMaxPool2d, _PoolNd):
-    """
-    Continual Adaptive Max Pool in 2D
+    r"""Applies a Continual 2D adaptive max pooling over an input signal composed of several input planes.
 
-    This is the continual version of the regular :class:`torch.nn.AdaptiveMaxPool2d`
+    The output is of size T x W, for any input size.
+    The pooling over the T dimension is continual (progressively cached) and the other is regular.
+    During continual inference, the temporal pooling size is determined by the :attr:`kernel_size`.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the image of the form T x W.
+                     Can be a tuple (T, W) or a single T for a square image T x T.
+                     T and W can be either a ``int``, or ``None`` which means the size will
+                     be the same as that of the input.
+        kernel_size: Temporal kernel size to use for ``forward_step`` and ``forward_steps``.
+        temporal_fill: How temporal states are initialized.
+
+    Shape:
+        - Input: :math:`(N, C, T_{in}, W_{in})`.
+        - Output: :math:`(N, C, S_{0}, S_{1})`, where
+          :math:`S=\text{output\_size}`.
+
+    Examples::
+
+        # target output size of 1x1
+        m = co.AdaptiveMaxPool2d((1, 1), kernel_size=5)
+        x = torch.randn(1, 64, 5, 16)
+        assert torch.allclose(m.forward(x), m.forward_steps(x))
+
     """
 
     def __init__(
@@ -769,10 +1156,33 @@ class AdaptiveMaxPool2d(nn.AdaptiveMaxPool2d, _PoolNd):
 
 
 class AdaptiveMaxPool3d(nn.AdaptiveMaxPool3d, _PoolNd):
-    """
-    Continual Adaptive Max Pool in 3D
+    r"""Applies a Continual 3D adaptive max pooling over an input signal composed of several input planes.
 
-    This is the continual version of the regular :class:`torch.nn.AdaptiveMaxPool3d`
+    The output is of size T x H x W, for any input size.
+    The pooling over the T dimension is continual (progressively cached) and the other is regular.
+    During continual inference, the temporal pooling size is determined by the :attr:`kernel_size`.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the form T x H x W.
+                     Can be a tuple (T, H, W) or a single number T for a cube T x T x T.
+                     T, H and W can be either a ``int``, or ``None`` which means the size will
+                     be the same as that of the input.
+        kernel_size: Temporal kernel size to use for ``forward_step`` and ``forward_steps``.
+        temporal_fill: How temporal states are initialized.
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, S_{0}, S_{1}, S_{2})`,
+          where :math:`S=\text{output\_size}`.
+
+    Examples::
+
+        # target output size of 1x1x1
+        m = co.AdaptiveMaxPool3d((1, 1, 1), kernel_size=5)
+        x = torch.randn(1, 64, 5, 16, 16)
+        assert torch.allclose(m.forward(x), m.forward_steps(x))
+
     """
 
     def __init__(

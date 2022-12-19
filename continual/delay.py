@@ -12,10 +12,27 @@ __all__ = ["Delay"]
 
 
 class Delay(CoModule, torch.nn.Module):
-    """Continual delay modules
+    """Delay an input by a number of steps.
 
-    This module only introduces a delay in the continual modes, i.e. on `forward_step` and `forward_steps`.
-    This corresponds to the equvalent computations when delay is used to align continual computations.
+    This module only introduces a delay in the continual modes, i.e. on ``forward_step`` and ``forward_steps``.
+    In essence it caches the input for ``delay`` steps before outputting it again.
+
+    The ``Delay`` modules is used extensively in various container modules to align delays of
+    different computational branches. For instance, it is used to align the :class:`Residual` module
+    as shown in the example below.
+
+    Arguments:
+        delay: The number of steps to delay an output.
+        temporal_fill: Temporal state initialisation mode ("zeros" or "replicate")
+        auto_shrink: Whether to shrink the temporal dimension of the feature map during forward.
+            This module is handy for residuals that are parallel to modules which reduce the number of temporal steps.
+            Options: "centered" or True: Centered residual shrink; "lagging": lagging shrink.
+
+    Examples::
+
+        conv = co.Conv3d(32, 32, kernel_size=3, padding=1)
+        residual = co.BroadcastReduce(conv, co.Delay(2), reduce="sum")
+
     """
 
     @property
@@ -32,21 +49,12 @@ class Delay(CoModule, torch.nn.Module):
         temporal_fill: PaddingMode = "zeros",
         auto_shrink: Union[bool, str] = False,
     ):
-        """Initialise Delay block
-
-        Args:
-            delay (int): the number of steps to delay an output.
-            temporal_fill (PaddingMode, optional): Temporal state initialisation mode ("zeros" or "replicate"). Defaults to "zeros".
-            auto_shrink (bool | str, optional): Whether to shrink the temporal dimension of the feature map during forward.
-                This module is handy for residuals that are parallel to modules which reduce the number of temporal steps.
-                Options: "centered" or True: Centered residual shrink; "lagging": lagging shrink. Defaults to False.
-        """
         assert delay >= 0
         self._delay = delay
         assert auto_shrink in {True, False, "centered", "lagging"}
         self.auto_shrink = auto_shrink
         assert temporal_fill in {"zeros", "replicate"}
-        self.make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
+        self._make_padding = {"zeros": torch.zeros_like, "replicate": torch.clone}[
             temporal_fill
         ]
 
@@ -58,7 +66,7 @@ class Delay(CoModule, torch.nn.Module):
         self,
         first_output: Tensor,
     ) -> State:
-        padding = self.make_padding(first_output)
+        padding = self._make_padding(first_output)
         state_buffer = torch.stack([padding for _ in range(self.delay)], dim=0)
         state_index = torch.tensor(-self.delay)
         return state_buffer, state_index
