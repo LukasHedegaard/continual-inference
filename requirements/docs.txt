@@ -1,5 +1,5 @@
 sphinx==5.0.0
-https://github.com/pytorch/pytorch_sphinx_theme.git#egg=pytorch_sphinx_theme
+https://github.com/LukasHedegaard/continual_inference_sphinx_theme/archive/master.zip#egg=continual-sphinx-theme
 sphinxcontrib.katex==0.8.6
 matplotlib==3.5.3
 tensorboard==2.10.0
