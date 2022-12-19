@@ -191,5 +191,5 @@ def Zero() -> Lambda:
 
 
 def One() -> Lambda:
-    """Create Lambda with zero output"""
+    """Create Lambda with one output"""
     return Lambda(torch.ones_like, takes_time=True)
