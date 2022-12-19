@@ -334,7 +334,7 @@ class Conv1d(_ConvCoNd):
 
     Continual Convolutions were proposed by
     Hedegaard et al.: "Continual 3D Convolutional Neural Networks for Real-time Processing of Videos", in ECCV (2022),
-    https://arxiv.org/pdf/2106.00050.pdf
+    https://arxiv.org/pdf/2106.00050.pdf (paper) https://www.youtube.com/watch?v=Jm2A7dVEaF4 (video).
 
     Assuming an input of shape `(B, C, T)`, it computes the convolution over one temporal instant `t` at a time
     where `t` ∈ `range(T)`, and keeps an internal state.
@@ -434,7 +434,7 @@ class Conv2d(_ConvCoNd):
 
     Continual Convolutions were proposed by
     Hedegaard et al.: "Continual 3D Convolutional Neural Networks for Real-time Processing of Videos", in ECCV (2022),
-    https://arxiv.org/pdf/2106.00050.pdf
+    https://arxiv.org/pdf/2106.00050.pdf (paper) https://www.youtube.com/watch?v=Jm2A7dVEaF4 (video).
 
     Assuming an input of shape `(B, C, T, S)`, it computes the convolution over one temporal instant `t` at a time
     where `t` ∈ `range(T)`, and keeps an internal state.
@@ -534,7 +534,7 @@ class Conv3d(_ConvCoNd):
 
     Continual Convolutions were proposed by
     Hedegaard et al.: "Continual 3D Convolutional Neural Networks for Real-time Processing of Videos", in ECCV (2022),
-    https://arxiv.org/pdf/2106.00050.pdf
+    https://arxiv.org/pdf/2106.00050.pdf (paper) https://www.youtube.com/watch?v=Jm2A7dVEaF4 (video).
 
     Assuming an input of shape `(B, C, T, H, W)`, it computes the convolution over one temporal instant `t` at a time
     where `t` ∈ `range(T)`, and keeps an internal state. Two forward modes are supported here.
