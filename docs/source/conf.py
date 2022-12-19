@@ -20,6 +20,7 @@ import shutil
 import sys
 from os import path
 
+# import pytorch_sphinx_theme
 import continual_sphinx_theme
 import sphinx.ext.doctest
 import torch
@@ -32,8 +33,6 @@ from sphinx.writers import html, html5
 # source code directory, relative to this file, for sphinx-autobuild
 # sys.path.insert(0, os.path.abspath('../..'))
 
-
-# import pytorch_sphinx_theme
 
 PATH_HERE = os.path.abspath(os.path.dirname(__file__))
 PATH_ROOT = os.path.join(PATH_HERE, "..", "..")
