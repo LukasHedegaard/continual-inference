@@ -47,7 +47,8 @@ Many of our favorite Deep Neural Network architectures (e.g., [CNNs](https://arx
 Yet, **many important real-life applications need online predictions on a continual input stream**. 
 While CNNs and Transformers can be applied by re-assembling and passing sequences within a sliding window, this is _inefficient_ due to the redundant intermediary computations from overlapping clips.
 
-**Continual Inference Networks** (CINs) ensure efficient stream processing via an alternative computational ordering, with ~_L_ ×  fewer FLOPs per prediction compared to sliding window-based inference with non-CINs where _L_ is the corresponding sequence length of a non-CIN network. For details on their inner workings, check out the videos below or the corresponding papers [[1](https://arxiv.org/abs/2106.00050), [2](https://arxiv.org/abs/2201.06268)].
+**Continual Inference Networks** (CINs) are built to ensure efficient stream processing by employing an alternative computational ordering, which allows sequential computations without the use of sliding window processing.
+In general, CINs requires approx. _L_ ×  fewer FLOPs per prediction compared to sliding window-based inference with non-CINs, where _L_ is the corresponding sequence length of a non-CIN network. For more details, check out the videos below describing Continual 3D CNNs [[1](https://arxiv.org/abs/2106.00050)] and Transformers [[2](https://arxiv.org/abs/2201.06268)].
 
 
 <div align="center">
