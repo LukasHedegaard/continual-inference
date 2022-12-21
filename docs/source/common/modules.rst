@@ -1,4 +1,7 @@
-These are the basic building blocks for Continual Inference Networks.
+The the modules for Continual Inference Networks are listed below.
+They are designed to be drop-in replacements for the `torch.nn` modules of the same name.
+Methods of the same name have identical interfaces and execute identical code. 
+The modules are extended with the `forward_step` and `forward_steps` functions alongside common properties as found in :class:`continual.CoModule`.
 
 
 .. role:: hidden
@@ -53,16 +56,16 @@ Pooling Layers
     :nosignatures:
     :template: classtemplate.rst
 
-    MaxPool1d
-    MaxPool2d
-    MaxPool3d
     AvgPool1d
     AvgPool2d
     AvgPool3d
-    AdaptiveMaxPool2d
-    AdaptiveMaxPool3d
+    MaxPool1d
+    MaxPool2d
+    MaxPool3d
     AdaptiveAvgPool2d
     AdaptiveAvgPool3d
+    AdaptiveMaxPool2d
+    AdaptiveMaxPool3d
 
 Recurrent Layers
 ----------------
