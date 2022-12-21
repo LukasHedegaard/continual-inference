@@ -191,6 +191,7 @@ def continual(module: nn.Module) -> CoModule:
     :class:`forward_stepping` function.
 
     Examples ::
+
         coconv = co.continual(nn.Conv3d(3, 3, 3))
 
         coseq = co.continual(nn.Sequential(
