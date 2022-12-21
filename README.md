@@ -2,15 +2,15 @@
 
 __A Python library for Continual Inference Networks in PyTorch__
 
-[Quick-start](#quick-start) • 
-[Docs](https://continual-inference.readthedocs.io) • 
-[Principles](#library-principles) • 
+[Quick-start](https://continual-inference.readthedocs.io/en/latest/generated/README.html#quick-start) • 
+[Docs](https://continual-inference.readthedocs.io/en/latest/generated/README.html) • 
+[Principles](https://continual-inference.readthedocs.io/en/latest/generated/README.html#library-principles) • 
 [Paper](https://arxiv.org/abs/2204.03418) • 
-[Examples](#composition-examples) • 
-[Modules](#module-library) • 
-[Model Zoo](#model-zoo-and-benchmarks) • 
-[Contribute](CONTRIBUTING.md) • 
-[License](LICENSE)
+[Examples](https://continual-inference.readthedocs.io/en/latest/generated/README.html#composition-examples) • 
+[Modules](https://continual-inference.readthedocs.io/en/latest/common/modules.html) • 
+[Model Zoo](https://continual-inference.readthedocs.io/en/latest/generated/README.html#model-zoo-and-benchmarks) • 
+[Contribute](https://continual-inference.readthedocs.io/en/latest/generated/CONTRIBUTING.html) • 
+[License](https://github.com/LukasHedegaard/continual-inference/blob/main/LICENSE)
 
 <div>
   <a href="https://pypi.org/project/continual-inference/" style="display:inline-block;">
@@ -19,7 +19,7 @@ __A Python library for Continual Inference Networks in PyTorch__
   <a href="https://badge.fury.io/py/continual-inference" style="display:inline-block;">
     <img src="https://badge.fury.io/py/continual-inference.svg" height="20" >
   </a>
-  <a href="https://continual-inference.readthedocs.io/en/latest/?badge=latest" style="display:inline-block;">
+  <a href="https://continual-inference.readthedocs.io/en/latest/generated/README.html" style="display:inline-block;">
     <img src="https://readthedocs.org/projects/continual-inference/badge/?version=latest" alt="Documentation Status" height="20"/>
   </a>
   <a href="https://pepy.tech/project/continual-inference" style="display:inline-block;">
