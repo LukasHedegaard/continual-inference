@@ -169,14 +169,14 @@ net(timestep)  # Invokes net.forward_step(timestep) again
 
 Continual Inference Networks require strict handling of internal data delays to guarantee correspondence between [forward modes](#forward-modes). While it is possible to compose neural networks by defining _forward_, _forward_step_, and _forward_steps_ manually, correct handling of delays is cumbersome and time-consuming. Instead, we provide a rich interface of container modules, which handles delays automatically. On top of `co.Sequential` (which is a drop-in replacement of _torch.nn.Sequential_), we provide modules for handling parallel and conditional dataflow. 
 
-- [`co.Sequential`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Sequential.html): Invoke modules sequentially, passing the output of one module onto the next.
-- [`co.Broadcast`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Broadcast.html): Broadcast one stream to multiple.
-- [`co.Parallel`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Parallel.html): Invoke modules in parallel given each their input.
-- [`co.ParallelDispatch`](https://continual-inference.readthedocs.io/en/latest/generated/continual.ParallelDispatch.html): Dispatch multiple input streams to multiple output streams flexibly.
-- [`co.Reduce`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Reduce.html): Reduce multiple input streams to one.
-- [`co.BroadcastReduce`](https://continual-inference.readthedocs.io/en/latest/generated/continual.BroadcastReduce.html): Shorthand for Sequential(Broadcast, Parallel, Reduce).
-- [`co.Residual`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Residual.html): Residual connection.
-- [`co.Conditional`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conditional.html): Conditionally checks whether to invoke a module (or another) at runtime.
+- [`co.Sequential`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Sequential.html): Invoke modules sequentially, passing the output of one module onto the next.
+- [`co.Broadcast`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Broadcast.html): Broadcast one stream to multiple.
+- [`co.Parallel`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Parallel.html): Invoke modules in parallel given each their input.
+- [`co.ParallelDispatch`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.ParallelDispatch.html): Dispatch multiple input streams to multiple output streams flexibly.
+- [`co.Reduce`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Reduce.html): Reduce multiple input streams to one.
+- [`co.BroadcastReduce`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.BroadcastReduce.html): Shorthand for Sequential(Broadcast, Parallel, Reduce).
+- [`co.Residual`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Residual.html): Residual connection.
+- [`co.Conditional`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Conditional.html): Conditionally checks whether to invoke a module (or another) at runtime.
 
 
 #### Composition examples:
@@ -324,57 +324,57 @@ _Continual Inference_ features a rich collection of modules for defining Continu
 <details>
 <summary><b>Convolutions</b></summary>
 
-- [`co.Conv1d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conv1d.html)
-- [`co.Conv2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conv2d.html)
-- [`co.Conv3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conv3d.html)
+- [`co.Conv1d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Conv1d.html)
+- [`co.Conv2d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Conv2d.html)
+- [`co.Conv3d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Conv3d.html)
 
 </details>
 
 <details>
 <summary><b>Pooling</b></summary>
 
-  - [`co.AvgPool1d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AvgPool1d.html)
-  - [`co.AvgPool2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AvgPool2d.html)
-  - [`co.AvgPool3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AvgPool3d.html)
-  - [`co.MaxPool1d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.MaxPool1d.html)
-  - [`co.MaxPool2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.MaxPool2d.html)
-  - [`co.MaxPool3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.MaxPool3d.html)
-  - [`co.AdaptiveAvgPool2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AdaptiveAvgPool2d.html)
-  - [`co.AdaptiveAvgPool3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AdaptiveAvgPool3d.html)
-  - [`co.AdaptiveMaxPool2d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AdaptiveMaxPool2d.html)
-  - [`co.AdaptiveMaxPool3d`](https://continual-inference.readthedocs.io/en/latest/generated/continual.AdaptiveMaxPool3d.html)
+  - [`co.AvgPool1d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.AvgPool1d.html)
+  - [`co.AvgPool2d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.AvgPool2d.html)
+  - [`co.AvgPool3d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.AvgPool3d.html)
+  - [`co.MaxPool1d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.MaxPool1d.html)
+  - [`co.MaxPool2d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.MaxPool2d.html)
+  - [`co.MaxPool3d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.MaxPool3d.html)
+  - [`co.AdaptiveAvgPool2d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.AdaptiveAvgPool2d.html)
+  - [`co.AdaptiveAvgPool3d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.AdaptiveAvgPool3d.html)
+  - [`co.AdaptiveMaxPool2d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.AdaptiveMaxPool2d.html)
+  - [`co.AdaptiveMaxPool3d`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.AdaptiveMaxPool3d.html)
 
 </details>
 
 <details>
 <summary><b>Linear</b></summary>
 
-  - [`co.Linear`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Linear.html)
-  - [`co.Identity`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Identity.html): Maps input to output without modification.
-  - [`co.Add`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Add.html): Adds a constant value.
-  - [`co.Multiply`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Multiply.html): Multiplies with a constant factor.
+  - [`co.Linear`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Linear.html)
+  - [`co.Identity`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Identity.html): Maps input to output without modification.
+  - [`co.Add`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Add.html): Adds a constant value.
+  - [`co.Multiply`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Multiply.html): Multiplies with a constant factor.
 
 </details>
 
 <details>
 <summary><b>Recurrent</b></summary>
 
-  - [`co.RNN`](https://continual-inference.readthedocs.io/en/latest/generated/continual.RNN.html)
-  - [`co.LSTM`](https://continual-inference.readthedocs.io/en/latest/generated/continual.LSTM.html)
-  - [`co.GRU`](https://continual-inference.readthedocs.io/en/latest/generated/continual.GRU.html)
+  - [`co.RNN`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.RNN.html)
+  - [`co.LSTM`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.LSTM.html)
+  - [`co.GRU`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.GRU.html)
 
 </details>
 
 <details>
 <summary><b>Transformers</b></summary>
 
-  - [`co.TransformerEncoder`](https://continual-inference.readthedocs.io/en/latest/generated/continual.TransformerEncoder.html)
-  - [`co.TransformerEncoderLayerFactory`](https://continual-inference.readthedocs.io/en/latest/generated/continual.TransformerEncoderLayerFactory.html): Factory function corresponding to `nn.TransformerEncoderLayer`.
-  - [`co.SingleOutputTransformerEncoderLayer`](https://continual-inference.readthedocs.io/en/latest/generated/continual.SingleOutputTransformerEncoderLayer.html): SingleOutputMHA version of `nn.TransformerEncoderLayer`.
-  - [`co.RetroactiveTransformerEncoderLayer`](https://continual-inference.readthedocs.io/en/latest/generated/continual.RetroactiveTransformerEncoderLayer.html): RetroactiveMHA version of `nn.TransformerEncoderLayer`.
-  - [`co.RetroactiveMultiheadAttention`](https://continual-inference.readthedocs.io/en/latest/generated/continual.retroactive_mha.html.RetroactiveMultiheadAttention): Retroactive version of `nn.MultiheadAttention`.
-  - [`co.SingleOutputMultiheadAttention`](https://continual-inference.readthedocs.io/en/latest/generated/continual.single_output_mha.html.SingleOutputMultiheadAttention): Single-output version of `nn.MultiheadAttention`.
-  - [`co.RecyclingPositionalEncoding`](https://continual-inference.readthedocs.io/en/latest/generated/continual.RecyclingPositionalEncoding.html): Positional Encoding used for Continual Transformers.
+  - [`co.TransformerEncoder`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.TransformerEncoder.html)
+  - [`co.TransformerEncoderLayerFactory`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.TransformerEncoderLayerFactory.html): Factory function corresponding to `nn.TransformerEncoderLayer`.
+  - [`co.SingleOutputTransformerEncoderLayer`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.SingleOutputTransformerEncoderLayer.html): SingleOutputMHA version of `nn.TransformerEncoderLayer`.
+  - [`co.RetroactiveTransformerEncoderLayer`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.RetroactiveTransformerEncoderLayer.html): RetroactiveMHA version of `nn.TransformerEncoderLayer`.
+  - [`co.RetroactiveMultiheadAttention`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.retroactive_mha.html.RetroactiveMultiheadAttention): Retroactive version of `nn.MultiheadAttention`.
+  - [`co.SingleOutputMultiheadAttention`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.single_output_mha.html.SingleOutputMultiheadAttention): Single-output version of `nn.MultiheadAttention`.
+  - [`co.RecyclingPositionalEncoding`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.RecyclingPositionalEncoding.html): Positional Encoding used for Continual Transformers.
 
 </details>
 
@@ -384,34 +384,34 @@ Modules for composing and converting networks. Both _composition_ and _utility_ 
 <details>
 <summary><b>Composition modules</b></summary>
 
-  - [`co.Sequential`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Sequential.html): Invoke modules sequentially, passing the output of one module onto the next.
-  - [`co.Broadcast`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Broadcast.html): Broadcast one stream to multiple.
-  - [`co.Parallel`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Parallel.html): Invoke modules in parallel given each their input.
-  - [`co.ParallelDispatch`](https://continual-inference.readthedocs.io/en/latest/generated/continual.ParallelDispatch.html): Dispatch multiple input streams to multiple output streams flexibly.
-  - [`co.Reduce`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Reduce.html): Reduce multiple input streams to one.
-  - [`co.BroadcastReduce`](https://continual-inference.readthedocs.io/en/latest/generated/continual.BroadcastReduce.html): Shorthand for Sequential(Broadcast, Parallel, Reduce).
-  - [`co.Residual`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Residual.html): Residual connection.
-  - [`co.Conditional`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Conditional.html): Conditionally checks whether to invoke a module (or another) at runtime.
+  - [`co.Sequential`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Sequential.html): Invoke modules sequentially, passing the output of one module onto the next.
+  - [`co.Broadcast`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Broadcast.html): Broadcast one stream to multiple.
+  - [`co.Parallel`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Parallel.html): Invoke modules in parallel given each their input.
+  - [`co.ParallelDispatch`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.ParallelDispatch.html): Dispatch multiple input streams to multiple output streams flexibly.
+  - [`co.Reduce`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Reduce.html): Reduce multiple input streams to one.
+  - [`co.BroadcastReduce`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.BroadcastReduce.html): Shorthand for Sequential(Broadcast, Parallel, Reduce).
+  - [`co.Residual`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Residual.html): Residual connection.
+  - [`co.Conditional`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Conditional.html): Conditionally checks whether to invoke a module (or another) at runtime.
 
 </details>
 
 <details>
 <summary><b>Utility modules</b></summary>
 
-  - [`co.Delay`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Delay.html): Pure delay module (e.g. needed in residuals).
-  - [`co.Reshape`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Reshape.html): Reshape non-temporal dimensions.
-  - [`co.Lambda`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Lambda.html): Lambda module which wraps any function.
-  - [`co.Constant`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Constant.html): Maps input to and output with constant value.
-  - [`co.Zero`](https://continual-inference.readthedocs.io/en/latest/generated/continual.Zero.html): Maps input to output of zeros.
-  - [`co.One`](https://continual-inference.readthedocs.io/en/latest/generated/continual.One.html): Maps input to output of ones.
+  - [`co.Delay`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Delay.html): Pure delay module (e.g. needed in residuals).
+  - [`co.Reshape`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Reshape.html): Reshape non-temporal dimensions.
+  - [`co.Lambda`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Lambda.html): Lambda module which wraps any function.
+  - [`co.Constant`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Constant.html): Maps input to and output with constant value.
+  - [`co.Zero`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Zero.html): Maps input to output of zeros.
+  - [`co.One`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.One.html): Maps input to output of ones.
 
 </details>
 
 <details>
 <summary><b>Converters</b></summary>
 
-  - [`co.continual`](https://continual-inference.readthedocs.io/en/latest/generated/continual.continual.html): conversion function from `torch.nn` modules to `co` modules.
-  - [`co.forward_stepping`](https://continual-inference.readthedocs.io/en/latest/generated/continual.forward_stepping.html): functional wrapper, which enhances temporally local `torch.nn` modules with the forward_stepping functions.
+  - [`co.continual`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.continual.html): conversion function from `torch.nn` modules to `co` modules.
+  - [`co.forward_stepping`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.forward_stepping.html): functional wrapper, which enhances temporally local `torch.nn` modules with the forward_stepping functions.
 
 </details>
 
