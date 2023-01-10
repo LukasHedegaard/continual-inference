@@ -2,7 +2,7 @@
 
 from functools import wraps
 from types import FunctionType
-from typing import Callable, Type
+from typing import Callable, Type, Union
 
 from torch import Tensor, nn
 
@@ -150,12 +150,36 @@ NAIVE_MAPPING = {
     nn.BatchNorm1d,
     nn.BatchNorm2d,
     nn.BatchNorm3d,
+    nn.LayerNorm,
+    nn.GroupNorm,
     # >> Dropout modules
     nn.Dropout,
     nn.Dropout2d,
     nn.Dropout3d,
     nn.AlphaDropout,
     nn.FeatureAlphaDropout,
+}
+
+
+_circumvent_message = " to work with automatic conversion. You can circumvent this by wrapping the module in `co.forward_stepping(your_module)`. Note however, that this may break correspondence between forward and forward_step."
+
+
+def _instance_norm_condition(
+    module: Union[nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d]
+):
+    assert module.affine, (
+        f"{type(module)} must be specified with `affine==True`" + _circumvent_message
+    )
+    assert module.track_running_stats, (
+        f"{type(module)} must be specified with `track_running_stats==True`"
+        + _circumvent_message
+    )
+
+
+CONDITIONAL_MAPPING = {
+    nn.InstanceNorm1d: _instance_norm_condition,
+    nn.InstanceNorm2d: _instance_norm_condition,
+    nn.InstanceNorm3d: _instance_norm_condition,
 }
 
 
@@ -204,6 +228,10 @@ def continual(module: nn.Module) -> CoModule:
         return module
 
     if type(module) in NAIVE_MAPPING:
+        return forward_stepping(module)
+
+    if type(module) in CONDITIONAL_MAPPING:
+        CONDITIONAL_MAPPING[type(module)](module)
         return forward_stepping(module)
 
     assert type(module) in MODULE_MAPPING, (
