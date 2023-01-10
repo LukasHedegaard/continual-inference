@@ -8,6 +8,11 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## Unpublished
 
+## [1.1.1] - 2023-01-10
+
+### Added
+- Support for `GroupNorm` and `InstanceNorm`
+
 
 ## [1.1.0] - 2022-12-19
 

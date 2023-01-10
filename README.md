@@ -456,7 +456,11 @@ We support drop-in interoperability with with the following _torch.nn_ modules:
   - `nn.BatchNorm1d`
   - `nn.BatchNorm2d`
   - `nn.BatchNorm3d`
-  - `nn.LayerNorm`
+  - `nn.GroupNorm`,
+  - `nn.InstanceNorm1d` (affine=True, track_running_stats=True required)
+  - `nn.InstanceNorm2d` (affine=True, track_running_stats=True required)
+  - `nn.InstanceNorm3d` (affine=True, track_running_stats=True required)
+  - `nn.LayerNorm` (only non-temporal dimensions must be specified)
 
 </details>
 
@@ -464,6 +468,7 @@ We support drop-in interoperability with with the following _torch.nn_ modules:
 <summary><b>Dropout</b></summary>
 
   - `nn.Dropout`
+  - `nn.Dropout1d`
   - `nn.Dropout2d`
   - `nn.Dropout3d`
   - `nn.AlphaDropout`
