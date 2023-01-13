@@ -280,7 +280,8 @@ def test_residual_shrink_centered():
 
     # forward_steps
     co_res.clean_state()
-    out_firsts = co_res.forward_steps(input[:, :, :-1], pad_end=False)
+    _ = co_res.forward_step(input[:, :, 0])
+    out_firsts = co_res.forward_steps(input[:, :, 1:-1], pad_end=False)
     assert torch.allclose(out_firsts, target[:, :, :3])
 
     # forward_step
@@ -312,7 +313,8 @@ def test_residual_shrink_lagging():
 
     # forward_steps
     co_res.clean_state()
-    out_firsts = co_res.forward_steps(input[:, :, :-1], pad_end=False)
+    _ = co_res.forward_step(input[:, :, 0])
+    out_firsts = co_res.forward_steps(input[:, :, 1:-1], pad_end=False)
     assert torch.allclose(out_firsts, out_manual_res[:, :, :3])
 
     # forward_step

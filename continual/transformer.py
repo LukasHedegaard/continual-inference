@@ -164,6 +164,7 @@ def SingleOutputTransformerEncoderLayer(
     dtype=None,
     sequence_len: int = None,
     single_output_forward=False,
+    query_index: int = -1,
 ):
     """Continual Single-output Transformer Encoder layer.
 
@@ -191,6 +192,7 @@ def SingleOutputTransformerEncoderLayer(
         dtype: datatype of layer parameters. Defaults to None.
         sequence_len: length of token-sequence to perform attention across. Defaults to None.
         single_output_forward: whether to restrict the attention to the last token during forward. Defaults to False.
+        query_index: the sequence position index to compute the attention for.
 
     Examples::
 
@@ -225,7 +227,7 @@ def SingleOutputTransformerEncoderLayer(
         bias=True,
         batch_first=True,
         embed_dim_second=True,
-        query_index=-1,
+        query_index=query_index,
         device=device,
         dtype=dtype,
         sequence_len=sequence_len,
@@ -462,7 +464,7 @@ def TransformerEncoderLayerFactory(
 
     Examples::
 
-        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8)
+        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8, sequence_len=32)
         transformer_encoder = co.TransformerEncoder(encoder_layer, num_layers=2)
         src = torch.rand(10, 512, 32)
         out = transformer_encoder(src)
@@ -527,7 +529,7 @@ class TransformerEncoder(Sequential):
 
     Examples::
 
-        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8)
+        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8, sequence_len=32)
         transformer_encoder = co.TransformerEncoder(encoder_layer, num_layers=2)
         src = torch.rand(10, 512, 32)
         out = transformer_encoder(src)
