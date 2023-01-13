@@ -462,7 +462,7 @@ def TransformerEncoderLayerFactory(
 
     Examples::
 
-        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8)
+        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8, sequence_len=32)
         transformer_encoder = co.TransformerEncoder(encoder_layer, num_layers=2)
         src = torch.rand(10, 512, 32)
         out = transformer_encoder(src)
@@ -527,7 +527,7 @@ class TransformerEncoder(Sequential):
 
     Examples::
 
-        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8)
+        encoder_layer = co.TransformerEncoderLayerFactory(d_model=512, nhead=8, sequence_len=32)
         transformer_encoder = co.TransformerEncoder(encoder_layer, num_layers=2)
         src = torch.rand(10, 512, 32)
         out = transformer_encoder(src)
