@@ -8,6 +8,9 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## Unpublished
 
+
+## [1.1.2] - 2023-01-13
+
 ### Added
 - `query_index` argument to `SingleOutputTransformerEncoderLayer`.
 
