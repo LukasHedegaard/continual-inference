@@ -8,6 +8,13 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## Unpublished
 
+### Added
+- `query_index` argument to `SingleOutputTransformerEncoderLayer`.
+
+### Fixed
+- `Residual` centred residual and `Delay` auto_delay forward_step. 
+
+
 ## [1.1.1] - 2023-01-10
 
 ### Added

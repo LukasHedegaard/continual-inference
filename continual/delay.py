@@ -68,7 +68,11 @@ class Delay(CoModule, torch.nn.Module):
     ) -> State:
         padding = self._make_padding(first_output)
         state_buffer = torch.stack([padding for _ in range(self.delay)], dim=0)
-        state_index = torch.tensor(-self.delay)
+        state_index = torch.tensor(
+            -2 * self.delay
+            if self.auto_shrink and isinstance(self.auto_shrink, bool)
+            else -self.delay
+        )
         return state_buffer, state_index
 
     def clean_state(self):
@@ -113,15 +117,12 @@ class Delay(CoModule, torch.nn.Module):
         return CoModule.forward_step(self, input, update_state)
 
     def forward_steps(self, input: Tensor, pad_end=False, update_state=True) -> Tensor:
-        first_run = self.get_state() is None
         if self._delay == 0:
             return input
 
         with temporary_parameter(self, "padding", (self.delay,)):
             output = CoModule.forward_steps(self, input, pad_end, update_state)
 
-        if first_run and self.auto_shrink in {True, "centered"}:
-            output = output[:, :, self.delay :]
         return output
 
     def forward(self, input: Tensor) -> Tensor:
