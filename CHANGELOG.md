@@ -147,7 +147,7 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 ### Added
 - Support for functor in `co.Lambda`
 
-### Remove
+### Removed
 - `nn.LayerNorm` from automatically convertible modules
 
 
