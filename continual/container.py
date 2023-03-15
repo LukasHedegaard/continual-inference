@@ -384,9 +384,9 @@ class ParallelDispatch(CoModule, nn.Module):
 
     Depiction of the reorder example::
 
-               | -> co.Add(1)  \\ / -> co.Identity() |
-        [0] -> |                X                | -> max -> [3]
-               | -> co.Identity() / \\ -> co.Add(2)  |
+               | -> co.Add(1)    \\ / -> co.Identity() |
+        [0] -> |                   X                   | -> max -> [3]
+               | -> co.Identity() / \\ -> co.Add(2)    |
 
     Copy example::
 
@@ -403,7 +403,7 @@ class ParallelDispatch(CoModule, nn.Module):
     Depiction of the copy example::
 
                | -> co.Add(1)  -> | -> co.Identity() -> |
-        [0] -> |                  | -> co.Add(2)  -> | -> max -> [3]
+        [0] -> |                  | -> co.Add(2)     -> | -> max -> [3]
                | -> co.Identity() ------> co.Add(1)  -> |
 
     Group example::
@@ -423,7 +423,7 @@ class ParallelDispatch(CoModule, nn.Module):
                                  | -> |
                | -> co.Add(2) -> |    | ->    sum     -> |
         [0] -> |                 | -> |                  | -> max -> [4]
-               | -> co.Identity() ----------> co.Identity() -> |
+               | -> co.Identity() ----> co.Identity() -> |
 
     Args:
         dispatch_mapping (Sequence[Union[int, Sequence[int]]]):

@@ -960,7 +960,6 @@ class AdaptiveAvgPool2d(nn.AdaptiveAvgPool2d, _PoolNd):
         dilation: int = 1,
         temporal_fill: PaddingMode = "zeros",
     ) -> None:
-
         self.output_size = _pair(output_size)
         assert self.output_size[0] == 1, "Only output_size[0] = 1 is supported"
 
@@ -1037,7 +1036,6 @@ class AdaptiveAvgPool3d(nn.AdaptiveAvgPool3d, _PoolNd):
         dilation: int = 1,
         temporal_fill: PaddingMode = "zeros",
     ) -> None:
-
         self.output_size = _triple(output_size)
         assert self.output_size[0] == 1, "Only output_size[0] = 1 is supported"
 
@@ -1114,7 +1112,6 @@ class AdaptiveMaxPool2d(nn.AdaptiveMaxPool2d, _PoolNd):
         dilation: int = 1,
         temporal_fill: PaddingMode = "zeros",
     ) -> None:
-
         self.output_size = _pair(output_size)
         self.return_indices = False
         assert self.output_size[0] == 1, "Only output_size[0] = 1 is supported"
@@ -1194,7 +1191,6 @@ class AdaptiveMaxPool3d(nn.AdaptiveMaxPool3d, _PoolNd):
         dilation: int = 1,
         temporal_fill: PaddingMode = "zeros",
     ) -> None:
-
         self.output_size = _triple(output_size)
         self.return_indices = False
         assert self.output_size[0] == 1, "Only output_size[0] = 1 is supported"

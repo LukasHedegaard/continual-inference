@@ -8,6 +8,15 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## Unpublished
 
+## [1.1.3] - 2023-03-15
+
+### Added
+- Description of state handling to README.
+
+### Fixed
+- Documentation formatting for `co.Identity()` examples.
+- Horovod check for newer pytorch lightning versions.
+
 
 ## [1.1.2] - 2023-01-13
 

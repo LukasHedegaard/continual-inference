@@ -8,18 +8,19 @@ __all__ = ["getLogger"]
 
 
 def _process_rank():
-    try:
+    try:  # pragma: no cover
         import pytorch_lightning as pl
 
-        if pl.utilities._HOROVOD_AVAILABLE:  # pragma: no cover
+        try:
             import horovod.torch as hvd
 
             hvd.init()
             return hvd.rank()
-        else:
+
+        except ModuleNotFoundError:
             return pl.utilities.rank_zero_only.rank
 
-    except ModuleNotFoundError:  # pragma: no cover
+    except ModuleNotFoundError:
         return 0
 
 
