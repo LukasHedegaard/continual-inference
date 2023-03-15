@@ -471,7 +471,6 @@ def TransformerEncoderLayerFactory(
     """
 
     def TransformerEncoderLayer(mha_type: MhaType):
-
         factory_fn = {
             MhaType.RETROACTIVE: RetroactiveTransformerEncoderLayer,
             MhaType.SINGLE_OUTPUT: SingleOutputTransformerEncoderLayer,
@@ -541,7 +540,6 @@ class TransformerEncoder(Sequential):
         num_layers: int,
         norm: nn.Module = None,
     ):
-
         layers = []
         if num_layers == 1:
             layers.append(encoder_layer(MhaType.SINGLE_OUTPUT))

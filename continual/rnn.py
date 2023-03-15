@@ -172,7 +172,7 @@ class RNN(CoModule, nn.RNN):
             }
         )
         with torch.no_grad():
-            for (ours, theirs) in zip(comodule._flat_weights, module._flat_weights):
+            for ours, theirs in zip(comodule._flat_weights, module._flat_weights):
                 ours.copy_(theirs)
         return comodule
 
@@ -387,7 +387,7 @@ class GRU(CoModule, nn.GRU):
             }
         )
         with torch.no_grad():
-            for (ours, theirs) in zip(comodule._flat_weights, module._flat_weights):
+            for ours, theirs in zip(comodule._flat_weights, module._flat_weights):
                 ours.copy_(theirs)
         return comodule
 
@@ -644,7 +644,7 @@ class LSTM(CoModule, nn.LSTM):
             }
         )
         with torch.no_grad():
-            for (ours, theirs) in zip(comodule._flat_weights, module._flat_weights):
+            for ours, theirs in zip(comodule._flat_weights, module._flat_weights):
                 ours.copy_(theirs)
         return comodule
 
