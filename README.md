@@ -317,6 +317,11 @@ For the `forward_step` function, this comes to show by some `None`-valued output
 
 For more information, please see the [library paper](https://arxiv.org/abs/2204.03418).
 
+### Handling state
+During stream processing, network modules which operate over multiple time-steps, e.g., a convolution with `kernel_size > 1` in the temporal dimension, will aggregate and cache state internally. Each module has its own local state, which can be inspected using `module.get_state()`. During `forward_step` and `forward_steps`, the state is updated unless the forward_step(s) is invoked with an `update_state = False` argument.
+
+A __state cleanup__ can be accomplished via `module.clean_state()`.
+
 
 ## Module library
 _Continual Inference_ features a rich collection of modules for defining Continual Inference Networks. Specific care was taken to create CIN versions of the PyTorch modules found in [_torch.nn_](https://pytorch.org/docs/stable/nn.html):
