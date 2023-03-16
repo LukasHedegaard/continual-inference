@@ -36,6 +36,7 @@ from .positional_encoding import RecyclingPositionalEncoding  # noqa: F401
 from .ptflops import _register_ptflops  # noqa: F401
 from .rnn import GRU, LSTM, RNN  # noqa: F401
 from .shape import Reshape  # noqa: F401
+from .skip import Skip  # noqa: F401
 from .transformer import (  # noqa: F401
     RetroactiveTransformerEncoderLayer,
     SingleOutputTransformerEncoderLayer,
@@ -43,4 +44,3 @@ from .transformer import (  # noqa: F401
     TransformerEncoderLayerFactory,
 )
 from .utils import flat_state_dict, load_state_dict, state_dict  # noqa: F401
-from .skip import Skip  # noqa: F401
