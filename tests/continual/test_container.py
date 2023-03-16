@@ -322,6 +322,49 @@ def test_residual_shrink_lagging():
     assert torch.allclose(out_last, out_manual_res[:, :, -1])
 
 
+def test_residual_shrink_leading():
+    input = torch.arange(6, dtype=torch.float).reshape((1, 1, 6))
+
+    conv = nn.Conv1d(1, 1, kernel_size=3, padding=0, bias=False)
+    torch.nn.init.ones_(conv.weight)
+
+    co_conv = co.Conv1d.build_from(conv)
+
+    co_res = co.Residual(co_conv, residual_shrink="leading")
+
+    assert "Skip(2)" in co_res.__repr__() and "Delay" not in co_res.__repr__()
+
+    # Target behavior: Discard first outputs during regular forward
+    target = conv(input) + input[:, :, 2:]
+
+    # forward
+    out_manual_res = co_conv.forward(input) + input[:, :, 2:]
+    assert torch.allclose(out_manual_res, target)
+
+    out_res = co_res.forward(input)
+    assert torch.allclose(out_res, target)
+
+    # forward_step
+    output_step = []
+    for t in range(input.shape[2]):
+        y = co_res.forward_step(input[:, :, t])
+        if isinstance(y, torch.Tensor):
+            output_step.append(y)
+    output_step = torch.stack(output_step, dim=2)
+    assert torch.allclose(output_step, target)
+
+    # forward_steps
+    co_res.clean_state()
+    out_firsts = co_res.forward_steps(input[:, :, :-2], pad_end=False)
+    assert torch.allclose(out_firsts, target[:, :, :-2])
+
+    # forward_step
+    out_last = co_res.forward_step(input[:, :, -2])
+    assert torch.allclose(out_last, target[:, :, -2])
+    out_last = co_res.forward_step(input[:, :, -1])
+    assert torch.allclose(out_last, target[:, :, -1])
+
+
 def test_broadcast_reduce():
     input = torch.arange(7, dtype=torch.float).reshape((1, 1, 7))
 

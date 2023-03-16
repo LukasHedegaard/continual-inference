@@ -9,6 +9,7 @@ from torch import Tensor, nn
 from .delay import Delay
 from .logging import getLogger
 from .module import CoModule, PaddingMode, _callmode
+from .skip import Skip
 from .utils import (
     function_repr,
     load_state_dict,
@@ -384,9 +385,9 @@ class ParallelDispatch(CoModule, nn.Module):
 
     Depiction of the reorder example::
 
-               | -> co.Add(1)    \\ / -> co.Identity() |
+               | -> co.Add(1)     \\ / -> co.Identity() |
         [0] -> |                   X                   | -> max -> [3]
-               | -> co.Identity() / \\ -> co.Add(2)    |
+               | -> co.Identity() /  \\ -> co.Add(2)    |
 
     Copy example::
 
@@ -681,8 +682,6 @@ class Sequential(FlattenableStateDict, CoModule, nn.Sequential):
         rf = reverse_modules[0].receptive_field
         for m in reverse_modules[1:]:
             s = getattr(m, "stride", [1])
-            if not isinstance(s, tuple):
-                print("hey")
             s = s[0]
             rf = s * rf + m.receptive_field - s
         return rf
@@ -944,7 +943,9 @@ def Residual(
         reduce (Reduction, optional): Reduction function. Defaults to "sum".
         residual_shrink (bool, optional):
             Set residual to shrink its forward to match the temporal dimension reduction of the wrapped module.
-            Options: "centered" or True: Centered residual shrink; "lagging": lagging shrink. Defaults to False.
+            Options: "centered", "lagging" or True: Centered residual shrink;
+                     "lagging": lagging shrink. Defaults to False.
+                     "leading": leading shrink, i.e. no delay during forward_step(s).
 
     Returns:
         BroadcastReduce: BroadcastReduce module with residual.
@@ -965,9 +966,13 @@ def Residual(
         assert delay % 2 == 0, "Auto-shrink only works for even-number delays."
         delay = delay // 2
 
+    if residual_shrink == "leading":
+        res = Skip(delay)
+    else:
+        res = Delay(delay, temporal_fill, auto_shrink=residual_shrink)
+
     return BroadcastReduce(
-        # Residual first yields easier broadcasting in reduce functions
-        Delay(delay, temporal_fill, auto_shrink=residual_shrink),
+        res,  # Residual first yields easier broadcasting in reduce functions
         module,
         reduce=reduce,
         auto_delay=False,
