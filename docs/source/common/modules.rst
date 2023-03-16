@@ -119,6 +119,7 @@ Utilities
 
     Lambda
     Delay
+    Skip
     Reshape
     Constant
     Zero
