@@ -404,7 +404,7 @@ Modules for composing and converting networks. Both _composition_ and _utility_ 
 <summary><b>Utility modules</b></summary>
 
   - [`co.Delay`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Delay.html): Pure delay module (e.g. needed in residuals).
-  - [`co.Skip`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Skip.html): Skip a number of input steps.
+  - [`co.Skip`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Skip.html): Skip a predefined number of input steps.
   - [`co.Reshape`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Reshape.html): Reshape non-temporal dimensions.
   - [`co.Lambda`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Lambda.html): Lambda module which wraps any function.
   - [`co.Constant`](https://continual-inference.readthedocs.io/en/latest/common/generated/continual.Constant.html): Maps input to and output with constant value.
