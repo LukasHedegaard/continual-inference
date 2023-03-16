@@ -8,6 +8,13 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## Unpublished
 
+## [1.2.0] - 2023-03-16
+
+### Added
+- `Skip` module.
+- "leading" mode in `Residual`.
+
+
 ## [1.1.3] - 2023-03-15
 
 ### Added
