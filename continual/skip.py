@@ -11,7 +11,7 @@ __all__ = ["Skip"]
 
 
 class Skip(CoModule, torch.nn.Module):
-    """Skip an number of input steps.
+    """Skip a number of input steps.
 
     Arguments:
         steps: The number of steps to skip.

@@ -43,3 +43,4 @@ from .transformer import (  # noqa: F401
     TransformerEncoderLayerFactory,
 )
 from .utils import flat_state_dict, load_state_dict, state_dict  # noqa: F401
+from .skip import Skip  # noqa: F401
