@@ -8,6 +8,15 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## Unpublished
 
+## [1.2.1] - 2023-03-24
+
+### Added
+- Onnx as dev requirement.
+
+### Changed
+- Allow torch>=2.0.
+
+
 ## [1.2.0] - 2023-03-16
 
 ### Added
