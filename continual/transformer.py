@@ -428,7 +428,7 @@ def TransformerEncoderLayerFactory(
     nhead: int,
     dim_feedforward: int = 2048,
     dropout: float = 0.1,
-    activation: Union[nn.Module, Callable[[Tensor], Tensor]] = nn.functional.relu,
+    activation: Union[nn.Module, Callable[[Tensor], Tensor], str] = nn.functional.relu,
     layer_norm_eps: float = 1e-5,
     # batch_first: bool = True,
     # norm_first: bool = False,
@@ -469,6 +469,11 @@ def TransformerEncoderLayerFactory(
         src = torch.rand(10, 512, 32)
         out = transformer_encoder(src)
     """
+    if activation in {"relu", "gelu"}:
+        activation = {
+            "relu": nn.functional.relu,
+            "gelu": nn.functional.relu,
+        }[activation]
 
     def TransformerEncoderLayer(mha_type: MhaType):
         factory_fn = {
