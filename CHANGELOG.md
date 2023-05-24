@@ -8,6 +8,12 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## Unpublished
 
+## [1.2.2] - 2023-05-24
+
+### Fixed
+- Option to use strings to specify transformer activation.
+
+
 ## [1.2.1] - 2023-03-24
 
 ### Added

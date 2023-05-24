@@ -402,6 +402,7 @@ def test_trans_enc_b1(tmp_path):
             dim_feedforward=E * 2,
             dropout=0.0,
             sequence_len=T,
+            activation="relu",
         ),
         num_layers=1,
     )
