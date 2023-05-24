@@ -185,8 +185,8 @@ def SingleOutputTransformerEncoderLayer(
         nhead: the number of heads in the multiheadattention models (required).
         dim_feedforward: the dimension of the feedforward network model (default=2048).
         dropout: the dropout value (default=0.1).
-        activation: the activation function of the intermediate layer, can be a string
-            ("relu" or "gelu") or a unary callable. Default: relu.
+        activation: the activation function of the intermediate layer. Should be callable
+            (e.g., `nn.functional.relu` or `nn.ReLU()`). Default: nn.functional.relu.
         layer_norm_eps: the eps value in layer normalization components (default=1e-5).
         device: torch device to initialize layer on. Defaults to None.
         dtype: datatype of layer parameters. Defaults to None.
@@ -324,8 +324,8 @@ def RetroactiveTransformerEncoderLayer(
         nhead: the number of heads in the multiheadattention models (required).
         dim_feedforward: the dimension of the feedforward network model (default=2048).
         dropout: the dropout value (default=0.1).
-        activation: the activation function of the intermediate layer, can be a string
-            ("relu" or "gelu") or a unary callable. Default: relu.
+        activation: the activation function of the intermediate layer. Should be callable
+            (e.g., `nn.functional.relu` or `nn.ReLU()`). Default: nn.functional.relu.
         layer_norm_eps: the eps value in layer normalization components (default=1e-5).
         device: torch device to initialize layer on. Defaults to None.
         dtype: datatype of layer parameters. Defaults to None.
@@ -451,8 +451,8 @@ def TransformerEncoderLayerFactory(
         nhead: the number of heads in the multiheadattention models (required).
         dim_feedforward: the dimension of the feedforward network model (default=2048).
         dropout: the dropout value (default=0.1).
-        activation: the activation function of the intermediate layer, can be a string
-            ("relu" or "gelu") or a unary callable. Default: relu.
+        activation: the activation function of the intermediate layer. Should be callable
+            (e.g., `nn.functional.relu` or `nn.ReLU()`). Default: nn.functional.relu.
         layer_norm_eps: the eps value in layer normalization components (default=1e-5).
         device: torch device to initialize layer on. Defaults to None.
         dtype: datatype of layer parameters. Defaults to None.
