@@ -8,6 +8,13 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## Unpublished
 
+
+## [1.2.3] - 2023-06-16
+
+### Fixed
+- Ensure state_index remains on the same device after clean_state.
+
+
 ## [1.2.2] - 2023-05-24
 
 ### Fixed

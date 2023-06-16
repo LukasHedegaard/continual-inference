@@ -155,7 +155,7 @@ class _ConvCoNd(CoModule, _ConvNd):
         return (state_buffer, state_index, stride_index)
 
     def clean_state(self):
-        self.state_buffer = torch.tensor([])
+        self.state_buffer = torch.tensor([], device=self.state_buffer.device)
         self.state_index = torch.tensor(0)
         self.stride_index = torch.tensor(0)
 

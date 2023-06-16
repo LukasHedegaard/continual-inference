@@ -276,11 +276,11 @@ class RetroactiveMultiheadAttention(MultiheadAttentionBase):
         ) = state
 
     def clean_state(self):
-        self.d_mem = torch.tensor([])
-        self.AV_mem = torch.tensor([])
-        self.Q_mem = torch.tensor([])
-        self.K_T_mem = torch.tensor([])
-        self.V_mem = torch.tensor([])
+        self.d_mem = torch.tensor([], device=self.d_mem.device)
+        self.AV_mem = torch.tensor([], device=self.AV_mem.device)
+        self.Q_mem = torch.tensor([], device=self.Q_mem.device)
+        self.K_T_mem = torch.tensor([], device=self.K_T_mem.device)
+        self.V_mem = torch.tensor([], device=self.V_mem.device)
         self.stride_index = torch.tensor(0)
 
     def _forward_step(
