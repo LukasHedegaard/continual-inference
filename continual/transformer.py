@@ -550,7 +550,7 @@ class TransformerEncoder(Sequential):
             layers.append(encoder_layer(MhaType.SINGLE_OUTPUT))
         else:
             layers.append(encoder_layer(MhaType.RETROACTIVE))
-            for _ in range(2, num_layers - 1):
+            for _ in range(1, num_layers - 1):
                 layers.append(
                     RetroactiveLambda(encoder_layer(MhaType.REGULAR), takes_time=True)
                 )
