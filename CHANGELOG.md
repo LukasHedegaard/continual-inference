@@ -8,6 +8,11 @@ From v1.0.0 and on, the project will adherence strictly to Semantic Versioning.
 
 ## Unpublished
 
+## [1.2.4] - 2025-02-24
+
+### Fixed
+- Multilayer transformers when num_layers>=3.
+
 
 ## [1.2.3] - 2023-06-16
 
