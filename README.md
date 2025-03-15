@@ -23,7 +23,7 @@ __A Python library for Continual Inference Networks in PyTorch__
     <img src="https://readthedocs.org/projects/continual-inference/badge/?version=latest" alt="Documentation Status" height="20"/>
   </a>
   <a href="https://pepy.tech/project/continual-inference" style="display:inline-block;">
-    <img src="https://pepy.tech/badge/continual-inference" height="20">
+    <img src="https://static.pepy.tech/badge/continual-inference" height="20">
   </a>
   <a href="https://codecov.io/gh/LukasHedegaard/continual-inference" style="display:inline-block;">
     <img src="https://codecov.io/gh/LukasHedegaard/continual-inference/branch/main/graph/badge.svg?token=XW1UQZSEOG" height="20"/>
