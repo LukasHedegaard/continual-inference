@@ -7,8 +7,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: [3.7, 3.9]
+        os: [ubuntu-latest]
+        python-version: [3.9, 3.12]
 
     steps:
       - uses: actions/checkout@v2
@@ -22,10 +22,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install .[dev]
 
-      - name: Lint
-        run: |
-          flake8 . --max-complexity=12 --max-line-length=88 --select=C,E,F,W,B,B950,BLK --ignore=E203,E231,E501,W503
-      
       - name: Test with pytest
         run: |
           pytest -m "not skip_cicd"

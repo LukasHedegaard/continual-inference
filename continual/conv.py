@@ -76,7 +76,7 @@ class _ConvCoNd(CoModule, _ConvNd):
 
         if stride[0] > 1:
             logger.warning(
-                f"Temporal stride of {stride[0]} will result in skipped outputs every {stride[0]-1} / {stride[0]} steps"
+                f"Temporal stride of {stride[0]} will result in skipped outputs every {stride[0] - 1} / {stride[0]} steps"
             )
 
         dilation = size_fn(dilation)
