@@ -1,6 +1,6 @@
-black
-flake8
-flake8-black
+black==23.1.0
+flake8==6.0.0
+flake8-black==0.3.6
 isort>=5.7
 pytest
 pytest-cov
